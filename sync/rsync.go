@@ -1,4 +1,4 @@
-package rsync
+package sync
 
 import (
 	"bufio"
@@ -6,14 +6,36 @@ import (
 	"os/exec"
 )
 
-func Sync(source string, destination string) error {
+type Syncer interface {
+	Sync(source string, destination string) error
+}
+
+type RsyncSyncer struct {
+	host           string
+	port           string
+	user           string
+	privateKeyPath string
+}
+
+func NewRsyncSyncer(host string, port string, user string, privateKeyPath string) *RsyncSyncer {
+	return &RsyncSyncer{
+		host:           host,
+		port:           port,
+		user:           user,
+		privateKeyPath: privateKeyPath,
+	}
+}
+
+func (rs *RsyncSyncer) Sync(source string, destination string) error {
 
 	//rsync -avhz --delete -e "ssh -p 7000 -l ces-exporter -i /my-private-key" localhost:/data/ ./destination/
 
-	sshOpts := "ssh -p 7000 -l ces-exporter -i /home/bernst/.ssh/ces_migrate_key -o StrictHostKeyChecking=no -o BatchMode=yes"
+	sshOpts := fmt.Sprintf("ssh -p %s -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", rs.port, rs.user, rs.privateKeyPath)
+
+	sourceWithHost := fmt.Sprintf("%s:%s", rs.host, source)
 
 	// Define the rsync command and arguments
-	cmd := exec.Command("rsync", "-avhz", "-e", sshOpts, source, destination)
+	cmd := exec.Command("rsync", "-avhz", "-e", sshOpts, sourceWithHost, destination)
 
 	fmt.Println(cmd.String())
 
