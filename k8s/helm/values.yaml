@@ -1,0 +1,12 @@
+image: registry.cloudogu.com/testing/ces-importer:0.0.1
+config:
+  log_level: "DEBUG"
+  exporter_host: "classic-ces.exporter"
+  exporter_port: "7000"
+  exporter_ssh_user: "ces-exporter"
+  exporter_source: "/data/"
+  importer_private_ssh_key_path: "/home/ces-importer/.ssh"
+  importer_private_ssh_key_file_name: "ces_importer_private.key"
+  importer_destination: "/data/import"
+secret:
+  privateKey: "dummy value"

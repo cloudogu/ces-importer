@@ -1,2 +1,5 @@
 .idea
 .env
+.bin
+target
+vendor

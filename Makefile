@@ -15,6 +15,7 @@ include build/make/clean.mk
 include build/make/mocks.mk
 include build/make/release.mk
 include build/make/self-update.mk
+include build/make/k8s-component.mk
 
 .PHONY: mocks
 mocks: ${MOCKERY_BIN} ${MOCKERY_YAML} ## target is used to generate mocks for all interfaces in a project.
