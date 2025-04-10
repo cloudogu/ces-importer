@@ -1,12 +1,48 @@
-image: registry.cloudogu.com/testing/ces-importer:0.0.1
+main:
+  image: registry.cloudogu.com/testing/ces-importer:0.0.1
+  imagePullSecrets:
+    - name: "ces-exporter-registries"
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+job:
+  image: registry.cloudogu.com/testing/ces-importer:0.0.1
+  imagePullSecrets:
+    - name: "ces-exporter-registries"
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 config:
-  log_level: "DEBUG"
-  exporter_host: "classic-ces.exporter"
-  exporter_port: "7000"
-  exporter_ssh_user: "ces-exporter"
-  exporter_source: "/data/"
-  importer_private_ssh_key_path: "/home/ces-importer/.ssh"
-  importer_private_ssh_key_file_name: "ces_importer_private.key"
-  importer_destination: "/data/import"
-secret:
-  privateKey: "dummy value"
+  logLevel: DEBUG
+  exporter:
+    # host configures the FQDN under which the exporter will be available for CES data export. The importer will
+    # contact the exporter API which returns all required data like data paths etc.
+    # The exporter API endpoint is fixed and will be routed on source side.
+    host: classic-ces.exporter
+    # apiSecretName contains the secret with the exporter API key
+    apiSecretName: "ces-exporter-secret"
+    # apiSecretDataKey contains the key name that accommodates the actual exporter API key as value.
+    apiSecretDataKey: "apiKey"
+  importer:
+    # sshSecretName contains the name of the secret that contains the SSH private key which the importer will use to access the source system.
+    sshSecretName: "ces-importer-secret"
+    # sshSecretDataKey contains the key name that accommodates the actual exporter SSH private key as value.
+    sshSecretDataKey: "privateKey"
+  migration:
+    # regular_schedule triggers recurring migration jobs while the whole source system is running.
+    # Uses CRON notation like "0 4 * * *"
+    regularSchedule: "0 4 * * *"
+    # final schedule triggers the finishing migration job while the source system is supposed to be void of active
+    # users.
+    # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
+    finalSchedule: "2025-04-03 12:34:56Z"

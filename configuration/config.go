@@ -5,24 +5,41 @@ import (
 	"os"
 )
 
-const logLevelEnv = "LOG_LEVEL"
-const exporterHostEnv = "EXPORTER_HOST"
-const exporterPortEnv = "EXPORTER_PORT"
-const exporterSSHUserEnv = "EXPORTER_SSH_USER"
-const exporterSourceEnv = "EXPORTER_SOURCE"
-const importerPrivateSSHKeyPathEnv = "IMPORTER_PRIVATE_SSH_KEY_PATH"
-const importerDestinationEnv = "IMPORTER_DESTINATION"
+const (
+	logLevelEnv                 = "LOG_LEVEL"
+	exporterHostEnv             = "EXPORTER_HOST"
+	exporterSSHUserEnv          = "EXPORTER_SSH_USER"
+	exporterApiKeyEnv           = "EXPORTER_API_KEY"
+	migrationRegularScheduleEnv = "MIGRATION_REGULAR_SCHEDULE"
+	migrationFinalScheduleEnv   = "MIGRATION_FINAL_SCHEDULE"
+)
 
 const errorFormat = "environment variable %s is not set"
 
+// Configuration consists of configuration data. The most fields are obtained from the Helm chart
+// values file by means of a configmap, while others are hardcoded or obtained from secrets.
 type Configuration struct {
-	ExporterHost              string
-	ExporterPort              string
-	ExporterSSHUser           string
-	ExporterSource            string
+	// ExporterHost configures the FQDN under which the exporter will be available for CES data export. The importer
+	// will contact the exporter API which returns all required data like data paths etc.
+	// The exporter API endpoint is fixed and will be routed on source side.
+	ExporterHost string
+	// ExporterSSHUser contains the SSH account name that will be used during copying the data from the source to the
+	// target system. This is usually the root user.
+	ExporterSSHUser string
+	// ExporterApiKey contains the API key to authenticate against the source system's exporter system info endpoint.
+	ExporterApiKey string
+	// ImporterPrivateSSHKeyPath contains the file path to the SSH private key used to identify against the source
+	// system.
 	ImporterPrivateSSHKeyPath string
-	ImporterDestination       string
-	LogLevel                  string
+	// LogLevel manages to granularity of log output.
+	LogLevel string
+	// regular_schedule triggers recurring migration jobs while the whole source system is running.
+	// Uses CRON notation f. e. "0 4 * * *"
+	MigrationRegularCron string
+	// final schedule triggers the finishing migration job while the source system is supposed to be void of active
+	// users.
+	// Uses RFC 3339 notation f. e. "2025-04-03 12:34:56Z"
+	MigrationFinalTimestamp string
 }
 
 func ReadConfigFromEnv() (Configuration, error) {
@@ -38,29 +55,26 @@ func ReadConfigFromEnv() (Configuration, error) {
 		return conf, fmt.Errorf(errorFormat, exporterHostEnv)
 	}
 
-	conf.ExporterPort = os.Getenv(exporterPortEnv)
-	if conf.ExporterPort == "" {
-		return conf, fmt.Errorf(errorFormat, exporterPortEnv)
-	}
-
 	conf.ExporterSSHUser = os.Getenv(exporterSSHUserEnv)
 	if conf.ExporterSSHUser == "" {
 		return conf, fmt.Errorf(errorFormat, exporterSSHUserEnv)
 	}
 
-	conf.ExporterSource = os.Getenv(exporterSourceEnv)
-	if conf.ExporterSource == "" {
-		return conf, fmt.Errorf(errorFormat, exporterSourceEnv)
+	conf.ExporterApiKey = os.Getenv(exporterApiKeyEnv)
+	if conf.ExporterApiKey == "" {
+		return conf, fmt.Errorf(errorFormat, exporterApiKeyEnv)
 	}
 
-	conf.ImporterPrivateSSHKeyPath = os.Getenv(importerPrivateSSHKeyPathEnv)
-	if conf.ImporterPrivateSSHKeyPath == "" {
-		return conf, fmt.Errorf(errorFormat, importerPrivateSSHKeyPathEnv)
+	conf.ImporterPrivateSSHKeyPath = "/importerSshPrivateKey"
+
+	conf.MigrationRegularCron = os.Getenv(migrationRegularScheduleEnv)
+	if conf.MigrationRegularCron == "" {
+		return conf, fmt.Errorf(errorFormat, migrationRegularScheduleEnv)
 	}
 
-	conf.ImporterDestination = os.Getenv(importerDestinationEnv)
-	if conf.ImporterDestination == "" {
-		return conf, fmt.Errorf(errorFormat, importerDestinationEnv)
+	conf.MigrationFinalTimestamp = os.Getenv(migrationFinalScheduleEnv)
+	if conf.MigrationFinalTimestamp == "" {
+		return conf, fmt.Errorf(errorFormat, migrationFinalScheduleEnv)
 	}
 
 	return conf, nil

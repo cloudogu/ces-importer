@@ -1,23 +1,30 @@
 package main
 
 import (
-	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/ces-importer/sync"
+	"fmt"
 	"log/slog"
 	"os"
+
+	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/sync"
 )
 
 func main() {
 	config, err := configuration.ReadConfigFromEnv()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to read config from env: %w", err))
 	}
 
 	configureLogger(config)
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	// TODO in upcoming feature: Interpret the actual target data from the exporter API
+	exporterSource, importerDestination, exporterPort := func() (string, string, string) {
+		return "your exporterAPIResult here", "and here", "and here"
+	}()
 
-	if err := syncer.Sync(config.ExporterSource, config.ImporterDestination); err != nil {
+	syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+
+	if err := syncer.Sync(exporterSource, importerDestination); err != nil {
 		panic(err)
 	}
 

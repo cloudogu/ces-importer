@@ -29,13 +29,8 @@ helm uninstall -n ecosystem ces-importer
 ```
 
 ##### Example `myvalues.yaml`
-```yaml
-config:
-  log_level: "DEBUG"
-  exporter_host: "classic-ces.exporter"
-  exporter_port: "7000"
-  exporter_ssh_user: "ces-exporter"
-```
+
+Please refer to [values.yaml](k8s/helm/values.yaml) as an example which contains helpful comments. 
 
 ---
 ### What is the Cloudogu EcoSystem?
