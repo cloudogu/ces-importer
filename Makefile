@@ -1,8 +1,8 @@
 ARTIFACT_ID=ces-importer
-MAKEFILES_VERSION=9.5.3
+MAKEFILES_VERSION=9.9.1
 VERSION=0.0.1
 
-GOTAG=1.23.5
+GOTAG=1.24.2
 .DEFAULT_GOAL:=help
 
 include build/make/variables.mk

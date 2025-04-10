@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -21,18 +21,17 @@ RUN go mod vendor
 RUN go build -mod=vendor -o target/ces-importer
 
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.21.2
+FROM alpine:3.21.3
 LABEL maintainer="hello@cloudogu.com" \
       NAME="ces-importer" \
       VERSION="0.0.1"
 
 RUN apk update && apk upgrade && apk --no-cache add bash openssh rsync && \
-    addgroup -S -g 1000 ces-importer && \
-    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 1000 ces-importer
+    addgroup -S -g 65532 ces-importer && \
+    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer
 
-USER ces-importer
+# note that this app will start deployments that must run as root
+USER ces-importer:ces-importer
 
 WORKDIR /
 COPY --from=builder /app/target/ces-importer .

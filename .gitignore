@@ -1,5 +1,6 @@
-.idea
+.idea/
+.code/
 .env
-.bin
-target
-vendor
+.bin/
+target/
+vendor/
