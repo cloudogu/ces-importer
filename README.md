@@ -1,36 +1,10 @@
 # CES-Importer
 
-### Build & Push Container
+The application `ces-importer` is a Helm Chart application which allows for migrating from one Cloudogu EcoSystem (source) to another (target). The source must be prepared for migration with a different tooling set, though. 
 
-```shell
-docker build -t registry.cloudogu.com/testing/ces-importer:0.0.1 . 
+Please refer to the [operations docs](docs/operations/operation_en.md) for how `ces-importer` can be installed.
 
-docker push registry.cloudogu.com/testing/ces-importer:0.0.1
-```
-
-### Build & Push Helm-Chart
-
-```shell
-make helm-package
-
-helm push target/k8s/helm/ces-importer-0.0.1.tgz oci://registry.cloudogu.com/testing/ces-importer-helm
-```
-
-### Install in k8s
-
-```shell
-# template only
-helm template -n ecosystem -f myvalues.yaml --set-file secret.privateKey=/path/to/private.key ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-# install
-helm install -n ecosystem -f myvalues.yaml --set-file secret.privateKey=/path/to/private.key ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-helm uninstall -n ecosystem ces-importer
-```
-
-##### Example `myvalues.yaml`
-
-Please refer to [values.yaml](k8s/helm/values.yaml) as an example which contains helpful comments. 
+Please refer to the [development docs](docs/developing/developing_en.md) for how `ces-importer` can be built.
 
 ---
 ### What is the Cloudogu EcoSystem?
