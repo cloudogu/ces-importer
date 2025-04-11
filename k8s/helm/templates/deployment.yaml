@@ -65,8 +65,11 @@ spec:
           image: {{ .Values.main.image }}
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main
-          resources: {{- toYaml .Values.main.resources | nindent 10
-          }}
+          resources:
+            limits:
+              {{- toYaml .Values.main.resources.limits | nindent 14}}
+            requests:
+              {{- toYaml .Values.main.resources.requests | nindent 14}}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
