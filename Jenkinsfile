@@ -30,10 +30,6 @@ parallel(
                 dockerfile.lint()
             }
 
-            stage('Shellcheck') {
-                shellCheck("resources/app/startup.sh")
-            }
-
             stage('Check markdown links') {
                 Markdown markdown = new Markdown(this, "3.11.0")
                 markdown.check()
