@@ -31,7 +31,8 @@ RUN apk update && apk upgrade && apk --no-cache add bash openssh rsync && \
     adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer
 
 # note that this app will start deployments that must run as root
-USER ces-importer:ces-importer
+# use numeric IDs to avoid clash with runAsNonRoot so that k8s can validate it as non-root user
+USER 65532:65532
 
 WORKDIR /
 COPY --from=builder /app/target/ces-importer .
