@@ -18,6 +18,10 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      volumes:
+        - name: exporter-ssh-private-key-volume
+          secret:
+            secretName: "{{ .Values.config.importer.sshSecretName}}"
       containers:
         - env:
             - name: LOG_LEVEL
@@ -55,9 +59,9 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           volumeMounts:
-            - name: exporter_ssh_private-key-volume
+            - name: exporter-ssh-private-key-volume
               readOnly: true
-              mountPath: "{{ include "ces-importer.sshPrivateKeyPath" }}"
+              mountPath: "{{ include "ces-importer.sshPrivateKeyPath" . }}"
           image: {{ .Values.main.image }}
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main

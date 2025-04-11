@@ -15,3 +15,17 @@ make helm-package
 
 helm push target/k8s/helm/ces-importer-0.0.1.tgz oci://registry.cloudogu.com/testing/ces-importer-helm
 ```
+
+## Install a local Helm Chart
+
+```shell
+make helm-package
+
+helm install -n ecosystem -f myvalues.yaml ces-importer target/k8s/helm/ces-importer-0.0.1.tgz --version 0.0.1
+```
+
+## Completely remove a Helm Chart
+
+```shell
+helm uninstall -n ecosystem ces-importer
+```
