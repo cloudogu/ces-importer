@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -16,6 +17,12 @@ func main() {
 	}
 
 	configureLogger(config)
+
+	//TODO: remove in next feature, this is only to demonstrate the config arrival
+	demoCtx := context.Background()
+	slog.Log(demoCtx, slog.LevelWarn, "========================")
+	slog.Log(demoCtx, slog.LevelWarn, "hooray! configuration arrived!", "config", config)
+	slog.Log(demoCtx, slog.LevelWarn, "========================")
 
 	// TODO in upcoming feature: Interpret the actual target data from the exporter API
 	exporterSource, importerDestination, exporterPort := func() (string, string, string) {
