@@ -37,6 +37,7 @@ parallel(
 
             withGolangContainer {
                 stage('Build') {
+                    sh "make vendor"
                     sh "make clean compile-ci"
                 }
 
