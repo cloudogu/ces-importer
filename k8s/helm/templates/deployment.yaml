@@ -79,5 +79,4 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      serviceAccountName: {{ include "ces-importer.name" . }}-main
       terminationGracePeriodSeconds: 10
