@@ -1,5 +1,13 @@
-.bin/
-target/
-docs/
-.idea/
-.code/
+# Deny all
+*/**
+
+# Allow-only go resources
+!*.go
+!go.*
+!/configuration/**/*
+!/sync/**/*
+# and other resources
+!build/**/*
+!Makefile
+!.git/**/*
+
