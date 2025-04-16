@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/sync"
@@ -13,42 +14,88 @@ import (
 func main() {
 	config, err := configuration.ReadConfigFromEnv()
 	if err != nil {
-		panic(fmt.Errorf("failed to read config from env: %w", err))
+		panic(fmt.Errorf("ces-importer main process failed to read config from env: %w", err))
 	}
 
 	configureLogger(config)
 
-	//TODO: remove in next feature, this is only to demonstrate the config arrival
-	demoCtx := context.Background()
-	slog.Log(demoCtx, slog.LevelWarn, "========================")
-	slog.Log(demoCtx, slog.LevelWarn, "hooray! configuration arrived!", "config", config)
-	slog.Log(demoCtx, slog.LevelWarn, "========================")
+	ctx := context.Background()
+	logUsedConfig(ctx, config)
 
-	// TODO in upcoming feature: Interpret the actual target data from the exporter API
-	exporterSource, importerDestination, exporterPort := func() (string, string, string) {
-		return "your exporterAPIResult here", "and here", "and here"
-	}()
+	err = runMain(ctx, config)
+	if err != nil {
+		slog.Error("ces-importer main process restarts now because of an error: %s", err.Error())
+		os.Exit(1)
+	}
+}
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
-
-	if err := syncer.Sync(exporterSource, importerDestination); err != nil {
-		panic(err)
+func runMain(ctx context.Context, config configuration.Configuration) error {
+	exporterSource, importerDestination, exporterPort, err := fetchExporterAPIConfig(ctx, config)
+	if err != nil {
+		return fmt.Errorf("failed to fetch API configuration from the exporter: %w", err)
 	}
 
-	slog.Info("Sync successful")
+	for {
+		isExporterSyncReady, err := checkExportSyncState(ctx, exporterSource, exporterPort)
+		if err != nil {
+			return fmt.Errorf("error while checking export sync readiness: %w", err)
+		}
 
-	//// Wait for interrupt signal to gracefully shut down the server with a timeout of 5 seconds.
-	//quit := make(chan os.Signal, 1)
-	//signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	//<-quit
-	//slog.Info("Shutdown Server ...")
-	//
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
-	//
-	//<-ctx.Done()
-	//slog.Info("shutdown-timeout of 5 seconds reached")
-	//slog.Info("exiting")
+		if !isExporterSyncReady {
+			// FIXME: do proper cron ticks here
+			time.Sleep(60 * time.Second)
+		}
+
+		syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+
+		if err := syncer.Sync(exporterSource, importerDestination); err != nil {
+			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination)
+		}
+
+		slog.Info("Sync successful")
+
+		//// Wait for interrupt signal to gracefully shut down the server with a timeout of 5 seconds.
+		//quit := make(chan os.Signal, 1)
+		//signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		//<-quit
+		//slog.Info("Shutdown Server ...")
+		//
+		//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		//defer cancel()
+		//
+		//<-ctx.Done()
+		//slog.Info("shutdown-timeout of 5 seconds reached")
+		//slog.Info("exiting")
+	}
+}
+
+func fetchExporterAPIConfig(ctx context.Context, config configuration.Configuration) (string, string, string, error) {
+	return "", "", "", nil
+}
+
+func checkExportSyncState(ctx context.Context, source string, port string) (isReady bool, err error) {
+	return true, nil
+}
+
+func logUsedConfig(ctx context.Context, config configuration.Configuration) {
+	slog.Log(ctx, slog.LevelInfo, "                     ./////,                    ")
+	slog.Log(ctx, slog.LevelInfo, "                 ./////==//////,                ")
+	slog.Log(ctx, slog.LevelInfo, "                ////.  ___   ////.              ")
+	slog.Log(ctx, slog.LevelInfo, "         ,OO,. ////  ,////A,  */// ,OO,.        ")
+	slog.Log(ctx, slog.LevelInfo, "    ,/////////////*  */////*  *////////////A    ")
+	slog.Log(ctx, slog.LevelInfo, "   ////'        `VA.   '|'   .///'       '///*  ")
+	slog.Log(ctx, slog.LevelInfo, "  *///  .*///*,         |         .*//*,   ///* ")
+	slog.Log(ctx, slog.LevelInfo, "  (///  (//////)**--_./////_----*//////)   ///) ")
+	slog.Log(ctx, slog.LevelInfo, "   V///   '°°°°      (/////)      °°°°'   ////  ")
+	slog.Log(ctx, slog.LevelInfo, "    V/////(////////o. '°°°' ./////////(///(/'   ")
+	slog.Log(ctx, slog.LevelInfo, "       'V/(/////////////////////////////V'      ")
+
+	slog.Log(ctx, slog.LevelInfo, "ces-importer started using this configuration:", "LogLevel", config.LogLevel,
+		"ExporterHost", config.ExporterHost,
+		"ExporterSSHUser", config.ExporterSSHUser,
+		"MigrationRegularCron", config.MigrationRegularCron,
+		"MigrationFinalTimestamp", config.MigrationFinalTimestamp,
+		"ImporterPrivateSSHKeyPath", config.ImporterPrivateSSHKeyPath)
 }
 
 func configureLogger(conf configuration.Configuration) {
