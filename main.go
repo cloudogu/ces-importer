@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/cloudogu/ces-importer/api"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/sync"
 )
 
@@ -24,14 +24,16 @@ func main() {
 	ctx := context.Background()
 	logUsedConfig(ctx, config)
 
-	err = runMain(ctx, config)
+	looper := cron.NewMainLooper("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds
+
+	err = runMainLoop(ctx, config, looper)
 	if err != nil {
 		slog.Error("ces-importer main process restarts now because of an error: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func runMain(ctx context.Context, config configuration.Configuration) error {
+func runMainLoop(ctx context.Context, config configuration.Configuration, looper *cron.MainLooper) error {
 	httpClient := http.Client{}
 
 	exporterSource, importerDestination, exporterPort, err := fetchExporterAPIConfig(ctx, config, httpClient)
@@ -39,7 +41,9 @@ func runMain(ctx context.Context, config configuration.Configuration) error {
 		return fmt.Errorf("failed to fetch API configuration from the exporter: %w", err)
 	}
 
-	for {
+	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
+
+	err = looper.Run(func(ctx context.Context) error {
 		isExporterSyncReady, err := checkExportSyncState(ctx, exporterSource, exporterPort, config, httpClient)
 		if err != nil {
 			// This error is recoverable except for misconfiguration which may be detected by analyzing the logs.
@@ -48,9 +52,8 @@ func runMain(ctx context.Context, config configuration.Configuration) error {
 		}
 
 		if !isExporterSyncReady {
-			// FIXME: do proper cron ticks here
-			time.Sleep(60 * time.Second)
-			continue
+			slog.Log(ctx, slog.LevelInfo, "Exporter does not seem to be ready. Waiting for the next run...")
+			return nil
 		}
 
 		syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
@@ -60,7 +63,7 @@ func runMain(ctx context.Context, config configuration.Configuration) error {
 			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
 		}
 
-		slog.Info("Sync successful")
+		slog.Log(ctx, slog.LevelInfo, "Sync successful")
 
 		//// Wait for interrupt signal to gracefully shut down the server with a timeout of 5 seconds.
 		//quit := make(chan os.Signal, 1)
@@ -74,7 +77,14 @@ func runMain(ctx context.Context, config configuration.Configuration) error {
 		//<-ctx.Done()
 		//slog.Info("shutdown-timeout of 5 seconds reached")
 		//slog.Info("exiting")
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
+
+	return nil
 }
 
 func fetchExporterAPIConfig(ctx context.Context, config configuration.Configuration, httpClient http.Client) (exporterSource, importerDestination, exporterPort string, err error) {
