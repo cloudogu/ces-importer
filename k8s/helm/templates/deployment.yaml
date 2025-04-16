@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ces-importer.name" . }}
+  labels:
+  {{- include "ces-importer.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+    {{- include "ces-importer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "ces-importer.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.main.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: exporter-ssh-private-key-volume
+          secret:
+            secretName: "{{ .Values.config.importer.sshSecretName}}"
+      containers:
+        - env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ces-importer.name" . }}-config
+                  key: log_level
+            - name: EXPORTER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ces-importer.name" . }}-config
+                  key: exporter_host
+            - name: EXPORTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.exporter.apiSecretName }}
+                  key: {{ .Values.config.exporter.apiSecretDataKey }}
+            - name: EXPORTER_SSH_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ces-importer.name" . }}-config
+                  key: exporter_ssh_user
+            - name: MIGRATION_REGULAR_SCHEDULE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ces-importer.name" . }}-config
+                  key: migration_regular_schedule
+            - name: MIGRATION_FINAL_SCHEDULE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ces-importer.name" . }}-config
+                  key: migration_final_schedule
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: exporter-ssh-private-key-volume
+              readOnly: true
+              mountPath: "{{ include "ces-importer.sshPrivateKeyPath" . }}"
+          image: {{ .Values.main.image }}
+          imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
+          name: main
+          resources:
+            limits:
+              {{- toYaml .Values.main.resources.limits | nindent 14}}
+            requests:
+              {{- toYaml .Values.main.resources.requests | nindent 14}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 10

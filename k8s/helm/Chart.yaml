@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ces-importer
+description: CES-Importer imports a Cloudogu Ecosystem from another instance.
+type: application
+version: 0.0.0-replaceme
+appVersion: "0.0.0-replaceme"

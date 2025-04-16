@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ces-importer.name" . }}-config
+  labels:
+    {{- include "ces-importer.labels" . | nindent 4 }}
+data:
+  log_level: "{{.Values.config.logLevel}}"
+  exporter_host: "{{.Values.config.exporter.host}}"
+  exporter_ssh_user: "{{ include "ces-importer.sshUser" . }}"
+  migration_regular_schedule: "{{.Values.config.migration.regularSchedule}}"
+  migration_final_schedule: "{{.Values.config.migration.finalSchedule}}"
