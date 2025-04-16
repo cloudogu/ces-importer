@@ -3,12 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/sync"
+)
+
+// http constants
+const (
+	// apiKeyAuthName contains the name of the header key to authenticate against the exporter API without basic auth.
+	apiKeyAuthName = "X-CES-EXPORTER-API-KEY"
 )
 
 func main() {
@@ -35,15 +43,20 @@ func runMain(ctx context.Context, config configuration.Configuration) error {
 		return fmt.Errorf("failed to fetch API configuration from the exporter: %w", err)
 	}
 
+	httpClient := http.Client{}
+
 	for {
-		isExporterSyncReady, err := checkExportSyncState(ctx, exporterSource, exporterPort)
+		isExporterSyncReady, err := checkExportSyncState(ctx, exporterSource, exporterPort, config, httpClient)
 		if err != nil {
-			return fmt.Errorf("error while checking export sync readiness: %w", err)
+			// This error is recoverable except for misconfiguration which may be detected by analyzing the logs.
+			// Fall-through to sleep and avoid adding load to the log output AND the CPU.
+			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
 		}
 
 		if !isExporterSyncReady {
 			// FIXME: do proper cron ticks here
 			time.Sleep(60 * time.Second)
+			continue
 		}
 
 		syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
@@ -73,7 +86,35 @@ func fetchExporterAPIConfig(ctx context.Context, config configuration.Configurat
 	return "", "", "", nil
 }
 
-func checkExportSyncState(ctx context.Context, source string, port string) (isReady bool, err error) {
+func checkExportSyncState(ctx context.Context, source string, port string, config configuration.Configuration, httpClient http.Client) (isReady bool, err error) {
+	endpoint := "/export/mode"
+	exporterUrl := source + ":" + port + endpoint
+
+	request, err := http.NewRequest(http.MethodGet, exporterUrl, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
+	}
+
+	request.Header.Set(apiKeyAuthName, config.ExporterApiKey)
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return false, fmt.Errorf("request to %s failed with an error: %w", exporterUrl, err)
+	}
+
+	defer func() { _ = response.Body.Close() }()
+	responseMsg, err := io.ReadAll(response.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read response body for %s", exporterUrl)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
+			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+	}
+
+	slog.Log(ctx, slog.LevelDebug, "Successfully called %s with response %#v", responseMsg)
+
 	return true, nil
 }
 
