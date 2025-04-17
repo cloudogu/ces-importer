@@ -11,7 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudogu/ces-importer/api"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/sync"
@@ -26,28 +30,48 @@ type exporterApiClient interface {
 }
 
 func main() {
-	config, err := configuration.ReadConfigFromEnv()
+	ctx := context.Background()
+
+	config, looper, exportApiCli, k8sClient, err := prepareMain(ctx)
 	if err != nil {
-		panic(fmt.Errorf("ces-importer main process failed to read config from env: %w", err))
+		panic(err)
 	}
 
-	configureLogger(config)
-
-	ctx := context.Background()
-	logUsedConfig(ctx, config)
-
-	looper := cron.NewMainLooper("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds
-
-	err = runMainLoop(ctx, config, looper)
+	err = runMainLoop(ctx, config, looper, exportApiCli, k8sClient)
 	if err != nil {
 		slog.Error("ces-importer main process restarts now because of an error: %s", err.Error())
 		os.Exit(1)
 	}
 }
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, looper *cron.MainLooper) error {
+func prepareMain(ctx context.Context) (configuration.Configuration, *cron.MainLooper, exporterApiClient, kubernetes.Interface, error) {
+	config, err := configuration.ReadConfigFromEnv()
+	if err != nil {
+		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	configureLogger(config)
+
+	logUsedConfig(ctx, config)
+
+	looper := cron.NewMainLooper("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds
 	httpClient := http.Client{}
-	exportApiCli := api.NewClient(config.ExporterApiKey, httpClient)
+	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
+
+	k8sRestConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to read kube config: %w", err)
+	}
+
+	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to create k8s client: %w", err)
+	}
+
+	return config, looper, exportApiCli, k8sClient, nil
+}
+
+func runMainLoop(ctx context.Context, config configuration.Configuration, looper *cron.MainLooper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -86,12 +110,17 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
 		}
 
-		err = deactivateImporterDogus(ctx, systemInfo, config)
+		err = deactivateImporterDogus(ctx, systemInfo, config, k8sClient)
 		if err != nil {
 			return err
 		}
 
 		err = syncDogus(ctx, systemInfo, config)
+		if err != nil {
+			return err
+		}
+
+		err = activateImporterDogus(ctx, systemInfo, config, k8sClient)
 		if err != nil {
 			return err
 		}
@@ -108,11 +137,11 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 	return nil
 }
 
-func deactivateImporterDogus(ctx context.Context, systemInfo *api.SystemInfo, config configuration.Configuration) error {
+func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
 
-		err := deactivateDogu(ctx, config, dogu)
+		err := deactivateDogu(ctx, config, dogu, k8sClient)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
 			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
@@ -122,22 +151,47 @@ func deactivateImporterDogus(ctx context.Context, systemInfo *api.SystemInfo, co
 	return nil
 }
 
-func deactivateDogu(ctx context.Context, config configuration.Configuration, dogu api.Dogu) error {
+func deactivateDogu(ctx context.Context, config configuration.Configuration, dogu exporter.Dogu, k8sClient kubernetes.Interface) error {
+	err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StopDogu(ctx, dogu)
+	if err != nil {
+		return err
+	}
 	return nil
 }
-
-func syncDogus(ctx context.Context, systemInfo *api.SystemInfo, config configuration.Configuration) error {
+func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
 
-		err := deactivateDogu(ctx, config, dogu)
+		err := activateDogu(ctx, config, dogu, k8sClient)
+		if err != nil {
+			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
+			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func activateDogu(ctx context.Context, config configuration.Configuration, dogu exporter.Dogu, k8sClient kubernetes.Interface) error {
+	err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StartDogu(ctx, dogu)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
+	for _, dogu := range systemInfo.Dogus {
+		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
+
+		err := deactivateDogu(ctx, config, dogu, nil)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
 			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
 		}
 
 		// TODO in upcoming feature: Interpret the actual target data from the exporter API
-		exporterSource, importerDestination, exporterPort := func(dogu api.Dogu) (string, string, string) {
+		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
 			return "your exporterAPIResult here", "and here", "and here"
 		}(dogu)
 
@@ -153,14 +207,14 @@ func syncDogus(ctx context.Context, systemInfo *api.SystemInfo, config configura
 }
 
 func isApiExportReady(ctx context.Context, hostname string, apiCli exporterApiClient) (isActive bool, err error) {
-	exporterUrl := hostProtocolScheme + hostname + api.EndpointExportMode
+	exporterUrl := hostProtocolScheme + hostname + exporter.EndpointExportMode
 
 	result, err := apiCli.DoGetRequest(ctx, exporterUrl)
 	if err != nil {
 		return false, fmt.Errorf("failed to check whether exporter is export ready: %w", err)
 	}
 
-	var exportMode api.ExportMode
+	var exportMode exporter.ExportMode
 	err = json.Unmarshal(result, &exportMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse export mode response: %q: %w", result, err)
@@ -169,15 +223,15 @@ func isApiExportReady(ctx context.Context, hostname string, apiCli exporterApiCl
 	return exportMode.IsActive, nil
 }
 
-func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli exporterApiClient) (*api.SystemInfo, error) {
-	exporterUrl := hostProtocolScheme + hostname + api.EndpointSystemInfo
+func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli exporterApiClient) (*exporter.SystemInfo, error) {
+	exporterUrl := hostProtocolScheme + hostname + exporter.EndpointSystemInfo
 
 	result, err := apiCli.DoGetRequest(ctx, exporterUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch exporter system info: %w", err)
 	}
 
-	var systemInfo *api.SystemInfo
+	var systemInfo *exporter.SystemInfo
 	err = json.Unmarshal(result, systemInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse system info response: %q: %w", result, err)
@@ -199,12 +253,9 @@ func logUsedConfig(ctx context.Context, config configuration.Configuration) {
 	slog.Log(ctx, slog.LevelInfo, "    V/////(////////o. '°°°' ./////////(///(/'   ")
 	slog.Log(ctx, slog.LevelInfo, "       'V/(/////////////////////////////V'      ")
 
-	slog.Log(ctx, slog.LevelInfo, "ces-importer started using this configuration:", "LogLevel", config.LogLevel,
-		"ExporterHost", config.ExporterHost,
-		"ExporterSSHUser", config.ExporterSSHUser,
-		"MigrationRegularCron", config.MigrationRegularCron,
-		"MigrationFinalTimestamp", config.MigrationFinalTimestamp,
-		"ImporterPrivateSSHKeyPath", config.ImporterPrivateSSHKeyPath)
+	slog.Log(ctx, slog.LevelInfo, "ces-importer started using this configuration:",
+		"config", fmt.Sprintf("%#v", config),
+	)
 }
 
 func configureLogger(conf configuration.Configuration) {

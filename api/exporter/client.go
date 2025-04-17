@@ -1,4 +1,4 @@
-package api
+package exporter
 
 import (
 	"context"
