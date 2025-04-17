@@ -40,7 +40,6 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 	if err != nil {
 		return fmt.Errorf("failed to fetch API configuration from the exporter: %w", err)
 	}
-
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
 
 	err = looper.Run(func(ctx context.Context) error {
@@ -73,6 +72,7 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 		//
 		//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		//defer cancel()
+		//defer looper.Stop()
 		//
 		//<-ctx.Done()
 		//slog.Info("shutdown-timeout of 5 seconds reached")
