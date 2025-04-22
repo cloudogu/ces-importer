@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
+
+	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 var testCtx, _ = context.WithTimeout(context.Background(), 1*time.Second)
@@ -29,8 +30,6 @@ func TestNewDoguDeploymentClient(t *testing.T) {
 	client := NewDoguDeploymentClient(nil, "ecosystem")
 
 	require.NotNil(t, client)
-	assert.Implements(t, (*doguStarter)(nil), client)
-	assert.Implements(t, (*doguStopper)(nil), client)
 }
 
 func Test_doguClient_StopDogu(t *testing.T) {

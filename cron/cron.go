@@ -55,8 +55,6 @@ func (cj *mainLooper) Run(jobClosure func(ctx context.Context) error) {
 	})
 
 	cj.currentTask.Run()
-
-	return
 }
 
 // Stop stops the looping over the provided function given to Run().
