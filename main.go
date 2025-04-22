@@ -46,7 +46,7 @@ func main() {
 
 	err = runMainLoop(ctx, config, looper, exportApiCli, k8sClient)
 	if err != nil {
-		slog.Error("ces-importer main process restarts now because of an error: %s", err.Error())
+		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
 		os.Exit(1)
 	}
 }
@@ -137,16 +137,12 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 		return nil
 	}) // main loop end
 
-	if err != nil {
-		return fmt.Errorf("failed to sync from exporter: %w", err)
-	}
-
 	return nil
 }
 
 func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
 	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
+		slog.Log(ctx, slog.LevelInfo, "Deactivating dogu ", "doguName", dogu.Name)
 
 		err := deactivateDogu(ctx, config, dogu, k8sClient)
 		if err != nil {
@@ -165,9 +161,10 @@ func deactivateDogu(ctx context.Context, config configuration.Configuration, dog
 	}
 	return nil
 }
+
 func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
 	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
+		slog.Log(ctx, slog.LevelInfo, "Activating dogu", "doguName", dogu.Name)
 
 		err := activateDogu(ctx, config, dogu, k8sClient)
 		if err != nil {
@@ -189,7 +186,7 @@ func activateDogu(ctx context.Context, config configuration.Configuration, dogu 
 
 func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
 	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu %s...", dogu.Name)
+		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
 
 		err := deactivateDogu(ctx, config, dogu, nil)
 		if err != nil {
