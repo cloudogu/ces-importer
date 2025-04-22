@@ -11,9 +11,11 @@ COPY go.sum go.sum
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
-# Copy the go source
-COPY main.go main.go
+# Copy the go sources
+COPY *.go .
+COPY api api
 COPY configuration configuration
+COPY cron cron
 COPY sync sync
 
 # Build
