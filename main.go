@@ -39,46 +39,42 @@ type exporterApiClient interface {
 func main() {
 	ctx := context.Background()
 
-	config, looper, exportApiCli, k8sClient, err := prepareMain(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	err = runMainLoop(ctx, config, looper, exportApiCli, k8sClient)
-	if err != nil {
-		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
-		os.Exit(1)
-	}
-}
-
-func prepareMain(ctx context.Context) (configuration.Configuration, looper, exporterApiClient, kubernetes.Interface, error) {
 	config, err := configuration.ReadConfigFromEnv()
 	if err != nil {
-		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to read config: %w", err)
+		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
 	configureLogger(config)
 
 	logUsedConfig(ctx, config)
 
-	looper, _ := cron.New("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds while regular cron only supports 5 digits.
+	cronLikeExpr := "0,30 * * * * *"
+	cronLooper, err := cron.New(cronLikeExpr) // gronx supports 6 cron-style digits for seconds while regular cron only supports 5 // digits.
+	if err != nil {
+		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", cronLikeExpr, err))
+	}
+
 	httpClient := http.Client{}
 	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
 
 	k8sRestConfig, err := ctrl.GetConfig()
 	if err != nil {
-		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to read kube config: %w", err)
+		panic(fmt.Errorf("failed to read kube config: %w", err))
 	}
 
 	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
 	if err != nil {
-		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to create k8s client: %w", err)
+		panic(fmt.Errorf("failed to create k8s client: %w", err))
 	}
 
-	return config, looper, exportApiCli, k8sClient, nil
+	err = runMainLoop(ctx, config, cronLooper, exportApiCli, k8sClient)
+	if err != nil {
+		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
+		os.Exit(1)
+	}
 }
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, looper looper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
+func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -88,14 +84,20 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	defer looper.Stop()
+	defer cronLooper.Stop()
 
 	<-ctx.Done()
 	slog.Info("shutdown-timeout of 5 seconds reached")
 	slog.Info("exiting")
 
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
-	looper.Run(func(ctx context.Context) error {
+	cronLooper.Run(createMainLoop(config, exportApiCli, k8sClient))
+
+	return nil
+}
+
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
 			// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
@@ -115,6 +117,7 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 			// this error is recoverable, the exporter system API might be down, or the API server errs
 			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
 			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+			return nil
 		}
 
 		err = deactivateImporterDogus(ctx, systemInfo, config, k8sClient)
@@ -135,30 +138,20 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 		slog.Log(ctx, slog.LevelInfo, "Sync successful")
 
 		return nil
-	}) // main loop end
-
-	return nil
+	}
 }
 
 func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Deactivating dogu ", "doguName", dogu.Name)
 
-		err := deactivateDogu(ctx, config, dogu, k8sClient)
+		err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StopDogu(ctx, dogu)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
 			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
 		}
 	}
 
-	return nil
-}
-
-func deactivateDogu(ctx context.Context, config configuration.Configuration, dogu exporter.Dogu, k8sClient kubernetes.Interface) error {
-	err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StopDogu(ctx, dogu)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -166,34 +159,19 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Activating dogu", "doguName", dogu.Name)
 
-		err := activateDogu(ctx, config, dogu, k8sClient)
+		err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StartDogu(ctx, dogu)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
 			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
 		}
 	}
 
-	return nil
-}
-
-func activateDogu(ctx context.Context, config configuration.Configuration, dogu exporter.Dogu, k8sClient kubernetes.Interface) error {
-	err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StartDogu(ctx, dogu)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
 func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
-
-		err := deactivateDogu(ctx, config, dogu, nil)
-		if err != nil {
-			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
-			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
-		}
-
 		// TODO in upcoming feature: Interpret the actual target data from the exporter API
 		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
 			return "your exporterAPIResult here", "and here", "and here"
