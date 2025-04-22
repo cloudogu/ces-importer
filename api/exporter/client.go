@@ -53,6 +53,6 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, "Successfully called %s with response %#v", responseMsg)
-	return result, nil
+	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
+	return responseMsg, nil
 }
