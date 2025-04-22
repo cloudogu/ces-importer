@@ -23,15 +23,15 @@ type clientSet interface {
 	kubernetes.Interface
 }
 
-// DoguStopper provides functions to stop a running dogu.
-type DoguStopper interface {
+// doguStopper provides functions to stop a running dogu.
+type doguStopper interface {
 	// StopDogu stopps the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
 	// condition except the dogu is already stopped.
 	StopDogu(ctx context.Context, dogu exporter.Dogu) error
 }
 
-// DoguStarter provides functions to start a stopped dogu.
-type DoguStarter interface {
+// doguStarter provides functions to start a stopped dogu.
+type doguStarter interface {
 	// StartDogu starts the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
 	// condition except when the dogu is stopped.
 	StartDogu(ctx context.Context, dogu exporter.Dogu) error

@@ -29,8 +29,8 @@ func TestNewDoguDeploymentClient(t *testing.T) {
 	client := NewDoguDeploymentClient(nil, "ecosystem")
 
 	require.NotNil(t, client)
-	assert.Implements(t, (*DoguStarter)(nil), client)
-	assert.Implements(t, (*DoguStopper)(nil), client)
+	assert.Implements(t, (*doguStarter)(nil), client)
+	assert.Implements(t, (*doguStopper)(nil), client)
 }
 
 func Test_doguClient_StopDogu(t *testing.T) {
