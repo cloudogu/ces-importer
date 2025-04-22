@@ -213,13 +213,13 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 		return nil, fmt.Errorf("failed to fetch exporter system info: %w", err)
 	}
 
-	var systemInfo *exporter.SystemInfo
-	err = json.Unmarshal(result, systemInfo)
+	var systemInfo exporter.SystemInfo
+	err = json.Unmarshal(result, &systemInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse system info response: %q: %w", result, err)
 	}
 
-	return systemInfo, nil
+	return &systemInfo, nil
 }
 
 func logUsedConfig(ctx context.Context, config configuration.Configuration) {
