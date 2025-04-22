@@ -1,6 +1,6 @@
 package systeminfo
 
-type Dogu struct {
+type dogu struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Volume  volume `json:"volume"`
@@ -15,7 +15,7 @@ type component struct {
 	Version string `json:"version"`
 }
 
-type SystemInfo struct {
-	Dogus      []Dogu      `json:"dogus"`
+type systemInfo struct {
+	Dogus      []dogu      `json:"dogus"`
 	Components []component `json:"components"`
 }

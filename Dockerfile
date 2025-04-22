@@ -16,7 +16,9 @@ COPY *.go .
 COPY api api
 COPY configuration configuration
 COPY cron cron
+COPY systeminfo systeminfo
 COPY sync sync
+COPY validate validate
 
 # Build
 RUN go mod vendor

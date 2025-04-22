@@ -6,42 +6,42 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
+	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
-	"io"
+	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const (
-	Namespace = "ecosystem"
-)
-
-type ecosystemComponentClient interface {
-	componentEcoClient.ComponentV1Alpha1Interface
-}
-
-type ecosystemDogusClient interface {
-	ecoSystemV2.EcoSystemV2Interface
-}
-
 type kubernetesClient interface {
-	kubernetes.Interface
+	v1.PersistentVolumeClaimInterface
 }
 
-// type ProviderInterface interface {
-// 	GetSystemInfo(namespace string) (*SystemInfo, error)
-// }
+type doguLister interface {
+	List(ctx context.Context, opts metav1.ListOptions) (*doguv2.DoguList, error)
+}
+
+type componentLister interface {
+	List(ctx context.Context, opts metav1.ListOptions) (*componentv1.ComponentList, error)
+}
+
+type exporterApiClient interface {
+	// DoGetRequest allows issuing HTTP requests towards the exporter API. The result will be a byte slice that must
+	// be parsed by the caller respectively.
+	DoGetRequest(ctx context.Context, url string) ([]byte, error)
+}
 
 type Provider struct {
-	componentClient  ecosystemComponentClient
-	doguClient       ecosystemDogusClient
-	KubernetesClient kubernetesClient
-	// Provider         ProviderInterface
+	componentLister componentLister
+	doguLister      doguLister
+	pvcClient       kubernetesClient
+	apiClient       exporterApiClient
+	ctx             context.Context
 }
 
-func NewSystemInfoProvider() (*Provider, error) {
+func NewSystemInfoProvider(namespace string) (*Provider, error) {
 	clusterConfig, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, err
@@ -51,34 +51,37 @@ func NewSystemInfoProvider() (*Provider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create component component client: %s", err)
 	}
+	componentLister := componentClient.Components(namespace)
 
 	doguClient, err := ecoSystemV2.NewForConfig(clusterConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create doguc lient: %s", err)
+		return nil, fmt.Errorf("failed to create dogu client: %s", err)
 	}
+	doguLister := doguClient.Dogus(namespace)
 
 	kubernetesClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create k8s kubernetesClient: %s", err)
 	}
+	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(namespace)
 
 	return &Provider{
-		componentClient:  componentClient,
-		doguClient:       doguClient,
-		KubernetesClient: kubernetesClient,
+		componentLister: componentLister,
+		doguLister:      doguLister,
+		pvcClient:       pvcClient,
 	}, nil
 }
 
-func (s *Provider) GetSystemInfo(namespace string) (*SystemInfo, error) {
+func (s *Provider) getSystemInfo() (*systemInfo, error) {
 	// collect Dogus
-	dogus, err := s.doguClient.Dogus(namespace).List(context.Background(), metav1.ListOptions{})
+	dogus, err := s.doguLister.List(s.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems dogus: %s", err)
 	}
-	var systemInfoDogus []Dogu
+	var systemInfoDogus []dogu
 	for _, d := range dogus.Items {
 		vol := d.GetDataVolumeSize()
-		systemInfoDogus = append(systemInfoDogus, Dogu{
+		systemInfoDogus = append(systemInfoDogus, dogu{
 			Name:    d.Name,
 			Version: d.Spec.Version,
 			Volume:  volume{SizeInBytes: vol.Value()},
@@ -86,7 +89,7 @@ func (s *Provider) GetSystemInfo(namespace string) (*SystemInfo, error) {
 	}
 
 	// collect components
-	components, err := s.componentClient.Components(namespace).List(context.Background(), metav1.ListOptions{})
+	components, err := s.componentLister.List(s.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems components: %s", err)
 	}
@@ -98,25 +101,23 @@ func (s *Provider) GetSystemInfo(namespace string) (*SystemInfo, error) {
 		})
 	}
 
-	return &SystemInfo{Dogus: systemInfoDogus, Components: systemInfoComponents}, nil
+	return &systemInfo{Dogus: systemInfoDogus, Components: systemInfoComponents}, nil
 }
 
-// TODO use api.go from boris pr
 // GetExporterSystemInfo gets the exporters system info via get request
-func GetExporterSystemInfo(conf configuration.Configuration) (SystemInfo, error) {
-	var sInfo SystemInfo
-	res, err := http.Get(conf.ExporterHost + "system-info")
+func (s *Provider) getExporterSystemInfo(conf configuration.Configuration) (*systemInfo, error) {
+	var sInfo *systemInfo
+	res, err := s.apiClient.DoGetRequest(s.ctx, "https://"+conf.ExporterHost+"/system-info")
 	if err != nil {
 		return sInfo, fmt.Errorf("error performing http request: %s", err)
 	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return sInfo, fmt.Errorf("could not read exporter response: %s", err)
-	}
-	err = json.Unmarshal(body, &sInfo)
+	err = json.Unmarshal(res, &sInfo)
 	if err != nil {
 		return sInfo, fmt.Errorf("could not read exporter response: %s", err)
 	}
 	return sInfo, nil
+}
+
+func (s *Provider) getPvcClient() kubernetesClient {
+	return s.pvcClient
 }

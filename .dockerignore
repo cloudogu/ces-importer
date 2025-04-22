@@ -7,7 +7,9 @@
 !/api/**/*
 !/configuration/**/*
 !/cron/**/*
+!/systeminfo/**/*
 !/sync/**/*
+!/validate/**/*
 
 # and other resources
 !build/**/*

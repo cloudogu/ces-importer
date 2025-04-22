@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/systeminfo"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,6 +20,10 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/sync"
+)
+
+const (
+	defaultNamespace = "ecosystem"
 )
 
 var hostProtocolScheme = "https://"
@@ -108,6 +113,11 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 			// this error is recoverable, the exporter system API might be down, or the API server errs
 			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
 			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+		}
+
+		err = validateSystemInfo(ctx, config, defaultNamespace)
+		if err != nil {
+			return err
 		}
 
 		err = deactivateImporterDogus(ctx, systemInfo, config, k8sClient)
@@ -238,6 +248,19 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 	}
 
 	return systemInfo, nil
+}
+
+func validateSystemInfo(ctx context.Context, conf configuration.Configuration, namespace string) error {
+	provider, err := systeminfo.NewSystemInfoProvider(namespace)
+	if err != nil {
+		return err
+	}
+	validator := systeminfo.NewValidator(conf, ctx, namespace, provider)
+	err = validator.ValidateSystemInfo()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func logUsedConfig(ctx context.Context, config configuration.Configuration) {
