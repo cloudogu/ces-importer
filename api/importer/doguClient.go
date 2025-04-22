@@ -6,20 +6,35 @@ import (
 	"log/slog"
 	"time"
 
-	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+
+	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 type clientSet interface {
 	kubernetes.Interface
+}
+
+// DoguStopper provides functions to stop a running dogu.
+type DoguStopper interface {
+	// StopDogu stopps the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
+	// condition except the dogu is already stopped.
+	StopDogu(ctx context.Context, dogu exporter.Dogu) error
+}
+
+// DoguStarter provides functions to start a stopped dogu.
+type DoguStarter interface {
+	// StartDogu starts the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
+	// condition except when the dogu is stopped.
+	StartDogu(ctx context.Context, dogu exporter.Dogu) error
 }
 
 type doguClient struct {
@@ -36,7 +51,7 @@ func NewDoguDeploymentClient(k8sClientSet clientSet, importerNamespace string) *
 }
 
 // StopDogu stopps the given dogu in the importer system by scaling down the deployment.
-func (dc *doguClient) StopDogu(ctx context.Context, dogu exporter.Dogu) (err error) {
+func (dc *doguClient) StopDogu(ctx context.Context, dogu exporter.Dogu) error {
 	fullyQualifiedDoguName, err := cescommons.QualifiedNameFromString(dogu.Name)
 	if err != nil {
 		return fmt.Errorf("failed to stop dogu: %w", err)
@@ -103,15 +118,15 @@ func (dc *doguClient) scaleDeployment(ctx context.Context, deployName string, ne
 			return fmt.Errorf("failed to get deployment %q for scaling update: %w", deployName, err)
 		}
 
-		prevReplicas = *currentDeployment.Spec.Replicas
-
 		if !found {
 			slog.Log(ctx, slog.LevelWarn, "Cannot scale down dogu deployment because it does not exist", "dogu", deployName)
 			return nil // if there is no longer a deployment, there is no longer a problem ¯\_(ツ)_/¯
 		}
 
-		newReplicasPtr := pointer.Int32(newReplicas)
-		if currentDeployment.Spec.Replicas == newReplicasPtr {
+		prevReplicas = *currentDeployment.Spec.Replicas
+
+		newReplicasPtr := ptr.To(newReplicas)
+		if *currentDeployment.Spec.Replicas == *newReplicasPtr {
 			slog.Log(ctx, slog.LevelWarn, "Could not scale deployment because it already was at the target value", "deployment", deployName, "replicas", newReplicas)
 			return nil
 		}
