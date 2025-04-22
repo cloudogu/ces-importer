@@ -34,7 +34,7 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
 	}
 
-	request.WithContext(ctx)
+	request = request.WithContext(ctx)
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)
