@@ -106,8 +106,8 @@ func (dc *doguClient) scaleDeployment(ctx context.Context, deployName string, ne
 		Duration: 1500 * time.Millisecond,
 		Factor:   1.5,
 		Jitter:   0,
-		Steps:    9999,
-		Cap:      30 * time.Second,
+		Steps:    3,
+		Cap:      5 * time.Second,
 	}
 
 	var currentDeployment *v1.Deployment
