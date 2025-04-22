@@ -23,6 +23,13 @@ import (
 
 var hostProtocolScheme = "https://"
 
+type looper interface {
+	// Run starts a function that runs for an undetermined time until it was stopped by Stop().
+	Run(jobClosure func(ctx context.Context) error)
+	// Stop stops the looper
+	Stop()
+}
+
 type exporterApiClient interface {
 	// DoGetRequest allows issuing HTTP requests towards the exporter API. The result will be a byte slice that must
 	// be parsed by the caller respectively.
@@ -44,7 +51,7 @@ func main() {
 	}
 }
 
-func prepareMain(ctx context.Context) (configuration.Configuration, *cron.MainLooper, exporterApiClient, kubernetes.Interface, error) {
+func prepareMain(ctx context.Context) (configuration.Configuration, looper, exporterApiClient, kubernetes.Interface, error) {
 	config, err := configuration.ReadConfigFromEnv()
 	if err != nil {
 		return configuration.Configuration{}, nil, nil, nil, fmt.Errorf("failed to read config: %w", err)
@@ -54,7 +61,7 @@ func prepareMain(ctx context.Context) (configuration.Configuration, *cron.MainLo
 
 	logUsedConfig(ctx, config)
 
-	looper := cron.NewMainLooper("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds
+	looper, _ := cron.New("0,30 * * * * *") // gronx supports 6 cron-style digits for seconds while regular cron only supports 5 digits.
 	httpClient := http.Client{}
 	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
 
@@ -71,7 +78,7 @@ func prepareMain(ctx context.Context) (configuration.Configuration, *cron.MainLo
 	return config, looper, exportApiCli, k8sClient, nil
 }
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, looper *cron.MainLooper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
+func runMainLoop(ctx context.Context, config configuration.Configuration, looper looper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -88,7 +95,7 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 	slog.Info("exiting")
 
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
-	err := looper.Run(func(ctx context.Context) error {
+	looper.Run(func(ctx context.Context) error {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
 			// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
@@ -128,7 +135,7 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, looper
 		slog.Log(ctx, slog.LevelInfo, "Sync successful")
 
 		return nil
-	})
+	}) // main loop end
 
 	if err != nil {
 		return fmt.Errorf("failed to sync from exporter: %w", err)
