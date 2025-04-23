@@ -63,6 +63,19 @@ func Test_isApiExportReady(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to check whether exporter is export ready")
+	})
+	t.Run("should return error json parsing error", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{banane`), nil)
+
+		// when
+		_, err := isApiExportReady(testCtx, "server.fqdn", exportApiClient)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to parse export mode response")
 	})
 }
 
