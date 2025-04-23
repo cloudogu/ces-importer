@@ -18,7 +18,6 @@ import (
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
-	"github.com/cloudogu/ces-importer/sync"
 )
 
 var hostProtocolScheme = "https://"
@@ -164,25 +163,22 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 
 func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
 	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
-	if true {
-		return nil
-	}
 
-	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
-		// TODO in upcoming feature: Interpret the actual target data from the exporter API
-		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
-			return "your exporterAPIResult here", "and here", "and here"
-		}(dogu)
-
-		syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
-
-		if err := syncer.Sync(exporterSource, importerDestination); err != nil {
-			// TODO: is this error recoverable? If so, log the error and continue
-			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
-		}
-		slog.Log(ctx, slog.LevelInfo, "Syncing for dogu %s successful")
-	}
+	//for _, dogu := range systemInfo.Dogus {
+	//	slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
+	//	// TODO in upcoming feature: Interpret the actual target data from the exporter API
+	//	exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
+	//		return "your exporterAPIResult here", "and here", "and here"
+	//	}(dogu)
+	//
+	//	syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	//
+	//	if err := syncer.Sync(exporterSource, importerDestination); err != nil {
+	//		// TODO: is this error recoverable? If so, log the error and continue
+	//		return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
+	//	}
+	//	slog.Log(ctx, slog.LevelInfo, "Syncing for dogu %s successful")
+	//}
 	return nil
 }
 
