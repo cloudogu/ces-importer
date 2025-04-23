@@ -10,7 +10,7 @@ const (
 const (
 	// EndpointExportMode contains the endpoint which returns data on the readiness of the exporter system.
 	EndpointExportMode = "/export/mode"
-	// contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
+	// EndpointSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
 	EndpointSystemInfo = "/system-info"
 )
 
@@ -49,11 +49,11 @@ type Component struct {
 // SystemInfo contains data on vital data on the exporter side.
 type SystemInfo struct {
 	// FQDN contains the DNS name of the exporter systeḿ.
-	FQDN string
+	FQDN string `json:"fqdn"`
 	// IsMultinode indicates whether the exporter system is a classic CES or a multinode CES instance.
-	IsMultinode bool
+	IsMultinode bool `json:"isMultinode"`
 	// Dogus contains data on all installed dogus on the exporter side.
-	Dogus []Dogu
+	Dogus []Dogu `json:"dogus"`
 	// Components contain data on all installed components on the exporter side.
-	Components []Component
+	Components []Component `json:"components"`
 }

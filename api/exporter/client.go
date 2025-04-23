@@ -34,7 +34,7 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
 	}
 
-	request.WithContext(ctx)
+	request = request.WithContext(ctx)
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)
@@ -53,6 +53,6 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, "Successfully called %s with response %#v", responseMsg)
-	return result, nil
+	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
+	return responseMsg, nil
 }

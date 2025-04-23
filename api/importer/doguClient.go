@@ -23,20 +23,6 @@ type clientSet interface {
 	kubernetes.Interface
 }
 
-// DoguStopper provides functions to stop a running dogu.
-type DoguStopper interface {
-	// StopDogu stopps the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
-	// condition except the dogu is already stopped.
-	StopDogu(ctx context.Context, dogu exporter.Dogu) error
-}
-
-// DoguStarter provides functions to start a stopped dogu.
-type DoguStarter interface {
-	// StartDogu starts the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
-	// condition except when the dogu is stopped.
-	StartDogu(ctx context.Context, dogu exporter.Dogu) error
-}
-
 type doguClient struct {
 	k8sClientSet clientSet
 	Namespace    string
@@ -106,8 +92,8 @@ func (dc *doguClient) scaleDeployment(ctx context.Context, deployName string, ne
 		Duration: 1500 * time.Millisecond,
 		Factor:   1.5,
 		Jitter:   0,
-		Steps:    9999,
-		Cap:      30 * time.Second,
+		Steps:    3,
+		Cap:      5 * time.Second,
 	}
 
 	var currentDeployment *v1.Deployment
