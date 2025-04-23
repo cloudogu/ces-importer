@@ -23,19 +23,6 @@ import (
 
 var hostProtocolScheme = "https://"
 
-type looper interface {
-	// Run starts a function that runs for an undetermined time until it was stopped by Stop().
-	Run(jobClosure func(ctx context.Context) error)
-	// Stop stops the looper
-	Stop()
-}
-
-type exporterApiClient interface {
-	// DoGetRequest allows issuing HTTP requests towards the exporter API. The result will be a byte slice that must
-	// be parsed by the caller respectively.
-	DoGetRequest(ctx context.Context, url string) ([]byte, error)
-}
-
 func main() {
 	ctx := context.Background()
 
@@ -67,14 +54,16 @@ func main() {
 		panic(fmt.Errorf("failed to create k8s client: %w", err))
 	}
 
-	err = runMainLoop(ctx, config, cronLooper, exportApiCli, k8sClient)
+	doguStartStopper := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace)
+
+	err = runMainLoop(ctx, config, cronLooper, exportApiCli, doguStartStopper, doguStartStopper)
 	if err != nil {
 		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
 		os.Exit(1)
 	}
 }
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) error {
+func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) error {
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -91,12 +80,12 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, cronLo
 	slog.Info("exiting")
 
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
-	cronLooper.Run(createMainLoop(config, exportApiCli, k8sClient))
+	cronLooper.Run(createMainLoop(config, exportApiCli, doguStart, doguStop))
 
 	return nil
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, k8sClient kubernetes.Interface) func(ctx context.Context) error {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
@@ -120,7 +109,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return nil
 		}
 
-		err = deactivateImporterDogus(ctx, systemInfo, config, k8sClient)
+		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
 		if err != nil {
 			return err
 		}
@@ -130,7 +119,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return err
 		}
 
-		err = activateImporterDogus(ctx, systemInfo, config, k8sClient)
+		err = activateImporterDogus(ctx, systemInfo, doguStart)
 		if err != nil {
 			return err
 		}
@@ -141,11 +130,11 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 	}
 }
 
-func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
+func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStop doguStopper) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Deactivating dogu ", "doguName", dogu.Name)
 
-		err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StopDogu(ctx, dogu)
+		err := doguStop.StopDogu(ctx, dogu)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
 			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
@@ -155,14 +144,14 @@ func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInf
 	return nil
 }
 
-func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, k8sClient kubernetes.Interface) error {
+func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStart doguStarter) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Activating dogu", "doguName", dogu.Name)
 
-		err := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace).StartDogu(ctx, dogu)
+		err := doguStart.StartDogu(ctx, dogu)
 		if err != nil {
 			// this error does not seem recoverable because the dogu must be down to avoid copy data problems
-			return fmt.Errorf("failed to deactivate dogu %s in the importer: %w", dogu.Name, err)
+			return fmt.Errorf("failed to activate dogu %s in the importer: %w", dogu.Name, err)
 		}
 	}
 
@@ -170,6 +159,11 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 }
 
 func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
+	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
+	if true {
+		return nil
+	}
+
 	for _, dogu := range systemInfo.Dogus {
 		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
 		// TODO in upcoming feature: Interpret the actual target data from the exporter API

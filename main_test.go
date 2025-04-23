@@ -4,14 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cloudogu/ces-importer/api/exporter"
-	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/ptr"
+
+	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 var testCtx = context.Background()
@@ -100,34 +96,22 @@ func Test_fetchExporterSystemInfo(t *testing.T) {
 }
 
 func Test_deactivateImporterDogus(t *testing.T) {
-	const scaleDown int32 = 0
 	t.Run("should stop dogu", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleDown)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleDown,
-				ReadyReplicas: 1,
-			},
-		}
-
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
-
-		expectedDogus := []exporter.Dogu{{
+		jenkinsDogu := exporter.Dogu{
 			Name:    "official/jenkins",
 			Version: "2.492.3-4",
 			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
-		}}
+		}
+
+		expectedDogus := []exporter.Dogu{jenkinsDogu}
 		expectedComps := []exporter.Component{{
 			Name:    "k8s/k8s-dogu-operator",
 			Version: "3.5.0",
 		}}
+
+		stopper := NewMockdoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
 
 		inputInfo := &exporter.SystemInfo{
 			FQDN:        "server.fqdn",
@@ -136,54 +120,92 @@ func Test_deactivateImporterDogus(t *testing.T) {
 			Components:  expectedComps,
 		}
 
-		config := configuration.Configuration{
-			ExporterHost:              testFqdn,
-			ExporterSSHUser:           "root",
-			ExporterApiKey:            "my-key",
-			ImporterPrivateSSHKeyPath: "/something",
-			ImporterNamespace:         "ecosystem",
-			LogLevel:                  "INFO",
-			MigrationRegularCron:      "0,30 * * * * *",
-			MigrationFinalTimestamp:   "2025-something",
-		}
-
 		// when
-		err = deactivateImporterDogus(testCtx, inputInfo, config, clientSetMock)
+		err := deactivateImporterDogus(testCtx, inputInfo, stopper)
 
 		// then
 		require.NoError(t, err)
 	})
-}
-
-func Test_activateImporterDogus(t *testing.T) {
-	const scaleUp int32 = 1
-	t.Run("should stop dogu", func(t *testing.T) {
+	t.Run("should return with error", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleUp)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleUp,
-				ReadyReplicas: 0,
-			},
-		}
-
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
-
-		expectedDogus := []exporter.Dogu{{
+		jenkinsDogu := exporter.Dogu{
 			Name:    "official/jenkins",
 			Version: "2.492.3-4",
 			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
-		}}
+		}
+
+		expectedDogus := []exporter.Dogu{jenkinsDogu}
 		expectedComps := []exporter.Component{{
 			Name:    "k8s/k8s-dogu-operator",
 			Version: "3.5.0",
 		}}
+
+		stopper := NewMockdoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
+
+		inputInfo := &exporter.SystemInfo{
+			FQDN:        "server.fqdn",
+			IsMultinode: false,
+			Dogus:       expectedDogus,
+			Components:  expectedComps,
+		}
+
+		// when
+		err := deactivateImporterDogus(testCtx, inputInfo, stopper)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to deactivate dogu official/jenkins in the importer")
+	})
+}
+
+func Test_activateImporterDogus(t *testing.T) {
+	t.Run("should stop dogu", func(t *testing.T) {
+		// given
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		expectedDogus := []exporter.Dogu{jenkinsDogu}
+		expectedComps := []exporter.Component{{
+			Name:    "k8s/k8s-dogu-operator",
+			Version: "3.5.0",
+		}}
+
+		starter := NewMockdoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
+
+		inputInfo := &exporter.SystemInfo{
+			FQDN:        "server.fqdn",
+			IsMultinode: false,
+			Dogus:       expectedDogus,
+			Components:  expectedComps,
+		}
+
+		// when
+		err := activateImporterDogus(testCtx, inputInfo, starter)
+
+		// then
+		require.NoError(t, err)
+	})
+	t.Run("starting dogu should fail with error", func(t *testing.T) {
+		// given
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		expectedDogus := []exporter.Dogu{jenkinsDogu}
+		expectedComps := []exporter.Component{{
+			Name:    "k8s/k8s-dogu-operator",
+			Version: "3.5.0",
+		}}
+
+		starter := NewMockdoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
 		inputInfo := &exporter.SystemInfo{
 			FQDN:        "server.fqdn",
@@ -202,6 +224,18 @@ func Test_activateImporterDogus(t *testing.T) {
 			MigrationRegularCron:      "0,30 * * * * *",
 			MigrationFinalTimestamp:   "2025-something",
 		}
+		// when
+		err := activateImporterDogus(testCtx, inputInfo, starter)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
+	})
+}
+
+func Test_createMainLoop(t *testing.T) {
+	t.Run("should run the function successfully", func(t *testing.T) {
+		// given
 
 		// when
 		err = activateImporterDogus(testCtx, inputInfo, config, clientSetMock)
