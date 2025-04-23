@@ -478,15 +478,30 @@ func Test_configureLogger(t *testing.T) {
 	})
 }
 
-//func createTestLogHandler(t *testing.T, level slog.Level) (mockStdout bytes.Buffer, newLogger, origLogger *slog.Logger) {
-//	t.Helper()
-//
-//	origLogger = slog.Default()
-//
-//	opts := &slog.HandlerOptions{Level: level}
-//
-//	logHandler := slog.NewTextHandler(&mockStdout, opts)
-//
-//	logger := slog.New(logHandler)
-//	return mockStdout, logger, origLogger
-//}
+func Test_main(t *testing.T) {
+	t.Run("should panic on missing kube config", func(t *testing.T) {
+		// given
+		t.Setenv("LOG_LEVEL", "DEBUG")
+		t.Setenv("EXPORTER_HOST", "source.net")
+		t.Setenv("EXPORTER_SSH_USER", "root")
+		t.Setenv("EXPORTER_API_KEY", "example1-1234-5678-102938475")
+		t.Setenv("MIGRATION_REGULAR_SCHEDULE", "0 4 * * *")
+		t.Setenv("MIGRATION_FINAL_SCHEDULE", "2025-04-03 12:34:56Z")
+		t.Setenv("IMPORTER_NAMESPACE", "ecosystem")
+
+		defer func() {
+			if r := recover(); r != nil {
+				// then
+				castedErr := r.(error)
+				assert.ErrorContains(t, castedErr, "failed to read kube config: invalid configuration")
+			}
+		}()
+
+		// when
+		main()
+
+		// we should never arrive here
+		t.FailNow()
+
+	})
+}
