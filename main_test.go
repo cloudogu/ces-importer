@@ -504,4 +504,23 @@ func Test_main(t *testing.T) {
 		t.FailNow()
 
 	})
+	t.Run("should panic on missing config variables", func(t *testing.T) {
+		// given
+		// no env vars go here
+
+		defer func() {
+			if r := recover(); r != nil {
+				// then
+				castedErr := r.(error)
+				assert.ErrorContains(t, castedErr, "failed to read config:")
+			}
+		}()
+
+		// when
+		main()
+
+		// we should never arrive here
+		t.FailNow()
+
+	})
 }
