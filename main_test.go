@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/cloudogu/ces-importer/configuration"
@@ -14,6 +16,17 @@ import (
 var testCtx = context.Background()
 
 const testFqdn = "server.fqdn"
+
+var testConfig = configuration.Configuration{
+	ExporterHost:              testFqdn,
+	ExporterSSHUser:           "root",
+	ExporterApiKey:            "my-key",
+	ImporterPrivateSSHKeyPath: "/something",
+	ImporterNamespace:         "ecosystem",
+	LogLevel:                  "INFO",
+	MigrationRegularCron:      "0,30 * * * * *",
+	MigrationFinalTimestamp:   "2025-something",
+}
 
 func Test_isApiExportReady(t *testing.T) {
 	t.Run("should be ready", func(t *testing.T) {
@@ -227,17 +240,6 @@ func Test_activateImporterDogus(t *testing.T) {
 func Test_createMainLoop_int(t *testing.T) {
 	t.Run("should run the function successfully", func(t *testing.T) {
 		// given
-		config := configuration.Configuration{
-			ExporterHost:              testFqdn,
-			ExporterSSHUser:           "root",
-			ExporterApiKey:            "my-key",
-			ImporterPrivateSSHKeyPath: "/something",
-			ImporterNamespace:         "ecosystem",
-			LogLevel:                  "INFO",
-			MigrationRegularCron:      "0,30 * * * * *",
-			MigrationFinalTimestamp:   "2025-something",
-		}
-
 		exportApiClient := NewMockexporterApiClient(t)
 		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
@@ -256,9 +258,82 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
 
 		// when
-		err := createMainLoop(config, exportApiClient, starter, stopper)(testCtx)
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
 
 		// then
 		require.NoError(t, err)
+	})
+}
+
+func Test_logUsedConfig(t *testing.T) {
+	// given
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	var mockStdout bytes.Buffer
+	logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
+
+	// when
+	logUsedConfig(testCtx, testConfig)
+
+	// then
+	logOutput := mockStdout.String()
+	assert.Contains(t, logOutput, "                     ./////,                    ")
+	assert.Contains(t, logOutput, "                 ./////==//////,                ")
+	assert.Contains(t, logOutput, "                ////.  ___   ////.              ")
+	assert.Contains(t, logOutput, "         ,OO,. ////  ,////A,  */// ,OO,.        ")
+	assert.Contains(t, logOutput, "    ,/////////////*  */////*  *////////////A    ")
+	assert.Contains(t, logOutput, "   ////'        `VA.   '|'   .///'       '///*  ")
+	assert.Contains(t, logOutput, "  *///  .*///*,         |         .*//*,   ///* ")
+	assert.Contains(t, logOutput, "  (///  (//////)**--_./////_----*//////)   ///) ")
+	assert.Contains(t, logOutput, "   V///   '°°°°      (/////)      °°°°'   ////  ")
+	assert.Contains(t, logOutput, "    V/////(////////o. '°°°' ./////////(///(/'   ")
+	assert.Contains(t, logOutput, "       'V/(/////////////////////////////V'      ")
+	assert.Contains(t, logOutput, "ces-importer started using this configuration:")
+	assert.Contains(t, logOutput, `config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"my-key\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\"}"`)
+}
+
+func Test_configureLogger(t *testing.T) {
+	t.Run("should fallback to INFO on config error", func(t *testing.T) {
+		// given
+		brokenConfig := configuration.Configuration{LogLevel: "banana"}
+
+		// when
+		configureLogger(brokenConfig)
+
+		// then
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
+	})
+	t.Run("should set loglevel to ERROR", func(t *testing.T) {
+		// given
+		brokenConfig := configuration.Configuration{LogLevel: "ERROR"}
+
+		// when
+		configureLogger(brokenConfig)
+
+		// then
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
+	})
+	t.Run("should set loglevel to WARN", func(t *testing.T) {
+		// given
+		config := configuration.Configuration{LogLevel: "WARN"}
+
+		// when
+		configureLogger(config)
+
+		// then
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
+		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
+		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
 	})
 }
