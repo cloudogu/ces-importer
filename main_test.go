@@ -350,6 +350,57 @@ func Test_createMainLoop_int(t *testing.T) {
 		assert.Contains(t, logOutput, "level=ERROR msg=\"Failed to fetch the system info from the exporter")
 		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
 	})
+	t.Run("should fail on stopping a dogu", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := NewMockdoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
+
+		starter := NewMockdoguStarter(t)
+
+		// when
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to deactivate dogu official/jenkins in the importer")
+	})
+	t.Run("should fail on starting a dogu", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := NewMockdoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		starter := NewMockdoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
+
+		// when
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
+	})
 }
 
 func Test_logUsedConfig(t *testing.T) {
