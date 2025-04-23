@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
@@ -49,12 +49,13 @@ func main() {
 		panic(fmt.Errorf("failed to read kube config: %w", err))
 	}
 
-	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	doguCli, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
-		panic(fmt.Errorf("failed to create k8s client: %w", err))
+		panic(fmt.Errorf("failed to create dogu client: %w", err))
 	}
 
-	doguStartStopper := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace)
+	doguClient := doguCli.Dogus(config.ImporterNamespace)
+	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
 	err = runMainLoop(ctx, config, cronLooper, exportApiCli, doguStartStopper, doguStartStopper)
 	if err != nil {

@@ -7,50 +7,33 @@ import (
 	"testing"
 	"time"
 
+	v2 "github.com/cloudogu/k8s-dogu-operator/v2/api/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 var testCtx, _ = context.WithTimeout(context.Background(), 1*time.Second)
 var gibiByte int64 = 1024 * 1024 * 1024
-var jenkinsK8sLabels = map[string]string{"app": "ces", "dogu.name": "jenkins"}
-
-const (
-	scaleUp   int32 = 1
-	scaleDown int32 = 0
-)
+var jenkinsDoguNotFoundErr = errors.NewNotFound(schema.GroupResource{Group: "k8s.cloudogu.com", Resource: "dogu/v2"}, "jenkins")
 
 func TestNewDoguDeploymentClient(t *testing.T) {
-	client := NewDoguDeploymentClient(nil, "ecosystem")
+	client := NewDoguDeploymentClient(nil)
 
 	require.NotNil(t, client)
 }
 
 func Test_doguClient_StopDogu(t *testing.T) {
-	t.Run("should scale down the given dogu deployment to zero", func(t *testing.T) {
+	t.Run("should stop the given dogu", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-				Labels:    jenkinsK8sLabels,
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleUp)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleUp,
-				ReadyReplicas: 0,
-			},
-		}
-
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
+		v2DoguJenkins := &v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "jenkins",
+			Stopped: false,
+		}}
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -59,33 +42,27 @@ func Test_doguClient_StopDogu(t *testing.T) {
 				SizeInBytes: 2 * gibiByte,
 			},
 		}
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, v2DoguJenkins, mock.Anything, mock.Anything).Return(v2DoguJenkins, nil)
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		sut := &doguClient{doguCli: doguCli}
 
 		// when
-		err = sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu)
 
 		// then
 		require.NoError(t, err)
 	})
 	t.Run("should return without error when dogu is already stopped", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-				Labels:    jenkinsK8sLabels,
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleDown)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleDown,
-				ReadyReplicas: 1,
-			},
-		}
+		v2DoguJenkins := &v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "jenkins",
+			Stopped: true,
+		}}
 
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -95,17 +72,18 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		sut := &doguClient{doguCli}
 
 		// when
-		err = sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu)
 
 		// then
 		require.NoError(t, err)
 	})
 	t.Run("should return without error but log warning when dogu was removed in the meantime", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(nil, jenkinsDoguNotFoundErr)
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -115,7 +93,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		sut := &doguClient{doguCli}
 
 		opts := &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -133,7 +111,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		require.NoError(t, err)
 		logOutput := mockStdout.String()
 		assert.Contains(t, logOutput, "WARN")
-		assert.Contains(t, logOutput, "Cannot scale down dogu deployment because it does not exist")
+		assert.Contains(t, logOutput, "Cannot start/stop dogu because it does not exist")
 		assert.Contains(t, logOutput, "jenkins")
 	})
 	t.Run("should return with error on misconfigured dogu name", func(t *testing.T) {
@@ -142,7 +120,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			Name: "missingnamespacedoguname",
 		}
 
-		sut := &doguClient{nil, "ecosystem"}
+		sut := &doguClient{nil}
 
 		// when
 		err := sut.StopDogu(testCtx, dogu)
@@ -154,24 +132,16 @@ func Test_doguClient_StopDogu(t *testing.T) {
 }
 
 func Test_doguClient_StartDogu(t *testing.T) {
-	t.Run("should scale up the given dogu deployment to one", func(t *testing.T) {
+	t.Run("should start the given dogu", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-				Labels:    jenkinsK8sLabels,
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleDown)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleDown,
-				ReadyReplicas: 1,
-			},
-		}
+		v2DoguJenkins := &v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "jenkins",
+			Stopped: true,
+		}}
 
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, v2DoguJenkins, mock.Anything, mock.Anything).Return(v2DoguJenkins, nil)
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -181,32 +151,23 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		sut := &doguClient{doguCli}
 
 		// when
-		err = sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu)
 
 		// then
 		require.NoError(t, err)
 	})
 	t.Run("should return without error when dogu is already started", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
-		inputDeploy := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jenkins",
-				Namespace: "ecosystem",
-				Labels:    jenkinsK8sLabels,
-			},
-			Spec: appsv1.DeploymentSpec{Replicas: ptr.To(scaleUp)},
-			Status: appsv1.DeploymentStatus{
-				Replicas:      scaleUp,
-				ReadyReplicas: 0,
-			},
-		}
+		v2DoguJenkins := &v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "jenkins",
+			Stopped: false,
+		}}
 
-		_, err := clientSetMock.AppsV1().Deployments("ecosystem").Create(testCtx, &inputDeploy, metav1.CreateOptions{})
-		require.NoError(t, err)
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -216,17 +177,16 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		sut := &doguClient{doguCli}
 
 		// when
-		err = sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu)
 
 		// then
 		require.NoError(t, err)
 	})
 	t.Run("should return without error but log warning when dogu was removed in the meantime", func(t *testing.T) {
 		// given
-		clientSetMock := fake.NewClientset()
 
 		dogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -236,7 +196,10 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{clientSetMock, "ecosystem"}
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(nil, jenkinsDoguNotFoundErr)
+
+		sut := &doguClient{doguCli}
 
 		opts := &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -254,7 +217,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		require.NoError(t, err)
 		logOutput := mockStdout.String()
 		assert.Contains(t, logOutput, "WARN")
-		assert.Contains(t, logOutput, "Cannot scale down dogu deployment because it does not exist")
+		assert.Contains(t, logOutput, "Cannot start/stop dogu because it does not exist")
 		assert.Contains(t, logOutput, "jenkins")
 	})
 	t.Run("should return with error on misconfigured dogu name", func(t *testing.T) {
@@ -263,7 +226,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			Name: "missingnamespacedoguname",
 		}
 
-		sut := &doguClient{nil, "ecosystem"}
+		sut := &doguClient{nil}
 
 		// when
 		err := sut.StartDogu(testCtx, dogu)
