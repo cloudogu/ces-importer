@@ -72,6 +72,9 @@ func NewSystemInfoProvider(namespace string) (*Provider, error) {
 	}, nil
 }
 
+// getSystemInfo
+//
+// gets the current systems system info about dogus and components
 func (s *Provider) getSystemInfo() (*systemInfo, error) {
 	// collect Dogus
 	dogus, err := s.doguLister.List(s.ctx, metav1.ListOptions{})

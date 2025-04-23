@@ -10,6 +10,7 @@ import (
 	"log/slog"
 )
 
+// client used for interacting with persistent volume claims
 type pvcClient interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*kubv1.PersistentVolumeClaim, error)
 	Update(ctx context.Context, persistentVolumeClaim *kubv1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*kubv1.PersistentVolumeClaim, error)
@@ -39,9 +40,13 @@ func NewValidator(conf configuration.Configuration, ctx context.Context, namespa
 
 // ValidateSystemInfo
 // validate that the importing system has the same configuration as the exporting system
+//
 // validates:
+//
 // - dogus exist in correct version
+//
 // - components exist in correct version
+//
 // - pvcs are large enough (a resize is attempted)
 func (v *Validator) ValidateSystemInfo() error {
 	slog.Info("Starting validation of system configuration")
@@ -54,7 +59,7 @@ func (v *Validator) ValidateSystemInfo() error {
 		return fmt.Errorf("could not get exporter system info: %s", err)
 	}
 	var result *multierror.Error
-	result = v.validateSystemInfo(*exSystemInfo, *imSystemInfo, v.systemInfoProvider.getPvcClient(), result)
+	result = v.doValidateSystemInfo(*exSystemInfo, *imSystemInfo, v.systemInfoProvider.getPvcClient(), result)
 	if result != nil {
 		return fmt.Errorf("could not validate system info: %w", result)
 	}
@@ -62,8 +67,19 @@ func (v *Validator) ValidateSystemInfo() error {
 	return nil
 }
 
-// returns a formatted multierror if any error occured
-func (v *Validator) validateSystemInfo(exInfo systemInfo, imInfo systemInfo, provider kubernetesClient, result *multierror.Error) *multierror.Error {
+// doValidateSystemInfo
+// validate that the importing system has the same configuration as the exporting system
+//
+// validates:
+//
+// - dogus exist in correct version
+//
+// - components exist in correct version
+//
+// - pvcs are large enough (a resize is attempted)
+//
+// returns a formatted multierror if any error occurred
+func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, provider kubernetesClient, result *multierror.Error) *multierror.Error {
 	//validate dogus
 	imDoguMap := make(map[string]dogu)
 	for _, d := range imInfo.Dogus {
