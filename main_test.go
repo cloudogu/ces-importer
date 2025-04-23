@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -214,6 +215,18 @@ func Test_activateImporterDogus(t *testing.T) {
 			Components:  expectedComps,
 		}
 
+		// when
+		err := activateImporterDogus(testCtx, inputInfo, starter)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
+	})
+}
+
+func Test_createMainLoop_int(t *testing.T) {
+	t.Run("should run the function successfully", func(t *testing.T) {
+		// given
 		config := configuration.Configuration{
 			ExporterHost:              testFqdn,
 			ExporterSSHUser:           "root",
@@ -224,21 +237,26 @@ func Test_activateImporterDogus(t *testing.T) {
 			MigrationRegularCron:      "0,30 * * * * *",
 			MigrationFinalTimestamp:   "2025-something",
 		}
+
+		exportApiClient := NewMockexporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := NewMockdoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		starter := NewMockdoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
+
 		// when
-		err := activateImporterDogus(testCtx, inputInfo, starter)
-
-		// then
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
-	})
-}
-
-func Test_createMainLoop(t *testing.T) {
-	t.Run("should run the function successfully", func(t *testing.T) {
-		// given
-
-		// when
-		err = activateImporterDogus(testCtx, inputInfo, config, clientSetMock)
+		err := createMainLoop(config, exportApiClient, starter, stopper)(testCtx)
 
 		// then
 		require.NoError(t, err)
