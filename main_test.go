@@ -263,17 +263,106 @@ func Test_createMainLoop_int(t *testing.T) {
 		// then
 		require.NoError(t, err)
 	})
+	t.Run("should error on the exporter export mode API call but return no error to recover for the next run", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return(nil, assert.AnError)
+
+		stopper := NewMockdoguStopper(t)
+		starter := NewMockdoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
+
+		// then
+		require.NoError(t, err)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=ERROR msg=\"Error while checking export sync readiness")
+		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
+	})
+	t.Run("should recover for the the next run when the exporter is not ready to export", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
+
+		stopper := NewMockdoguStopper(t)
+		starter := NewMockdoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
+
+		// then
+		require.NoError(t, err)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=INFO msg=\"Exporter does not seem to be ready. Waiting for the next run...")
+	})
+	t.Run("should error on the exporter system info API call but return nil to recover for the next run", func(t *testing.T) {
+		// given
+		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return(nil, assert.AnError)
+
+		stopper := NewMockdoguStopper(t)
+		starter := NewMockdoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
+
+		// then
+		require.NoError(t, err)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=ERROR msg=\"Failed to fetch the system info from the exporter")
+		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
+	})
 }
 
 func Test_logUsedConfig(t *testing.T) {
 	// given
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}
+	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
 	var mockStdout bytes.Buffer
 	logHandler := slog.NewTextHandler(&mockStdout, opts)
 
 	logger := slog.New(logHandler)
+	defer func() {
+		orig := slog.Default()
+		slog.SetDefault(orig)
+	}()
 	slog.SetDefault(logger)
 
 	// when
@@ -337,3 +426,16 @@ func Test_configureLogger(t *testing.T) {
 		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
 	})
 }
+
+//func createTestLogHandler(t *testing.T, level slog.Level) (mockStdout bytes.Buffer, newLogger, origLogger *slog.Logger) {
+//	t.Helper()
+//
+//	origLogger = slog.Default()
+//
+//	opts := &slog.HandlerOptions{Level: level}
+//
+//	logHandler := slog.NewTextHandler(&mockStdout, opts)
+//
+//	logger := slog.New(logHandler)
+//	return mockStdout, logger, origLogger
+//}
