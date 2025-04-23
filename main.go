@@ -73,16 +73,19 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, cronLo
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	<-quit
-	slog.Info("Shutdown Server ...")
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	defer cronLooper.Stop()
 
-	<-ctx.Done()
-	slog.Info("shutdown-timeout of 5 seconds reached")
-	slog.Info("exiting")
+	go func() {
+		<-quit
+		slog.Info("Shutdown Server ...")
+
+		<-ctx.Done()
+		cronLooper.Stop()
+		slog.Info("shutdown-timeout of 5 seconds reached")
+		slog.Info("exiting")
+	}()
 
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
 	cronLooper.Run(createMainLoop(config, exportApiCli, doguStart, doguStop))
