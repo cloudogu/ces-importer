@@ -3,6 +3,9 @@ module github.com/cloudogu/ces-importer
 go 1.24.2
 
 require (
+	github.com/adhocore/gronx v1.19.5
+	github.com/cloudogu/ces-commons-lib v0.2.0
+	github.com/cloudogu/k8s-dogu-operator/v2 v2.3.0
 	github.com/cloudogu/k8s-component-operator v1.8.0
 	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -38,6 +41,8 @@ require (
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/eapache/go-resiliency v1.7.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.5.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect

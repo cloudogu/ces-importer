@@ -4,35 +4,29 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
-	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/ptr"
 
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
+	doguV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/v2"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
-type clientSet interface {
-	kubernetes.Interface
+type DoguInterface interface {
+	ecoSystem.DoguInterface
 }
 
 type doguClient struct {
-	k8sClientSet clientSet
-	Namespace    string
+	doguCli DoguInterface
 }
 
 // NewDoguDeploymentClient creates a new client that operates on dogu deployments on the importer system.
-func NewDoguDeploymentClient(k8sClientSet clientSet, importerNamespace string) *doguClient {
+func NewDoguDeploymentClient(doguCli DoguInterface) *doguClient {
 	return &doguClient{
-		k8sClientSet: k8sClientSet,
-		Namespace:    importerNamespace,
+		doguCli: doguCli,
 	}
 }
 
@@ -45,9 +39,9 @@ func (dc *doguClient) StopDogu(ctx context.Context, dogu exporter.Dogu) error {
 
 	doguName := fullyQualifiedDoguName.SimpleName.String()
 
-	_, err = dc.scaleDeployment(ctx, doguName, 0)
+	err = dc.scaleDogu(ctx, doguName, true)
 	if err != nil {
-		return fmt.Errorf("failed to scale down dogu deployment for dogu %q: %w", doguName, err)
+		return fmt.Errorf("failed to stop dogu: %w", err)
 	}
 
 	return nil
@@ -62,74 +56,49 @@ func (dc *doguClient) StartDogu(ctx context.Context, dogu exporter.Dogu) error {
 
 	doguName := fullyQualifiedDoguName.SimpleName.String()
 
-	_, err = dc.scaleDeployment(ctx, doguName, 1)
+	err = dc.scaleDogu(ctx, doguName, false)
 	if err != nil {
-		return fmt.Errorf("failed to start dogu deployment for dogu %q: %w", doguName, err)
+		return fmt.Errorf("failed to start dogu: %w", err)
 	}
 
 	return nil
 }
 
-func (dc *doguClient) getDeploymentByName(ctx context.Context, simpleDeploymentName string) (found bool, deployment *v1.Deployment, err error) {
-	deployment, err = dc.k8sClientSet.
-		AppsV1().Deployments(dc.Namespace).
-		Get(ctx, simpleDeploymentName, metav1.GetOptions{})
+func (dc *doguClient) getDoguByName(ctx context.Context, simpleDoguName string) (found bool, dogu *doguV2.Dogu, err error) {
+	dogu, err = dc.doguCli.Get(ctx, simpleDoguName, metav1.GetOptions{})
 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil, nil
 		}
-		return false, nil, fmt.Errorf("failed to fetch deployment for dogu %q: %w", simpleDeploymentName, err)
+		return false, nil, fmt.Errorf("failed to fetch deployment for dogu %q: %w", simpleDoguName, err)
 	}
 
-	return true, deployment, nil
+	return true, dogu, nil
 }
 
-func (dc *doguClient) scaleDeployment(ctx context.Context, deployName string, newReplicas int32) (prevReplicas int32, err error) {
-	prevReplicas = -1
-
-	conflictBackoff := wait.Backoff{
-		Duration: 1500 * time.Millisecond,
-		Factor:   1.5,
-		Jitter:   0,
-		Steps:    3,
-		Cap:      5 * time.Second,
-	}
-
-	var currentDeployment *v1.Deployment
-	err = retry.RetryOnConflict(conflictBackoff, func() error {
-		found := false
-		found, currentDeployment, err = dc.getDeploymentByName(ctx, deployName)
-		if err != nil {
-			return fmt.Errorf("failed to get deployment %q for scaling update: %w", deployName, err)
-		}
-
-		if !found {
-			slog.Log(ctx, slog.LevelWarn, "Cannot scale down dogu deployment because it does not exist", "dogu", deployName)
+func (dc *doguClient) scaleDogu(ctx context.Context, doguName string, shouldStop bool) error {
+	dogu, err := dc.doguCli.Get(ctx, doguName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			slog.Log(ctx, slog.LevelWarn, "Cannot start/stop dogu because it does not exist", "dogu", doguName)
 			return nil // if there is no longer a deployment, there is no longer a problem ¯\_(ツ)_/¯
 		}
-
-		prevReplicas = *currentDeployment.Spec.Replicas
-
-		newReplicasPtr := ptr.To(newReplicas)
-		if *currentDeployment.Spec.Replicas == *newReplicasPtr {
-			slog.Log(ctx, slog.LevelWarn, "Could not scale deployment because it already was at the target value", "deployment", deployName, "replicas", newReplicas)
-			return nil
-		}
-
-		currentDeployment.Spec.Replicas = newReplicasPtr
-
-		_, err = dc.k8sClientSet.AppsV1().Deployments(dc.Namespace).Update(ctx, currentDeployment, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to update deployment %q for scaling: %w", deployName, err)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return prevReplicas, err
+		return fmt.Errorf("failed to get dogu %s: %w", doguName, err)
 	}
 
-	return prevReplicas, nil
+	if dogu.Spec.Stopped == shouldStop {
+		return nil
+	}
+
+	_, err = dc.doguCli.UpdateSpecWithRetry(ctx, dogu, func(spec doguV2.DoguSpec) doguV2.DoguSpec {
+		spec.Stopped = shouldStop
+		return spec
+	}, metav1.UpdateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("failed to update dogu %s (shouldStop: %t): %w", doguName, shouldStop, err)
+	}
+
+	return nil
 }

@@ -80,3 +80,4 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 10
+      serviceAccountName: {{ include "ces-importer.name" . }}-main-manager

@@ -5,17 +5,11 @@ metadata:
   labels:
     {{- include "ces-importer.labels" . | nindent 4 }}
 rules:
-  # starting + stopping of dogus
+  # allow starting + stopping of dogus
 - apiGroups:
-    - apps
+    - k8s.cloudogu.com/v2
   resources:
-    - deployments
+    - dogus
   verbs:
     - get
-    - update
-- apiGroups:
-    - apps
-  resources:
-    - deployments/scale
-  verbs:
     - update
