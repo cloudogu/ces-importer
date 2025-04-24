@@ -64,19 +64,6 @@ func (dc *doguClient) StartDogu(ctx context.Context, dogu exporter.Dogu) error {
 	return nil
 }
 
-func (dc *doguClient) getDoguByName(ctx context.Context, simpleDoguName string) (found bool, dogu *doguV2.Dogu, err error) {
-	dogu, err = dc.doguCli.Get(ctx, simpleDoguName, metav1.GetOptions{})
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil, nil
-		}
-		return false, nil, fmt.Errorf("failed to fetch deployment for dogu %q: %w", simpleDoguName, err)
-	}
-
-	return true, dogu, nil
-}
-
 func (dc *doguClient) scaleDogu(ctx context.Context, doguName string, shouldStop bool) error {
 	dogu, err := dc.doguCli.Get(ctx, doguName, metav1.GetOptions{})
 	if err != nil {
