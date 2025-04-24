@@ -61,14 +61,20 @@ func main() {
 
 	doguStartStopper := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace)
 
-	err = runMainLoop(ctx, config, cronLooper, exportApiCli, doguStartStopper, doguStartStopper)
+	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
+	if err != nil {
+		panic(fmt.Errorf("failed to create system info provider: %w", err))
+	}
+	validator := systeminfo.NewValidator(config, ctx, config.ImporterNamespace, provider)
+
+	err = runMainLoop(ctx, config, cronLooper, exportApiCli, doguStartStopper, doguStartStopper, validator)
 	if err != nil {
 		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
 		os.Exit(1)
 	}
 }
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) error {
+func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, sysInfoValidator systemInfoValidator) error {
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -85,12 +91,16 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, cronLo
 	slog.Info("exiting")
 
 	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
-	cronLooper.Run(createMainLoop(config, exportApiCli, doguStart, doguStop))
+	cronLooper.Run(createMainLoop(config, exportApiCli, doguStart, doguStop, sysInfoValidator))
 
 	return nil
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) func(ctx context.Context) error {
+type systemInfoValidator interface {
+	ValidateSystemInfo() error
+}
+
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, sysInfoValidator systemInfoValidator) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
@@ -114,7 +124,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return nil
 		}
 
-		err = validateSystemInfo(ctx, config, defaultNamespace)
+		err = sysInfoValidator.ValidateSystemInfo()
 		if err != nil {
 			return err
 		}
@@ -224,19 +234,6 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 	}
 
 	return &systemInfo, nil
-}
-
-func validateSystemInfo(ctx context.Context, conf configuration.Configuration, namespace string) error {
-	provider, err := systeminfo.NewSystemInfoProvider(namespace)
-	if err != nil {
-		return err
-	}
-	validator := systeminfo.NewValidator(conf, ctx, namespace, provider)
-	err = validator.ValidateSystemInfo()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func logUsedConfig(ctx context.Context, config configuration.Configuration) {

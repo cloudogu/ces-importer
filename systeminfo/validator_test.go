@@ -14,7 +14,7 @@ import (
 
 func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
-		p := NewMocksystemInfoProvider(t)
+		p := newMockSystemInfoProvider(t)
 		n := "namespace"
 		v := NewValidator(configuration.Configuration{}, context.Background(), n, p)
 		require.Equal(t, v.conf, configuration.Configuration{})
@@ -43,11 +43,11 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&sysInfo, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&sysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
 
-		client := NewMockkubernetesClient(t)
+		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
@@ -95,10 +95,10 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
-		client := NewMockkubernetesClient(t)
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
@@ -138,10 +138,10 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
-		client := NewMockkubernetesClient(t)
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
@@ -184,10 +184,10 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 			Components: []component{},
 		}
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
-		client := NewMockkubernetesClient(t)
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
@@ -235,10 +235,10 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
-		client := NewMockkubernetesClient(t)
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
@@ -253,8 +253,8 @@ func TestValidateSystemInfo(t *testing.T) {
 
 	t.Run("should return error getting importer system info", func(t *testing.T) {
 
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(nil, fmt.Errorf("testerror"))
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -268,9 +268,9 @@ func TestValidateSystemInfo(t *testing.T) {
 
 	t.Run("should return error getting exporter system info", func(t *testing.T) {
 
-		s := NewMocksystemInfoProvider(t)
-		s.EXPECT().GetSystemInfo().Return(&systemInfo{}, nil)
-		s.EXPECT().GetExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo().Return(&systemInfo{}, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -338,7 +338,7 @@ func TestUpdatePVC(t *testing.T) {
 			},
 			Status: kubv1.PersistentVolumeClaimStatus{},
 		}
-		pvcClient := NewMockpvcClient(t)
+		pvcClient := newMockPvcClient(t)
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		pvcClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 		var result *multierror.Error
@@ -366,7 +366,7 @@ func TestUpdatePVC(t *testing.T) {
 				SizeInBytes: 3,
 			},
 		}
-		pvcClient := NewMockpvcClient(t)
+		pvcClient := newMockPvcClient(t)
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 		var result *multierror.Error
 		result = v.updatePVC(exDogu, imDogu, pvcClient, result)
@@ -393,7 +393,7 @@ func TestUpdatePVC(t *testing.T) {
 				SizeInBytes: 3,
 			},
 		}
-		pvcClient := NewMockpvcClient(t)
+		pvcClient := newMockPvcClient(t)
 		pvc := &kubv1.PersistentVolumeClaim{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},

@@ -15,7 +15,7 @@ import (
 func TestGetSystemInfo(t *testing.T) {
 	t.Run("should return with no error", func(t *testing.T) {
 		// dogus
-		dogus := NewMockDoguInterface(t)
+		dogus := newMockDoguLister(t)
 		doguList := doguv2.DoguList{
 			TypeMeta: metav1.TypeMeta{},
 			ListMeta: metav1.ListMeta{},
@@ -37,7 +37,7 @@ func TestGetSystemInfo(t *testing.T) {
 		dogus.EXPECT().List(mock.Anything, mock.Anything).Return(&doguList, nil)
 
 		// components
-		components := NewMockComponentLister(t)
+		components := newMockComponentLister(t)
 		componentList := componentv1.ComponentList{
 			TypeMeta: metav1.TypeMeta{},
 			ListMeta: metav1.ListMeta{},
@@ -67,7 +67,7 @@ func TestGetSystemInfo(t *testing.T) {
 	})
 	t.Run("should not be able to get dogus", func(t *testing.T) {
 		// dogus
-		dogus := NewMockDoguInterface(t)
+		dogus := newMockDoguLister(t)
 		dogus.EXPECT().List(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("error"))
 
 		mockProvider := Provider{
@@ -81,7 +81,7 @@ func TestGetSystemInfo(t *testing.T) {
 	})
 	t.Run("should not be able to get components", func(t *testing.T) {
 		// dogus
-		dogus := NewMockDoguInterface(t)
+		dogus := newMockDoguLister(t)
 		doguList := doguv2.DoguList{
 			TypeMeta: metav1.TypeMeta{},
 			ListMeta: metav1.ListMeta{},
@@ -103,7 +103,7 @@ func TestGetSystemInfo(t *testing.T) {
 		dogus.EXPECT().List(mock.Anything, mock.Anything).Return(&doguList, nil)
 
 		// components
-		components := NewMockComponentLister(t)
+		components := newMockComponentLister(t)
 		components.EXPECT().List(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("error"))
 
 		mockProvider := Provider{
@@ -141,7 +141,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		apiCli := NewMockexporterApiClient(t)
+		apiCli := newMockExporterApiClient(t)
 		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(json.Marshal(sInfo))
 
 		p := Provider{
@@ -160,7 +160,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should get an error on http request", func(t *testing.T) {
-		apiCli := NewMockexporterApiClient(t)
+		apiCli := newMockExporterApiClient(t)
 		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		p := Provider{
@@ -178,7 +178,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 
 	t.Run("should get an error on json unmarshall", func(t *testing.T) {
 		b := []byte("{")
-		apiCli := NewMockexporterApiClient(t)
+		apiCli := newMockExporterApiClient(t)
 		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(b, nil)
 
 		p := Provider{
@@ -197,7 +197,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 
 func TestGetPvcClient(t *testing.T) {
 	t.Run("should return pvc client", func(t *testing.T) {
-		k := NewMockkubernetesClient(t)
+		k := newMockKubernetesClient(t)
 		p := Provider{
 			componentLister: nil,
 			doguLister:      nil,
