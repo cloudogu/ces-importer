@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 )
 
 type requestExecuter interface {
@@ -28,11 +27,6 @@ func NewClient(apiKey string, httpClient requestExecuter) *client {
 // errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 // provided API key.
 func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
-	_, err = url.Parse(exporterUrl)
-	if err != nil {
-		return result, fmt.Errorf("exporter URL %s appears to be invalid (please check ces-importer config values): %w", exporterUrl, err)
-	}
-
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
