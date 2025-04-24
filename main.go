@@ -21,10 +21,6 @@ import (
 	"github.com/cloudogu/ces-importer/cron"
 )
 
-const (
-	defaultNamespace = "ecosystem"
-)
-
 var hostProtocolScheme = "https://"
 
 func main() {
@@ -129,7 +125,10 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 
 		err = sysInfoValidator.ValidateSystemInfo()
 		if err != nil {
-			return err
+			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
+			// TODO should this break the main loop or not?
+			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+			return nil
 		}
 
 		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
