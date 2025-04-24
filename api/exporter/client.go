@@ -9,14 +9,18 @@ import (
 	"net/url"
 )
 
+type requestExecuter interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type client struct {
 	apiKey     string
-	httpClient http.Client
+	httpClient requestExecuter
 }
 
 // NewClient creates a client for easy API access with the given HTTP client. This allows for generically modifying the
 // HTTP client f. i. adding proxy settings.
-func NewClient(apiKey string, httpClient http.Client) *client {
+func NewClient(apiKey string, httpClient requestExecuter) *client {
 	return &client{apiKey: apiKey, httpClient: httpClient}
 }
 

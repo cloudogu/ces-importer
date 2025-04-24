@@ -16,7 +16,7 @@ const testApiKey = "testApiKey"
 const testResponse = `This was a triumph. I'm making a note here "huge success".'`
 
 func Test_client_DoGetRequest(t *testing.T) {
-	httpClient := http.Client{}
+	httpClient := &http.Client{}
 
 	t.Run("should successfully execute GET request", func(t *testing.T) {
 		// given

@@ -40,7 +40,7 @@ func main() {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", cronLikeExpr, err))
 	}
 
-	httpClient := http.Client{}
+	httpClient := &http.Client{}
 	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
 
 	k8sRestConfig, err := ctrl.GetConfig()
