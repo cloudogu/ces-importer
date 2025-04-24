@@ -33,12 +33,11 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 		return result, fmt.Errorf("exporter URL %s appears to be invalid (please check ces-importer config values): %w", exporterUrl, err)
 	}
 
-	request, err := http.NewRequest(http.MethodGet, exporterUrl, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
 	}
 
-	request = request.WithContext(ctx)
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)
@@ -50,11 +49,6 @@ func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 	responseMsg, err := io.ReadAll(response.Body)
 	if err != nil {
 		return result, fmt.Errorf("failed to read response body for %s", exporterUrl)
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
-			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
 	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
