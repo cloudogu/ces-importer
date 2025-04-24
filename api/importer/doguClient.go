@@ -9,14 +9,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
 	doguV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/v2"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 type DoguInterface interface {
-	ecoSystem.DoguInterface
+	// Get returns a single dogu CR if it exists in the k8s cluster.
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguV2.Dogu, error)
+	// UpdateSpecWithRetry tries to update the provided dogu with the given update function and returns the updated
+	// copy. If a conflict happens, the update will be retried with the same function.
+	UpdateSpecWithRetry(ctx context.Context, dogu *doguV2.Dogu, updateFunc func(spec doguV2.DoguSpec) doguV2.DoguSpec, opts metav1.UpdateOptions) (*doguV2.Dogu, error)
 }
 
 type doguClient struct {
@@ -68,7 +71,7 @@ func (dc *doguClient) scaleDogu(ctx context.Context, doguName string, shouldStop
 	dogu, err := dc.doguCli.Get(ctx, doguName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			slog.Log(ctx, slog.LevelWarn, "Cannot start/stop dogu because it does not exist", "dogu", doguName)
+			slog.Warn("Cannot start/stop dogu because it does not exist", "dogu", doguName)
 			return nil // if there is no longer a deployment, there is no longer a problem ¯\_(ツ)_/¯
 		}
 		return fmt.Errorf("failed to get dogu %s: %w", doguName, err)
