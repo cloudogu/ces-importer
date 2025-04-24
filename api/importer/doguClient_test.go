@@ -127,7 +127,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to stop dogu: dogu name needs to be in the form 'namespace/dogu' but is 'missingnamespacedoguname'")
+		assert.ErrorContains(t, err, "dogu name needs to be in the form 'namespace/dogu' but is 'missingnamespacedoguname'")
 	})
 }
 
