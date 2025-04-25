@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"k8s.io/client-go/rest"
 	"log/slog"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	"github.com/cloudogu/ces-importer/configuration"
@@ -503,6 +505,15 @@ func Test_configureLogger(t *testing.T) {
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.
 func Test_main(t *testing.T) {
 	t.Run("should panic on missing kube config", func(t *testing.T) {
+		// override default controller method to retrieve a kube config
+		oldGetConfigDelegate := ctrl.GetConfig
+		defer func() {
+			ctrl.GetConfig = oldGetConfigDelegate
+		}()
+		ctrl.GetConfig = func() (*rest.Config, error) {
+			return &rest.Config{}, assert.AnError
+		}
+
 		// given
 		t.Setenv("LOG_LEVEL", "DEBUG")
 		t.Setenv("EXPORTER_HOST", "source.net")
@@ -516,7 +527,8 @@ func Test_main(t *testing.T) {
 			if r := recover(); r != nil {
 				// then
 				castedErr := r.(error)
-				assert.ErrorContains(t, castedErr, "failed to read kube config: invalid configuration")
+				assert.ErrorContains(t, castedErr, "failed to read kube config")
+				assert.ErrorContains(t, castedErr, assert.AnError.Error())
 			}
 		}()
 
