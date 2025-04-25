@@ -62,7 +62,7 @@ spec:
             - name: exporter-ssh-private-key-volume
               readOnly: true
               mountPath: "{{ include "ces-importer.sshPrivateKeyPath" . }}"
-          image: {{ .Values.main.image }}
+          image: "{{ .Values.main.image.registry }}/{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main
           resources:

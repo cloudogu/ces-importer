@@ -1,15 +1,37 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "ces-importer.name" . }}-main-role
+  name: {{ include "ces-importer.name" . }}-main-manager-role
   labels:
     {{- include "ces-importer.labels" . | nindent 4 }}
 rules:
   # allow starting + stopping of dogus
 - apiGroups:
-    - k8s.cloudogu.com/v2
+    - k8s.cloudogu.com
   resources:
     - dogus
   verbs:
     - get
     - update
+  # allow listing of dogus for systeminfo comparison
+- apiGroups:
+    - k8s.cloudogu.com
+  resources:
+    - dogus
+  verbs:
+    - list
+  # allow for dogu resizing
+- apiGroups:
+    - v1
+  resources:
+    - pvc
+  verbs:
+    - get
+    - update
+  # allow for systeminfo comparison
+- apiGroups:
+  - k8s.cloudogu.com
+  resources:
+    - components
+  verbs:
+    - list
