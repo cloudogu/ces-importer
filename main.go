@@ -9,15 +9,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
+	"github.com/cloudogu/ces-importer/sync"
 )
 
 var hostProtocolScheme = "https://"
@@ -33,12 +32,6 @@ func main() {
 	configureLogger(config)
 
 	logUsedConfig(ctx, config)
-
-	cronLikeExpr := "0,30 * * * * *"
-	cronLooper, err := cron.New(cronLikeExpr) // gronx supports 6 cron-style digits for seconds while regular cron only supports 5 // digits.
-	if err != nil {
-		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", cronLikeExpr, err))
-	}
 
 	httpClient := &http.Client{}
 	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
@@ -56,21 +49,17 @@ func main() {
 	doguClient := doguCli.Dogus(config.ImporterNamespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
-	err = runMainLoop(ctx, config, cronLooper, exportApiCli, doguStartStopper, doguStartStopper)
-	if err != nil {
-		slog.Error("ces-importer main process restarts now because of an error", "error", err.Error())
-		os.Exit(1)
-	}
-}
+	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
 
-func runMainLoop(ctx context.Context, config configuration.Configuration, cronLooper looper, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) error {
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer)
+	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
+	if err != nil {
+		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
+	}
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 
 	go func() {
 		<-quit
@@ -78,64 +67,61 @@ func runMainLoop(ctx context.Context, config configuration.Configuration, cronLo
 
 		<-ctx.Done()
 		cronLooper.Stop()
-		slog.Info("shutdown-timeout of 5 seconds reached")
-		slog.Info("exiting")
+		slog.Warn("shutdown reached: exiting")
 	}()
 
-	slog.Log(ctx, slog.LevelInfo, "Starting main loop")
-	cronLooper.Run(createMainLoop(config, exportApiCli, doguStart, doguStop))
-
-	return nil
+	slog.Info("Starting main loop")
+	cronLooper.Run()
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer) func(ctx context.Context) (int, error) {
+	return func(ctx context.Context) (int, error) {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
 			// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
-			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
-			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
-			return nil
+			slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
+			slog.Info("Waiting for the next run...")
+			return 0, nil
 		}
 
 		if !isExporterSyncReady {
 			// This condition is recoverable, but it is still unclear when the ready status will be triggered
-			slog.Log(ctx, slog.LevelInfo, "Exporter does not seem to be ready. Waiting for the next run...")
-			return nil // continue to the next main loop iteration
+			slog.Info("Exporter does not seem to be ready. Waiting for the next run...")
+			return 0, nil // continue to the next main loop iteration
 		}
 
 		systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
 			// this error is recoverable, the exporter system API might be down, or the API server errs
-			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
-			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
-			return nil
+			slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
+			slog.Info("Waiting for the next run...")
+			return 0, nil
 		}
 
 		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
 		if err != nil {
-			return err
+			return 1, err
 		}
 
-		err = syncDogus(ctx, systemInfo, config)
+		err = syncDogus(ctx, systemInfo, config, syncer)
 		if err != nil {
-			return err
+			return 2, err
 		}
 
 		err = activateImporterDogus(ctx, systemInfo, doguStart)
 		if err != nil {
-			return err
+			return 3, err
 		}
 
-		slog.Log(ctx, slog.LevelInfo, "Sync successful")
+		slog.Info("Sync successful")
 
-		return nil
+		return 0, nil
 	}
 }
 
 func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStop doguStopper) error {
 	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Deactivating dogu ", "doguName", dogu.Name)
+		slog.Info("Deactivating dogu ", "doguName", dogu.Name)
 
 		err := doguStop.StopDogu(ctx, dogu)
 		if err != nil {
@@ -149,7 +135,7 @@ func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInf
 
 func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStart doguStarter) error {
 	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Activating dogu", "doguName", dogu.Name)
+		slog.Info("Activating dogu", "doguName", dogu.Name)
 
 		err := doguStart.StartDogu(ctx, dogu)
 		if err != nil {
@@ -161,7 +147,7 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	return nil
 }
 
-func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, _ doguVolumeSyncer) error {
 	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
 
 	//for _, dogu := range systemInfo.Dogus {
@@ -217,19 +203,19 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 }
 
 func logUsedConfig(ctx context.Context, config configuration.Configuration) {
-	slog.Log(ctx, slog.LevelInfo, "                     ./////,                    ")
-	slog.Log(ctx, slog.LevelInfo, "                 ./////==//////,                ")
-	slog.Log(ctx, slog.LevelInfo, "                ////.  ___   ////.              ")
-	slog.Log(ctx, slog.LevelInfo, "         ,OO,. ////  ,////A,  */// ,OO,.        ")
-	slog.Log(ctx, slog.LevelInfo, "    ,/////////////*  */////*  *////////////A    ")
-	slog.Log(ctx, slog.LevelInfo, "   ////'        `VA.   '|'   .///'       '///*  ")
-	slog.Log(ctx, slog.LevelInfo, "  *///  .*///*,         |         .*//*,   ///* ")
-	slog.Log(ctx, slog.LevelInfo, "  (///  (//////)**--_./////_----*//////)   ///) ")
-	slog.Log(ctx, slog.LevelInfo, "   V///   '°°°°      (/////)      °°°°'   ////  ")
-	slog.Log(ctx, slog.LevelInfo, "    V/////(////////o. '°°°' ./////////(///(/'   ")
-	slog.Log(ctx, slog.LevelInfo, "       'V/(/////////////////////////////V'      ")
+	slog.Info("                     ./////,                    ")
+	slog.Info("                 ./////==//////,                ")
+	slog.Info("                ////.  ___   ////.              ")
+	slog.Info("         ,OO,. ////  ,////A,  */// ,OO,.        ")
+	slog.Info("    ,/////////////*  */////*  *////////////A    ")
+	slog.Info("   ////'        `VA.   '|'   .///'       '///*  ")
+	slog.Info("  *///  .*///*,         |         .*//*,   ///* ")
+	slog.Info("  (///  (//////)**--_./////_----*//////)   ///) ")
+	slog.Info("   V///   '°°°°      (/////)      °°°°'   ////  ")
+	slog.Info("    V/////(////////o. '°°°' ./////////(///(/'   ")
+	slog.Info("       'V/(/////////////////////////////V'      ")
 
-	slog.Log(ctx, slog.LevelInfo, "ces-importer started using this configuration:",
+	slog.Info("ces-importer started using this configuration:",
 		"config", fmt.Sprintf("%#v", config),
 	)
 }
