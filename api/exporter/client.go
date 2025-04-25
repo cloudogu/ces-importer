@@ -6,17 +6,21 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 )
+
+type requestExecuter interface {
+	// Do executes the given HTTP request.
+	Do(req *http.Request) (*http.Response, error)
+}
 
 type client struct {
 	apiKey     string
-	httpClient http.Client
+	httpClient requestExecuter
 }
 
 // NewClient creates a client for easy API access with the given HTTP client. This allows for generically modifying the
 // HTTP client f. i. adding proxy settings.
-func NewClient(apiKey string, httpClient http.Client) *client {
+func NewClient(apiKey string, httpClient requestExecuter) *client {
 	return &client{apiKey: apiKey, httpClient: httpClient}
 }
 
@@ -24,17 +28,11 @@ func NewClient(apiKey string, httpClient http.Client) *client {
 // errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 // provided API key.
 func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
-	_, err = url.Parse(exporterUrl)
-	if err != nil {
-		return result, fmt.Errorf("exporter URL %s appears to be invalid (please check ces-importer config values): %w", exporterUrl, err)
-	}
-
-	request, err := http.NewRequest(http.MethodGet, exporterUrl, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
 	}
 
-	request = request.WithContext(ctx)
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)

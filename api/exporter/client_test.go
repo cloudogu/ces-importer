@@ -16,7 +16,7 @@ const testApiKey = "testApiKey"
 const testResponse = `This was a triumph. I'm making a note here "huge success".'`
 
 func Test_client_DoGetRequest(t *testing.T) {
-	httpClient := http.Client{}
+	httpClient := &http.Client{}
 
 	t.Run("should successfully execute GET request", func(t *testing.T) {
 		// given
@@ -50,8 +50,7 @@ func Test_client_DoGetRequest(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "exporter URL pc:/h")
-		assert.ErrorContains(t, err, "appears to be invalid (please check ces-importer config values):")
+		assert.ErrorContains(t, err, "failed to create request to pc:/h\x12: parse")
 	})
 	t.Run("should error non-OK status code", func(t *testing.T) {
 		// given
