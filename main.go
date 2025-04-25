@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/systeminfo"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,7 +13,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -53,7 +54,13 @@ func main() {
 
 	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer)
+	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
+	if err != nil {
+		panic(fmt.Errorf("failed to create system info provider: %w", err))
+	}
+	validator := systeminfo.NewValidator(config, ctx, config.ImporterNamespace, provider)
+
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
@@ -76,7 +83,11 @@ func main() {
 	cronLooper.Run()
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer) func(ctx context.Context) (int, error) {
+type systemInfoValidator interface {
+	ValidateSystemInfo() error
+}
+
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
@@ -97,6 +108,14 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			// this error is recoverable, the exporter system API might be down, or the API server errs
 			slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
 			slog.Info("Waiting for the next run...")
+			return 0, nil
+		}
+
+		err = sysInfoValidator.ValidateSystemInfo()
+		if err != nil {
+			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
+			// TODO should this break the main loop or not?
+			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
 			return 0, nil
 		}
 

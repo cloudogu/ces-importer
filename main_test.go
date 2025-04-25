@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"k8s.io/client-go/rest"
 	"log/slog"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	"github.com/cloudogu/ces-importer/configuration"
@@ -277,8 +279,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
 
+		validator := newMockSystemInfoValidator(t)
+		validator.EXPECT().ValidateSystemInfo().Return(nil)
+
 		// when
-		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)
+		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)
 		code, err := sut(testCtx)
 
 		// then
@@ -305,8 +310,10 @@ func Test_createMainLoop_int(t *testing.T) {
 		}()
 		slog.SetDefault(logger)
 
+		validator := newMockSystemInfoValidator(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -336,8 +343,10 @@ func Test_createMainLoop_int(t *testing.T) {
 		}()
 		slog.SetDefault(logger)
 
+		validator := newMockSystemInfoValidator(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -367,8 +376,10 @@ func Test_createMainLoop_int(t *testing.T) {
 		}()
 		slog.SetDefault(logger)
 
+		validator := newMockSystemInfoValidator(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -398,8 +409,11 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		starter := newMockDoguStarter(t)
 
+		validator := newMockSystemInfoValidator(t)
+		validator.EXPECT().ValidateSystemInfo().Return(nil)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -432,8 +446,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
+		validator := newMockSystemInfoValidator(t)
+		validator.EXPECT().ValidateSystemInfo().Return(nil)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -465,8 +482,11 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		starter := newMockDoguStarter(t)
 
+		validator := newMockSystemInfoValidator(t)
+		validator.EXPECT().ValidateSystemInfo().Return(nil)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -555,6 +575,15 @@ func Test_configureLogger(t *testing.T) {
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.
 func Test_main(t *testing.T) {
 	t.Run("should panic on missing kube config", func(t *testing.T) {
+		// override default controller method to retrieve a kube config
+		oldGetConfigDelegate := ctrl.GetConfig
+		defer func() {
+			ctrl.GetConfig = oldGetConfigDelegate
+		}()
+		ctrl.GetConfig = func() (*rest.Config, error) {
+			return &rest.Config{}, assert.AnError
+		}
+
 		// given
 		t.Setenv("LOG_LEVEL", "DEBUG")
 		t.Setenv("EXPORTER_HOST", "source.net")
@@ -568,7 +597,8 @@ func Test_main(t *testing.T) {
 			if r := recover(); r != nil {
 				// then
 				castedErr := r.(error)
-				assert.ErrorContains(t, castedErr, "failed to read kube config: invalid configuration")
+				assert.ErrorContains(t, castedErr, "failed to read kube config")
+				assert.ErrorContains(t, castedErr, assert.AnError.Error())
 			}
 		}()
 
