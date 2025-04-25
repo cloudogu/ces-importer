@@ -33,7 +33,7 @@ func main() {
 
 	configureLogger(config)
 
-	logUsedConfig(ctx, config)
+	logUsedConfig(config)
 
 	httpClient := &http.Client{}
 	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
@@ -204,7 +204,7 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 	return &systemInfo, nil
 }
 
-func logUsedConfig(ctx context.Context, config configuration.Configuration) {
+func logUsedConfig(config configuration.Configuration) {
 	slog.Info("                     ./////,                    ")
 	slog.Info("                 ./////==//////,                ")
 	slog.Info("                ////.  ___   ////.              ")

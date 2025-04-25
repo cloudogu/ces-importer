@@ -491,7 +491,7 @@ func Test_logUsedConfig(t *testing.T) {
 	slog.SetDefault(logger)
 
 	// when
-	logUsedConfig(testCtx, testConfig)
+	logUsedConfig(testConfig)
 
 	// then
 	logOutput := mockStdout.String()

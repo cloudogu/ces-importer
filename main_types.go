@@ -6,13 +6,6 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
-type looper interface {
-	// Run starts a function that runs for an undetermined time until it was stopped by Stop().
-	Run()
-	// Stop stops the looper.
-	Stop()
-}
-
 type exporterApiClient interface {
 	// DoGetRequest allows issuing HTTP requests towards the exporter API. The result will be a byte slice that must
 	// be parsed by the caller respectively.
