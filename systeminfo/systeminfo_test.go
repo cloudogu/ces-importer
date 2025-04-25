@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 )
 
@@ -119,6 +121,15 @@ func TestGetSystemInfo(t *testing.T) {
 
 func TestNewSystemInfoProvider(t *testing.T) {
 	t.Run("should instantiate system info provider", func(t *testing.T) {
+		// override default controller method to retrieve a kube config
+		oldGetConfigDelegate := ctrl.GetConfig
+		defer func() {
+			ctrl.GetConfig = oldGetConfigDelegate
+		}()
+		ctrl.GetConfig = func() (*rest.Config, error) {
+			return &rest.Config{}, nil
+		}
+
 		_, err := NewSystemInfoProvider("test")
 		require.NoError(t, err)
 	})
