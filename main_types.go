@@ -34,6 +34,6 @@ type doguStarter interface {
 }
 
 type doguVolumeSyncer interface {
-	// Sync starts copying the data of all dogu volumes.
-	Sync(ctx context.Context, port, source, destination string) error
+	// SyncDogu starts copying the volume data of a single dogu as provided by systemInfo.
+	SyncDogu(ctx context.Context, port, source, destination string) error
 }

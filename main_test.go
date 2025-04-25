@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"testing"
 
@@ -31,7 +32,7 @@ var testConfig = configuration.Configuration{
 func Test_isApiExportReady(t *testing.T) {
 	t.Run("should be ready", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
 
 		// when
@@ -43,7 +44,7 @@ func Test_isApiExportReady(t *testing.T) {
 	})
 	t.Run("should not be ready", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
 
 		// when
@@ -55,7 +56,7 @@ func Test_isApiExportReady(t *testing.T) {
 	})
 	t.Run("should return error for upstream error", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return(nil, assert.AnError)
 
 		// when
@@ -67,7 +68,7 @@ func Test_isApiExportReady(t *testing.T) {
 	})
 	t.Run("should return error json parsing error", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{banane`), nil)
 
 		// when
@@ -82,7 +83,7 @@ func Test_isApiExportReady(t *testing.T) {
 func Test_fetchExporterSystemInfo(t *testing.T) {
 	t.Run("should return system infos", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
 
@@ -111,7 +112,7 @@ func Test_fetchExporterSystemInfo(t *testing.T) {
 	})
 	t.Run("should return error for upstream error", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return(nil, assert.AnError)
 
 		// when
@@ -137,7 +138,7 @@ func Test_deactivateImporterDogus(t *testing.T) {
 			Version: "3.5.0",
 		}}
 
-		stopper := NewMockdoguStopper(t)
+		stopper := newMockDoguStopper(t)
 		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
 
 		inputInfo := &exporter.SystemInfo{
@@ -167,7 +168,7 @@ func Test_deactivateImporterDogus(t *testing.T) {
 			Version: "3.5.0",
 		}}
 
-		stopper := NewMockdoguStopper(t)
+		stopper := newMockDoguStopper(t)
 		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
 		inputInfo := &exporter.SystemInfo{
@@ -201,7 +202,7 @@ func Test_activateImporterDogus(t *testing.T) {
 			Version: "3.5.0",
 		}}
 
-		starter := NewMockdoguStarter(t)
+		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
 
 		inputInfo := &exporter.SystemInfo{
@@ -231,7 +232,7 @@ func Test_activateImporterDogus(t *testing.T) {
 			Version: "3.5.0",
 		}}
 
-		starter := NewMockdoguStarter(t)
+		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
 		inputInfo := &exporter.SystemInfo{
@@ -253,7 +254,133 @@ func Test_activateImporterDogus(t *testing.T) {
 func Test_createMainLoop_int(t *testing.T) {
 	t.Run("should run the function successfully", func(t *testing.T) {
 		// given
-		exportApiClient := NewMockexporterApiClient(t)
+		exportApiClient := newMockExporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := newMockDoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
+
+		starter := newMockDoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
+
+		// when
+		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)
+		code, err := sut(testCtx)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, 0, code)
+	})
+	t.Run("should error on the exporter export mode API call but return no error to recover for the next run", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return(nil, assert.AnError)
+
+		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		starter := newMockDoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=ERROR msg=\"Error while checking export sync readiness")
+		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
+	})
+	t.Run("should recover for the the next run when the exporter is not ready to export", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
+
+		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		starter := newMockDoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=INFO msg=\"Exporter does not seem to be ready. Waiting for the next run...")
+	})
+	t.Run("should error on the exporter system info API call but return nil to recover for the next run", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return(nil, assert.AnError)
+
+		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		starter := newMockDoguStarter(t)
+
+		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+		var mockStdout bytes.Buffer
+		logHandler := slog.NewTextHandler(&mockStdout, opts)
+
+		logger := slog.New(logHandler)
+		defer func() {
+			orig := slog.Default()
+			slog.SetDefault(orig)
+		}()
+		slog.SetDefault(logger)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
+
+		logOutput := mockStdout.String()
+		assert.Contains(t, logOutput, "level=ERROR msg=\"Failed to fetch the system info from the exporter")
+		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
+	})
+	t.Run("should fail on stopping a dogu", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
 		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
@@ -264,158 +391,90 @@ func Test_createMainLoop_int(t *testing.T) {
 			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
 		}
 
-		stopper := NewMockdoguStopper(t)
-		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+		stopper := newMockDoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
-		starter := NewMockdoguStarter(t)
-		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+
+		starter := newMockDoguStarter(t)
 
 		// when
-		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, nil)
-		code, err := sut(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
-		require.NoError(t, err)
-		require.Equal(t, 0, code)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to deactivate dogu official/jenkins in the importer")
+		assert.NotEqual(t, 0, exitCode)
 	})
-	//t.Run("should error on the exporter export mode API call but return no error to recover for the next run", func(t *testing.T) {
-	//	// given
-	//	exportApiClient := NewMockexporterApiClient(t)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return(nil, assert.AnError)
-	//
-	//	stopper := NewMockdoguStopper(t)
-	//	starter := NewMockdoguStarter(t)
-	//
-	//	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
-	//	var mockStdout bytes.Buffer
-	//	logHandler := slog.NewTextHandler(&mockStdout, opts)
-	//
-	//	logger := slog.New(logHandler)
-	//	defer func() {
-	//		orig := slog.Default()
-	//		slog.SetDefault(orig)
-	//	}()
-	//	slog.SetDefault(logger)
-	//
-	//	// when
-	//	err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
-	//
-	//	// then
-	//	require.NoError(t, err)
-	//
-	//	logOutput := mockStdout.String()
-	//	assert.Contains(t, logOutput, "level=ERROR msg=\"Error while checking export sync readiness")
-	//	assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
-	//})
-	//t.Run("should recover for the the next run when the exporter is not ready to export", func(t *testing.T) {
-	//	// given
-	//	exportApiClient := NewMockexporterApiClient(t)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
-	//
-	//	stopper := NewMockdoguStopper(t)
-	//	starter := NewMockdoguStarter(t)
-	//
-	//	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
-	//	var mockStdout bytes.Buffer
-	//	logHandler := slog.NewTextHandler(&mockStdout, opts)
-	//
-	//	logger := slog.New(logHandler)
-	//	defer func() {
-	//		orig := slog.Default()
-	//		slog.SetDefault(orig)
-	//	}()
-	//	slog.SetDefault(logger)
-	//
-	//	// when
-	//	err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
-	//
-	//	// then
-	//	require.NoError(t, err)
-	//
-	//	logOutput := mockStdout.String()
-	//	assert.Contains(t, logOutput, "level=INFO msg=\"Exporter does not seem to be ready. Waiting for the next run...")
-	//})
-	//t.Run("should error on the exporter system info API call but return nil to recover for the next run", func(t *testing.T) {
-	//	// given
-	//	exportApiClient := NewMockexporterApiClient(t)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return(nil, assert.AnError)
-	//
-	//	stopper := NewMockdoguStopper(t)
-	//	starter := NewMockdoguStarter(t)
-	//
-	//	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
-	//	var mockStdout bytes.Buffer
-	//	logHandler := slog.NewTextHandler(&mockStdout, opts)
-	//
-	//	logger := slog.New(logHandler)
-	//	defer func() {
-	//		orig := slog.Default()
-	//		slog.SetDefault(orig)
-	//	}()
-	//	slog.SetDefault(logger)
-	//
-	//	// when
-	//	err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
-	//
-	//	// then
-	//	require.NoError(t, err)
-	//
-	//	logOutput := mockStdout.String()
-	//	assert.Contains(t, logOutput, "level=ERROR msg=\"Failed to fetch the system info from the exporter")
-	//	assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
-	//})
-	//t.Run("should fail on stopping a dogu", func(t *testing.T) {
-	//	// given
-	//	exportApiClient := NewMockexporterApiClient(t)
-	//	responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
-	//
-	//	jenkinsDogu := exporter.Dogu{
-	//		Name:    "official/jenkins",
-	//		Version: "2.492.3-4",
-	//		Volume:  exporter.DoguVolume{SizeInBytes: 1234},
-	//	}
-	//
-	//	stopper := NewMockdoguStopper(t)
-	//	stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
-	//
-	//	starter := NewMockdoguStarter(t)
-	//
-	//	// when
-	//	err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
-	//
-	//	// then
-	//	require.Error(t, err)
-	//	assert.ErrorContains(t, err, "failed to deactivate dogu official/jenkins in the importer")
-	//})
-	//t.Run("should fail on starting a dogu", func(t *testing.T) {
-	//	// given
-	//	exportApiClient := NewMockexporterApiClient(t)
-	//	responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
-	//	exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
-	//
-	//	jenkinsDogu := exporter.Dogu{
-	//		Name:    "official/jenkins",
-	//		Version: "2.492.3-4",
-	//		Volume:  exporter.DoguVolume{SizeInBytes: 1234},
-	//	}
-	//
-	//	stopper := NewMockdoguStopper(t)
-	//	stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
-	//
-	//	starter := NewMockdoguStarter(t)
-	//	starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
-	//
-	//	// when
-	//	err := createMainLoop(testConfig, exportApiClient, starter, stopper)(testCtx)
-	//
-	//	// then
-	//	require.Error(t, err)
-	//	assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
-	//})
+	t.Run("should fail on starting a dogu", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := newMockDoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
+
+		starter := newMockDoguStarter(t)
+		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
+		assert.NotEqual(t, 0, exitCode)
+	})
+	t.Run("should fail on syncing dogu data", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := newMockDoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(assert.AnError)
+
+		starter := newMockDoguStarter(t)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		// TODO: test for a better error message once the sync package is fully implemented
+		assert.ErrorContains(t, err, "failed to sync source")
+		assert.NotEqual(t, 0, exitCode)
+	})
 }
 
 func Test_logUsedConfig(t *testing.T) {

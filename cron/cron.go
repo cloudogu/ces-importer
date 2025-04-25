@@ -12,17 +12,12 @@ import (
 type JobFunc func(ctx context.Context) (int, error)
 
 type taskRunner interface {
-	// Task registers the provided task with the CRON-like expression and returns the task. This task should be
-	// considered to be saved into a form of state allowing to call Stop() and thus end the task.
-	Task(expr string, task tasker.TaskFunc, concurrent ...bool) *tasker.Tasker
 	// Run starts the provided task. No errors will be returned during the execution since this would end the main
 	// loop. Implementors should either provide an error channel to the task function or simply log errors to
 	// indicate error situations.
 	Run()
 	// Stop interrupts the provided task.
 	Stop()
-	// Running returns true if the provided task is currently running, otherwise false.
-	Running() bool
 }
 
 // Task allows executing functions in recurring points in time, depending on the system time. Considering
@@ -52,9 +47,4 @@ func (t *Task) Run() {
 // Stop stops the looping over the provided function given to Run().
 func (t *Task) Stop() {
 	t.taskExecutor.Stop()
-}
-
-// Running returns true if the task at hand is still in its execution phase, otherwise false.
-func (t *Task) Running() bool {
-	return t.taskExecutor.Running()
 }

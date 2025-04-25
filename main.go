@@ -12,6 +12,8 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
+
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -103,7 +105,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return 1, err
 		}
 
-		err = syncDogus(ctx, systemInfo, config, syncer)
+		err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
 		if err != nil {
 			return 2, err
 		}
@@ -147,25 +149,25 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	return nil
 }
 
-func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration, _ doguVolumeSyncer) error {
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, _ exporterApiClient, syncer doguVolumeSyncer) error {
 	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
 
-	//for _, dogu := range systemInfo.Dogus {
-	//	slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
-	//	// TODO in upcoming feature: Interpret the actual target data from the exporter API
-	//	exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
-	//		return "your exporterAPIResult here", "and here", "and here"
-	//	}(dogu)
-	//
-	//	syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
-	//
-	//	if err := syncer.Sync(exporterSource, importerDestination); err != nil {
-	//		// TODO: is this error recoverable? If so, log the error and continue
-	//		return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
-	//	}
-	//	slog.Log(ctx, slog.LevelInfo, "Syncing for dogu %s successful")
-	//}
+	for _, dogu := range systemInfo.Dogus {
+		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
+
+		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
+			return "call your your exporterApiClient for data here", "and here", "and here"
+		}(dogu)
+
+		if err := syncer.SyncDogu(ctx, exporterPort, exporterSource, importerDestination); err != nil {
+			// TODO: should we continue syncing other dogus on a best-effort basis?
+			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
+		}
+		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
+	}
+
 	return nil
+
 }
 
 func isApiExportReady(ctx context.Context, hostname string, apiCli exporterApiClient) (isActive bool, err error) {
