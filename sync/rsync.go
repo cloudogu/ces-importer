@@ -2,35 +2,33 @@ package sync
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os/exec"
 )
 
-type Syncer interface {
-	Sync(source string, destination string) error
-}
-
+// RsyncSyncer allows copying data from a remote host.
 type RsyncSyncer struct {
 	host           string
-	port           string
 	user           string
 	privateKeyPath string
 }
 
-func NewRsyncSyncer(host string, port string, user string, privateKeyPath string) *RsyncSyncer {
+// NewRsyncSyncer creates a new RsyncSyncer instance.
+func NewRsyncSyncer(host string, user string, privateKeyPath string) *RsyncSyncer {
 	return &RsyncSyncer{
 		host:           host,
-		port:           port,
 		user:           user,
 		privateKeyPath: privateKeyPath,
 	}
 }
 
-func (rs *RsyncSyncer) Sync(source string, destination string) error {
+// SyncDogu copies dogu volume data from a remote Cloudogu EcoSystem instance.
+func (rs *RsyncSyncer) SyncDogu(_ context.Context, port, source, destination string) error {
 
 	//rsync -avhz --delete -e "ssh -p 7000 -l ces-exporter -i /my-private-key" localhost:/data/ ./destination/
 
-	sshOpts := fmt.Sprintf("ssh -p %s -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", rs.port, rs.user, rs.privateKeyPath)
+	sshOpts := fmt.Sprintf("ssh -p %s -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", port, rs.user, rs.privateKeyPath)
 
 	sourceWithHost := fmt.Sprintf("%s:%s", rs.host, source)
 

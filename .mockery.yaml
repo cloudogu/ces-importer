@@ -1,12 +1,14 @@
-with-expecter: True
-all: True
+with-expecter: true
+all: true
+exclude: ["vendor"]
+recursive: true
+inpackage: true
+include-auto-generated: false
+mockname: "{{.Mock}}{{.InterfaceName | camelcase }}"
+filename: "mock_{{.InterfaceName}}_test.go"
+dir: "{{.InterfaceDir}}"
 
 packages:
   github.com/cloudogu/ces-importer:
     config:
       recursive: True
-      exclude: ["vendor"]
-      inpackage: true
-      include-auto-generated: false
-      filename: "mock_{{.InterfaceName}}_test.go"
-      dir: "{{.PackageName}}"

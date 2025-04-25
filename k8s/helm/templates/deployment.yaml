@@ -54,7 +54,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "ces-importer.name" . }}-config
                   key: migration_final_schedule
-            - name: NAMESPACE
+            - name: IMPORTER_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
@@ -80,3 +80,4 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 10
+      serviceAccountName: {{ include "ces-importer.name" . }}-main-manager

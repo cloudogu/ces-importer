@@ -4,8 +4,11 @@
 # Allow-only go resources
 !*.go
 !go.*
+!/api/**/*
 !/configuration/**/*
+!/cron/**/*
 !/sync/**/*
+
 # and other resources
 !build/**/*
 !Makefile
