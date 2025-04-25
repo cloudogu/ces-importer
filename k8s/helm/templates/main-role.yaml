@@ -7,7 +7,7 @@ metadata:
 rules:
   # allow starting + stopping of dogus
 - apiGroups:
-    - k8s.cloudogu.com/v2
+    - k8s.cloudogu.com
   resources:
     - dogus
   verbs:
@@ -15,7 +15,7 @@ rules:
     - update
   # allow listing of dogus for systeminfo comparison
 - apiGroups:
-    - k8s.cloudogu.com/v2
+    - k8s.cloudogu.com
   resources:
     - dogus
   verbs:
@@ -30,7 +30,7 @@ rules:
     - update
   # allow for systeminfo comparison
 - apiGroups:
-  - k8s.cloudogu.com/v1
+  - k8s.cloudogu.com
   resources:
     - components
   verbs:
