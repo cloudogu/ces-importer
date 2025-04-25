@@ -3,7 +3,10 @@ module github.com/cloudogu/ces-importer
 go 1.24.2
 
 require (
+	github.com/adhocore/gronx v1.19.5
+	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-component-operator v1.8.0
+	github.com/cloudogu/k8s-dogu-operator/v2 v2.3.0
 	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.10.0
@@ -22,13 +25,11 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
-	github.com/adhocore/gronx v1.19.5
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.3 // indirect
-	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/cesapp-lib v0.18.1 // indirect
 	github.com/cloudogu/retry-lib v0.1.0 // indirect
 	github.com/containerd/containerd v1.7.24 // indirect
@@ -144,7 +145,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/api v0.32.3
-	k8s.io/utils v0.0.0-20241210054802-24370beab758
+	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 )
 
 require (

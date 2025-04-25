@@ -12,18 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
-	"github.com/cloudogu/ces-importer/sync"
-)
-
-const (
-	defaultNamespace = "ecosystem"
 )
 
 var hostProtocolScheme = "https://"
@@ -54,12 +49,13 @@ func main() {
 		panic(fmt.Errorf("failed to read kube config: %w", err))
 	}
 
-	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	doguCli, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
-		panic(fmt.Errorf("failed to create k8s client: %w", err))
+		panic(fmt.Errorf("failed to create dogu client: %w", err))
 	}
 
-	doguStartStopper := importer.NewDoguDeploymentClient(k8sClient, config.ImporterNamespace)
+	doguClient := doguCli.Dogus(config.ImporterNamespace)
+	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
 	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
 	if err != nil {
@@ -129,7 +125,10 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 
 		err = sysInfoValidator.ValidateSystemInfo()
 		if err != nil {
-			return err
+			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
+			// TODO should this break the main loop or not?
+			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+			return nil
 		}
 
 		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
@@ -183,25 +182,22 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 
 func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, config configuration.Configuration) error {
 	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
-	if true {
-		return nil
-	}
 
-	for _, dogu := range systemInfo.Dogus {
-		slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
-		// TODO in upcoming feature: Interpret the actual target data from the exporter API
-		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
-			return "your exporterAPIResult here", "and here", "and here"
-		}(dogu)
-
-		syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
-
-		if err := syncer.Sync(exporterSource, importerDestination); err != nil {
-			// TODO: is this error recoverable? If so, log the error and continue
-			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
-		}
-		slog.Log(ctx, slog.LevelInfo, "Syncing for dogu %s successful")
-	}
+	//for _, dogu := range systemInfo.Dogus {
+	//	slog.Log(ctx, slog.LevelInfo, "Starting sync for dogu ", "doguName", dogu.Name)
+	//	// TODO in upcoming feature: Interpret the actual target data from the exporter API
+	//	exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
+	//		return "your exporterAPIResult here", "and here", "and here"
+	//	}(dogu)
+	//
+	//	syncer := sync.NewRsyncSyncer(config.ExporterHost, exporterPort, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	//
+	//	if err := syncer.Sync(exporterSource, importerDestination); err != nil {
+	//		// TODO: is this error recoverable? If so, log the error and continue
+	//		return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
+	//	}
+	//	slog.Log(ctx, slog.LevelInfo, "Syncing for dogu %s successful")
+	//}
 	return nil
 }
 

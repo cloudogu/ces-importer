@@ -5,17 +5,33 @@ metadata:
   labels:
     {{- include "ces-importer.labels" . | nindent 4 }}
 rules:
-  # starting + stopping of dogus
+  # allow starting + stopping of dogus
 - apiGroups:
-    - apps
+    - k8s.cloudogu.com/v2
   resources:
-    - deployments
+    - dogus
   verbs:
     - get
     - update
+  # allow listing of dogus for systeminfo comparison
 - apiGroups:
-    - apps
+    - k8s.cloudogu.com/v2
   resources:
-    - deployments/scale
+    - dogus
   verbs:
+    - list
+  # allow for dogu resizing
+- apiGroups:
+    - v1
+  resources:
+    - pvc
+  verbs:
+    - get
     - update
+  # allow for systeminfo comparison
+- apiGroups:
+  - k8s.cloudogu.com/v1
+  resources:
+    - components
+  verbs:
+    - list
