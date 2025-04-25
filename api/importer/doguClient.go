@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
-	doguV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/v2"
+	"github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	doguV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )

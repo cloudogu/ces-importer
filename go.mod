@@ -6,7 +6,6 @@ require (
 	github.com/adhocore/gronx v1.19.5
 	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-component-operator v1.8.0
-	github.com/cloudogu/k8s-dogu-operator/v2 v2.3.0
 	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.10.0

@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v2/api/ecoSystem"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/cloudogu/ces-importer/api/exporter"

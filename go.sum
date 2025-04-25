@@ -52,8 +52,6 @@ github.com/cloudogu/cesapp-lib v0.18.1 h1:LMdGktIefm/PuhdPqpLTPvjY1smO06EEGBbRSA
 github.com/cloudogu/cesapp-lib v0.18.1/go.mod h1:J05eXFxnz4enZblABlmiVTZaUtJ+LIhlJ2UF6l9jpDw=
 github.com/cloudogu/k8s-component-operator v1.8.0 h1:k86YqmNmbKOAMwucjFrZMNsu11ttaczX3s/Fytg79nw=
 github.com/cloudogu/k8s-component-operator v1.8.0/go.mod h1:BdWqwpZWHoSFOduQ3FzcVV4uGJNb+t0DUYlLBHQ9wwQ=
-github.com/cloudogu/k8s-dogu-operator/v2 v2.3.0 h1:U2VHM9QwHArm5AYmcfSgzzAbTdgxrk+TqcgTublhNZA=
-github.com/cloudogu/k8s-dogu-operator/v2 v2.3.0/go.mod h1:yfvaFn951pWxFMapJmEz2ZPpT5unEOcTwEhspGehNYQ=
 github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0 h1:AUDwm8VkVzLyzHY7mXBglM+OGJKZoB113zVyHDFOXvs=
 github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0/go.mod h1:AFpY+5Kr1CHfAMO6h8KJ7jcAooR+5b5MSFHlrPFP+1o=
 github.com/cloudogu/retry-lib v0.1.0 h1:gaAmtyjUqgHbxfCWMeUn0qnGbDH4TtZVSQkbZ1Nq6eI=
