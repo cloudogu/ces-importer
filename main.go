@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to create system info provider: %w", err))
 	}
-	validator := systeminfo.NewValidator(config, ctx, config.ImporterNamespace, provider)
+	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
 
 	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
@@ -84,7 +84,7 @@ func main() {
 }
 
 type systemInfoValidator interface {
-	ValidateSystemInfo() error
+	ValidateSystemInfo(ctx context.Context) error
 }
 
 func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
@@ -111,7 +111,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return 0, nil
 		}
 
-		err = sysInfoValidator.ValidateSystemInfo()
+		err = sysInfoValidator.ValidateSystemInfo(ctx)
 		if err != nil {
 			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
 			// TODO should this break the main loop or not?

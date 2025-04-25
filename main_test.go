@@ -280,7 +280,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
 
 		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
+		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
 		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)
@@ -410,7 +410,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter := newMockDoguStarter(t)
 
 		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
+		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
 		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
@@ -447,7 +447,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
 		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
+		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
 		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
@@ -483,7 +483,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		starter := newMockDoguStarter(t)
 
 		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
+		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
 		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)

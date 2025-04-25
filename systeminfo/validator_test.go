@@ -16,9 +16,8 @@ func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		n := "namespace"
-		v := NewValidator(configuration.Configuration{}, context.Background(), n, p)
+		v := NewValidator(configuration.Configuration{}, n, p)
 		require.Equal(t, v.conf, configuration.Configuration{})
-		require.Equal(t, v.ctx, context.Background())
 		require.Equal(t, v.namespace, n)
 		require.Equal(t, v.systemInfoProvider, p)
 	})
@@ -44,19 +43,18 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&sysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&sysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&sysInfo, nil)
 
 		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.Nil(t, err)
 	})
 
@@ -96,18 +94,17 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
@@ -139,18 +136,17 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
 	})
 
@@ -185,18 +181,17 @@ func TestValidateSystemInfo(t *testing.T) {
 			Components: []component{},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
 	})
 
@@ -236,49 +231,46 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 		client := newMockKubernetesClient(t)
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
 	t.Run("should return error getting importer system info", func(t *testing.T) {
 
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(nil, fmt.Errorf("testerror"))
+		s.EXPECT().getSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "could not get importer system info: testerror")
 	})
 
 	t.Run("should return error getting exporter system info", func(t *testing.T) {
 
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo().Return(&systemInfo{}, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
+		s.EXPECT().getSystemInfo(context.Background()).Return(&systemInfo{}, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			ctx:                context.Background(),
 			namespace:          "",
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo()
+		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
 }
@@ -287,7 +279,6 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
 		v := Validator{
 			conf:      configuration.Configuration{},
-			ctx:       context.Background(),
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -305,13 +296,12 @@ func TestUpdatePVC(t *testing.T) {
 			},
 		}
 		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, nil, result)
+		result = v.updatePVC(exDogu, imDogu, nil, result, context.Background())
 		require.Nil(t, result)
 	})
 	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
 		v := Validator{
 			conf:      configuration.Configuration{},
-			ctx:       context.Background(),
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -342,14 +332,13 @@ func TestUpdatePVC(t *testing.T) {
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		pvcClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result)
+		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
 		require.Nil(t, result)
 	})
 
 	t.Run("can not find dogus volume", func(t *testing.T) {
 		v := Validator{
 			conf:      configuration.Configuration{},
-			ctx:       context.Background(),
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -369,14 +358,13 @@ func TestUpdatePVC(t *testing.T) {
 		pvcClient := newMockPvcClient(t)
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result)
+		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
 		require.ErrorContains(t, result, "dogu testDogu volume could not be found")
 	})
 
 	t.Run("can not update dogus volume", func(t *testing.T) {
 		v := Validator{
 			conf:      configuration.Configuration{},
-			ctx:       context.Background(),
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -407,7 +395,7 @@ func TestUpdatePVC(t *testing.T) {
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		pvcClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result)
+		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
 		require.ErrorContains(t, result, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
 	})
 }

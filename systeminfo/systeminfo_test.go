@@ -1,6 +1,7 @@
 package systeminfo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -63,7 +64,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo()
+		_, err := mockProvider.getSystemInfo(context.Background())
 
 		require.NoError(t, err)
 	})
@@ -77,7 +78,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo()
+		_, err := mockProvider.getSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems dogus: error")
 	})
@@ -113,7 +114,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo()
+		_, err := mockProvider.getSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems components: error")
 	})
@@ -164,7 +165,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 
 		apiSystemInfo, err := p.getExporterSystemInfo(configuration.Configuration{
 			ExporterHost: "",
-		})
+		}, context.Background())
 		require.NoError(t, err)
 		require.Equal(t, sInfo.Dogus, apiSystemInfo.Dogus)
 		require.Equal(t, sInfo.Components, apiSystemInfo.Components)
@@ -183,7 +184,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 
 		_, err := p.getExporterSystemInfo(configuration.Configuration{
 			ExporterHost: "",
-		})
+		}, context.Background())
 		require.EqualError(t, err, "error performing http request: testerror")
 	})
 
@@ -201,7 +202,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 
 		_, err := p.getExporterSystemInfo(configuration.Configuration{
 			ExporterHost: "",
-		})
+		}, context.Background())
 		require.EqualError(t, err, "could not read exporter response: unexpected end of JSON input")
 	})
 }

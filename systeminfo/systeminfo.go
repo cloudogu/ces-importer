@@ -38,7 +38,6 @@ type Provider struct {
 	doguLister      doguLister
 	pvcClient       kubernetesClient
 	apiClient       exporterApiClient
-	ctx             context.Context
 }
 
 func NewSystemInfoProvider(namespace string) (*Provider, error) {
@@ -75,9 +74,9 @@ func NewSystemInfoProvider(namespace string) (*Provider, error) {
 // getSystemInfo
 //
 // gets the current systems system info about dogus and components
-func (s *Provider) getSystemInfo() (*systemInfo, error) {
+func (s *Provider) getSystemInfo(ctx context.Context) (*systemInfo, error) {
 	// collect Dogus
-	dogus, err := s.doguLister.List(s.ctx, metav1.ListOptions{})
+	dogus, err := s.doguLister.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems dogus: %s", err)
 	}
@@ -92,7 +91,7 @@ func (s *Provider) getSystemInfo() (*systemInfo, error) {
 	}
 
 	// collect components
-	components, err := s.componentLister.List(s.ctx, metav1.ListOptions{})
+	components, err := s.componentLister.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems components: %s", err)
 	}
@@ -108,9 +107,9 @@ func (s *Provider) getSystemInfo() (*systemInfo, error) {
 }
 
 // GetExporterSystemInfo gets the exporters system info via get request
-func (s *Provider) getExporterSystemInfo(conf configuration.Configuration) (*systemInfo, error) {
+func (s *Provider) getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error) {
 	var sInfo *systemInfo
-	res, err := s.apiClient.DoGetRequest(s.ctx, "https://"+conf.ExporterHost+"/system-info")
+	res, err := s.apiClient.DoGetRequest(ctx, "https://"+conf.ExporterHost+"/system-info")
 	if err != nil {
 		return sInfo, fmt.Errorf("error performing http request: %s", err)
 	}
