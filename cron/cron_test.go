@@ -9,9 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testCtx context.Context = context.Background()
+
 func TestNew(t *testing.T) {
 	t.Run("should return an param validation error", func(t *testing.T) {
-		_, err := New("blubb")
+		_, err := New(testCtx, "blubb", nil)
 
 		// then
 		require.Error(t, err)
@@ -22,22 +24,22 @@ func TestNew(t *testing.T) {
 func Test_mainLooper(t *testing.T) {
 	t.Run("should return without error", func(t *testing.T) {
 		// Given
-		sut, err := New("* * * * * *") // exec every second
-		require.NoError(t, err)
-		require.NotNil(t, sut)
-
 		var calledCounter *int
 		calledCounter = new(int)
 
+		sut, err := New(testCtx, "* * * * * *", func(ctx context.Context) (int, error) {
+			println("Test function was calledCounter")
+			*calledCounter++
+			time.Sleep(500 * time.Millisecond) // run less than a second
+
+			return 0, nil
+		}) // exec every second
+		require.NoError(t, err)
+		require.NotNil(t, sut)
+
 		go func() {
 			// When
-			sut.Run(func(ctx context.Context) error {
-				println("Test function was calledCounter")
-				*calledCounter++
-				time.Sleep(500 * time.Millisecond) // run less than a second
-
-				return nil
-			})
+			sut.Run()
 			require.NoError(t, err)
 		}()
 
@@ -45,7 +47,6 @@ func Test_mainLooper(t *testing.T) {
 		sut.Stop()
 
 		// Then
-		require.NoError(t, err)
 		assert.GreaterOrEqual(t, 1, *calledCounter)
 	})
 }

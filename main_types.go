@@ -8,7 +8,7 @@ import (
 
 type looper interface {
 	// Run starts a function that runs for an undetermined time until it was stopped by Stop().
-	Run(jobClosure func(ctx context.Context) error)
+	Run()
 	// Stop stops the looper.
 	Stop()
 }
@@ -31,4 +31,9 @@ type doguStarter interface {
 	// StartDogu starts the given dogu in the importer system. An error is expected if the dogu is in a non-healthy
 	// condition except when the dogu is stopped.
 	StartDogu(ctx context.Context, dogu exporter.Dogu) error
+}
+
+type doguVolumeSyncer interface {
+	// SyncDogu starts copying the volume data of a single dogu as provided by systemInfo.
+	SyncDogu(ctx context.Context, port, source, destination string) error
 }

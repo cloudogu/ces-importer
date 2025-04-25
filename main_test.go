@@ -3,9 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
-	"k8s.io/client-go/rest"
+	"encoding/json"
 	"log/slog"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	"github.com/cloudogu/ces-importer/configuration"
@@ -256,9 +255,9 @@ func Test_createMainLoop_int(t *testing.T) {
 	t.Run("should run the function successfully", func(t *testing.T) {
 		// given
 		exportApiClient := newMockExporterApiClient(t)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
 		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
-		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
 
 		jenkinsDogu := exporter.Dogu{
 			Name:    "official/jenkins",
@@ -269,17 +268,22 @@ func Test_createMainLoop_int(t *testing.T) {
 		stopper := newMockDoguStopper(t)
 		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
 
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
+
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
 
-		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
-
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, validator)(testCtx)
+		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)
+		code, err := sut(testCtx)
 
 		// then
 		require.NoError(t, err)
+		require.Equal(t, 0, code)
 	})
 	t.Run("should error on the exporter export mode API call but return no error to recover for the next run", func(t *testing.T) {
 		// given
@@ -287,6 +291,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return(nil, assert.AnError)
 
 		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
 		starter := newMockDoguStarter(t)
 
 		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
@@ -301,10 +306,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, nil)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
 		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
 
 		logOutput := mockStdout.String()
 		assert.Contains(t, logOutput, "level=ERROR msg=\"Error while checking export sync readiness")
@@ -316,6 +322,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
 
 		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
 		starter := newMockDoguStarter(t)
 
 		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
@@ -330,10 +337,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, nil)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
 		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
 
 		logOutput := mockStdout.String()
 		assert.Contains(t, logOutput, "level=INFO msg=\"Exporter does not seem to be ready. Waiting for the next run...")
@@ -345,6 +353,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return(nil, assert.AnError)
 
 		stopper := newMockDoguStopper(t)
+		doguSyncer := newMockDoguVolumeSyncer(t)
 		starter := newMockDoguStarter(t)
 
 		opts := &slog.HandlerOptions{Level: slog.LevelDebug}
@@ -359,10 +368,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, nil)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
 		require.NoError(t, err)
+		assert.Equal(t, 0, exitCode)
 
 		logOutput := mockStdout.String()
 		assert.Contains(t, logOutput, "level=ERROR msg=\"Failed to fetch the system info from the exporter")
@@ -384,17 +394,18 @@ func Test_createMainLoop_int(t *testing.T) {
 		stopper := newMockDoguStopper(t)
 		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
+		doguSyncer := newMockDoguVolumeSyncer(t)
+
 		starter := newMockDoguStarter(t)
 
-		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
-
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
 		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, "failed to deactivate dogu official/jenkins in the importer")
+		assert.NotEqual(t, 0, exitCode)
 	})
 	t.Run("should fail on starting a dogu", func(t *testing.T) {
 		// given
@@ -412,18 +423,57 @@ func Test_createMainLoop_int(t *testing.T) {
 		stopper := newMockDoguStopper(t)
 		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
 
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
+
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
 
-		validator := newMockSystemInfoValidator(t)
-		validator.EXPECT().ValidateSystemInfo().Return(nil)
-
 		// when
-		err := createMainLoop(testConfig, exportApiClient, starter, stopper, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
 
 		// then
 		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, "failed to activate dogu official/jenkins in the importer")
+		assert.NotEqual(t, 0, exitCode)
+	})
+	t.Run("should fail on syncing dogu data", func(t *testing.T) {
+		// given
+		exportApiClient := newMockExporterApiClient(t)
+		responseJson := `{"fqdn":"server.fqdn","isMultinode":false,"dogus":[{"name":"official/jenkins","version":"2.492.3-4","volume":{"sizeInBytes":1234}}],"components":[{"name":"k8s/k8s-dogu-operator","version":"3.5.0"}]}`
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/system-info").Return([]byte(responseJson), nil)
+		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
+
+		jenkinsDogu := exporter.Dogu{
+			Name:    "official/jenkins",
+			Version: "2.492.3-4",
+			Volume:  exporter.DoguVolume{SizeInBytes: 1234},
+		}
+
+		stopper := newMockDoguStopper(t)
+		stopper.EXPECT().StopDogu(testCtx, jenkinsDogu).Return(nil)
+
+		var systemInfo exporter.SystemInfo
+		err := json.Unmarshal([]byte(responseJson), &systemInfo)
+		require.NoError(t, err)
+		doguSyncer := newMockDoguVolumeSyncer(t)
+		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(assert.AnError)
+
+		starter := newMockDoguStarter(t)
+
+		// when
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer)(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		// TODO: test for a better error message once the sync package is fully implemented
+		assert.ErrorContains(t, err, "failed to sync source")
+		assert.NotEqual(t, 0, exitCode)
 	})
 }
 
@@ -505,15 +555,6 @@ func Test_configureLogger(t *testing.T) {
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.
 func Test_main(t *testing.T) {
 	t.Run("should panic on missing kube config", func(t *testing.T) {
-		// override default controller method to retrieve a kube config
-		oldGetConfigDelegate := ctrl.GetConfig
-		defer func() {
-			ctrl.GetConfig = oldGetConfigDelegate
-		}()
-		ctrl.GetConfig = func() (*rest.Config, error) {
-			return &rest.Config{}, assert.AnError
-		}
-
 		// given
 		t.Setenv("LOG_LEVEL", "DEBUG")
 		t.Setenv("EXPORTER_HOST", "source.net")
@@ -527,8 +568,7 @@ func Test_main(t *testing.T) {
 			if r := recover(); r != nil {
 				// then
 				castedErr := r.(error)
-				assert.ErrorContains(t, castedErr, "failed to read kube config")
-				assert.ErrorContains(t, castedErr, assert.AnError.Error())
+				assert.ErrorContains(t, castedErr, "failed to read kube config: invalid configuration")
 			}
 		}()
 
