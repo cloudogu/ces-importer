@@ -19,96 +19,102 @@ productionReleaseBranch = "main"
 
 parallel(
     "source code": {
-        node('docker') {
+        timestamps {
+            node('docker') {
+                properties([
+                        // Don't run concurrent builds for a branch, because they use the same workspace directory
+                        disableConcurrentBuilds(),
+                ])
 
-            stage('Checkout') {
-                checkout scm
-            }
-
-            stage('Lint') {
-                Dockerfile dockerfile = new Dockerfile(this)
-                dockerfile.lint()
-            }
-
-            stage('Check markdown links') {
-                Markdown markdown = new Markdown(this, "3.11.0")
-                markdown.check()
-            }
-
-            withGolangContainer {
-                stage('Build') {
-                    sh "make vendor"
-                    sh "make clean compile-ci"
+                stage('Checkout') {
+                    checkout scm
                 }
 
-                stage('Unit Test') {
-                    sh "make unit-test"
-                    junit allowEmptyResults: true, testResults: 'target/unit-tests/*-tests.xml'
+                stage('Lint') {
+                    Dockerfile dockerfile = new Dockerfile(this)
+                    dockerfile.lint()
                 }
 
-                stage('Static Analysis') {
-                    def commitSha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                stage('Check markdown links') {
+                    Markdown markdown = new Markdown(this, "3.11.0")
+                    markdown.check()
+                }
 
-                    withCredentials([
-                            [$class: 'UsernamePasswordMultiBinding', credentialsId: 'sonarqube-gh', usernameVariable: 'USERNAME', passwordVariable: 'REVIEWDOG_GITHUB_API_TOKEN']
-                    ]) {
-                        withEnv(["CI_PULL_REQUEST=${env.CHANGE_ID}", "CI_COMMIT=${commitSha}", "CI_REPO_OWNER=cloudogu", "CI_REPO_NAME=${doguName}"]) {
-                            sh "make static-analysis-ci"
+                withGolangContainer {
+                    stage('Build') {
+                        sh "make vendor"
+                        sh "make clean compile-ci"
+                    }
+
+                    stage('Unit Test') {
+                        sh "make unit-test"
+                        junit allowEmptyResults: true, testResults: 'target/unit-tests/*-tests.xml'
+                    }
+
+                    stage('Static Analysis') {
+                        def commitSha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+
+                        withCredentials([
+                                [$class: 'UsernamePasswordMultiBinding', credentialsId: 'sonarqube-gh', usernameVariable: 'USERNAME', passwordVariable: 'REVIEWDOG_GITHUB_API_TOKEN']
+                        ]) {
+                            withEnv(["CI_PULL_REQUEST=${env.CHANGE_ID}", "CI_COMMIT=${commitSha}", "CI_REPO_OWNER=cloudogu", "CI_REPO_NAME=${doguName}"]) {
+                                sh "make static-analysis-ci"
+                            }
                         }
                     }
                 }
-            }
 
-            stage('SonarQube') {
-                projectName = 'ces-importer'
-                def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                withSonarQubeEnv {
-                    sh "git config 'remote.origin.fetch' '+refs/heads/*:refs/remotes/origin/*'"
-                    branch = env.BRANCH_NAME
-                    gitWithCredentials("fetch --all")
+                stage('SonarQube') {
+                    projectName = 'ces-importer'
+                    def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    withSonarQubeEnv {
+                        sh "git config 'remote.origin.fetch' '+refs/heads/*:refs/remotes/origin/*'"
+                        branch = env.BRANCH_NAME
+                        gitWithCredentials("fetch --all")
 
-                    if (branch == "main") {
-                        echo "This branch has been detected as the main branch."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName}"
-                    } else if (branch == "develop") {
-                        echo "This branch has been detected as the develop branch."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=main  "
-                    } else if (env.CHANGE_TARGET) {
-                        echo "This branch has been detected as a pull request."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=develop    "
-                    } else if (branch.startsWith("feature/")) {
-                        echo "This branch has been detected as a feature branch."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
-                    } else if (branch.startsWith("bugfix/")) {
-                        echo "This branch has been detected as a bugfix branch."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
-                    } else {
-                        echo "This branch has been detected as a miscellaneous branch."
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
+                        if (branch == "main") {
+                            echo "This branch has been detected as the main branch."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName}"
+                        } else if (branch == "develop") {
+                            echo "This branch has been detected as the develop branch."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=main  "
+                        } else if (env.CHANGE_TARGET) {
+                            echo "This branch has been detected as a pull request."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=develop    "
+                        } else if (branch.startsWith("feature/")) {
+                            echo "This branch has been detected as a feature branch."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
+                        } else if (branch.startsWith("bugfix/")) {
+                            echo "This branch has been detected as a bugfix branch."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
+                        } else {
+                            echo "This branch has been detected as a miscellaneous branch."
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${branch} -Dsonar.branch.target=develop"
+                        }
+                    }
+                    timeout(time: 2, unit: 'MINUTES') { // Needed when there is no webhook for example
+                        def qGate = waitForQualityGate()
+                        if (qGate.status != 'OK') {
+                            unstable("Pipeline unstable due to SonarQube quality gate failure")
+                        }
                     }
                 }
-                timeout(time: 2, unit: 'MINUTES') { // Needed when there is no webhook for example
-                    def qGate = waitForQualityGate()
-                    if (qGate.status != 'OK') {
-                        unstable("Pipeline unstable due to SonarQube quality gate failure")
+
+                if (gitflow.isPreReleaseBranch()) {
+                    stage("Pre-release") {
+                        error("pre-release is not yet supported")
                     }
                 }
-            }
+                if (gitflow.isReleaseBranch()) {
+                    String releaseVersion = git.getSimpleBranchName()
 
-            if (gitflow.isPreReleaseBranch()) {
-                stage("Pre-release") {
-                    error("pre-release is not yet supported")
-                }
-            }
-            if (gitflow.isReleaseBranch()) {
-                String releaseVersion = git.getSimpleBranchName()
+                    stage('Finish Release') {
+                        gitflow.finishRelease(releaseVersion, productionReleaseBranch)
+                    }
 
-                stage('Finish Release') {
-                    gitflow.finishRelease(releaseVersion, productionReleaseBranch)
-                }
-
-                stage('Add Github-Release') {
-                    github.createReleaseWithChangelog(releaseVersion, changelog, productionReleaseBranch)
+                    stage('Add Github-Release') {
+                        github.createReleaseWithChangelog(releaseVersion, changelog, productionReleaseBranch)
+                    }
                 }
             }
         }
