@@ -10,5 +10,5 @@ roleRef:
   name: '{{ include "ces-importer.name" . }}-main-role'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "ces-importer.name" . }}-main'
+  name: '{{ include "ces-importer.name" . }}-main-manager'
   namespace: '{{ .Release.Namespace }}'
