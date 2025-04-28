@@ -6,8 +6,10 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/hashicorp/go-multierror"
 	kubv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
+	"strconv"
 )
 
 // client used for interacting with persistent volume claims
@@ -92,6 +94,7 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, p
 			// validate that the version is correct
 			if !(imDogu.Version == exDogu.Version) {
 				result = multierror.Append(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
+			} else {
 				// validate and update the size of the dogus pvc
 				result = v.updatePVC(exDogu, imDogu, provider, result, ctx)
 			}
@@ -127,10 +130,13 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, pvcs pvcClient, result *
 		if err != nil {
 			result = multierror.Append(result, fmt.Errorf("dogu %s volume could not be found: %s \n", imDogu.Name, err.Error()))
 		} else {
-			pvc.Spec.Resources.Requests.Storage().Set(exDogu.Volume.SizeInBytes)
+			slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
+			pvc.Spec.Resources.Requests[kubv1.ResourceStorage] = resource.MustParse(strconv.FormatInt(exDogu.Volume.SizeInBytes, 10))
 			_, err = pvcs.Update(ctx, pvc, metav1.UpdateOptions{})
 			if err != nil {
 				result = multierror.Append(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
+			} else {
+				slog.Info(fmt.Sprintf("Dogu %s volume resized to %d bytes", imDogu.Name, exDogu.Volume.SizeInBytes))
 			}
 		}
 	}
