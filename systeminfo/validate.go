@@ -136,7 +136,8 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, pvcs pvcClient, result *
 			if err != nil {
 				result = multierror.Append(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
 			} else {
-				slog.Info(fmt.Sprintf("Dogu %s volume resized to %d bytes", imDogu.Name, exDogu.Volume.SizeInBytes))
+				sizeInGB := float64(exDogu.Volume.SizeInBytes) / 1024 * 1024 * 1024
+				slog.Info(fmt.Sprintf("Dogu %s volume resized to %.2f GB", imDogu.Name, sizeInGB))
 			}
 		}
 	}
