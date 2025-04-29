@@ -4,13 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/hashicorp/go-multierror"
 	kubv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
-	"strconv"
+	"math"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+// client used for interacting with persistent volume claims
+type doguClient interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguv2.Dogu, error)
+	Update(ctx context.Context, dogu *doguv2.Dogu, opts metav1.UpdateOptions) (*doguv2.Dogu, error)
+}
 
 // client used for interacting with persistent volume claims
 type pvcClient interface {
@@ -21,21 +29,33 @@ type pvcClient interface {
 type systemInfoProvider interface {
 	getSystemInfo(ctx context.Context) (*systemInfo, error)
 	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
-	getPvcClient() kubernetesClient
 }
 
 type Validator struct {
 	conf               configuration.Configuration
 	namespace          string
 	systemInfoProvider systemInfoProvider
+	doguClient         doguClient
 }
 
-func NewValidator(conf configuration.Configuration, namespace string, p systemInfoProvider) *Validator {
+func NewValidator(conf configuration.Configuration, namespace string, p systemInfoProvider) (*Validator, error) {
+	clusterConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	ecoSystemV2Client, err := ecoSystemV2.NewForConfig(clusterConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dogu client: %s", err)
+	}
+	doguClient := ecoSystemV2Client.Dogus(namespace)
+
 	return &Validator{
 		conf:               conf,
 		namespace:          namespace,
 		systemInfoProvider: p,
-	}
+		doguClient:         doguClient,
+	}, nil
 }
 
 // ValidateSystemInfo
@@ -59,7 +79,7 @@ func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
 		return fmt.Errorf("could not get exporter system info: %s", err)
 	}
 	var result *multierror.Error
-	result = v.doValidateSystemInfo(*exSystemInfo, *imSystemInfo, v.systemInfoProvider.getPvcClient(), result, ctx)
+	result = v.doValidateSystemInfo(*exSystemInfo, *imSystemInfo, result, ctx)
 	if result != nil {
 		return fmt.Errorf("could not validate system info: %w", result)
 	}
@@ -79,7 +99,7 @@ func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
 // - pvcs are large enough (a resize is attempted)
 //
 // returns a formatted multierror if any error occurred
-func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, provider kubernetesClient, result *multierror.Error, ctx context.Context) *multierror.Error {
+func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, result *multierror.Error, ctx context.Context) *multierror.Error {
 	//validate dogus
 	imDoguMap := make(map[string]dogu)
 	for _, d := range imInfo.Dogus {
@@ -96,7 +116,7 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, p
 				result = multierror.Append(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
 			} else {
 				// validate and update the size of the dogus pvc
-				result = v.updatePVC(exDogu, imDogu, provider, result, ctx)
+				result = v.updatePVC(exDogu, imDogu, result, ctx)
 			}
 		}
 	}
@@ -122,22 +142,23 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, p
 }
 
 // resize the dogus pvc if is it not large enough
-func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, pvcs pvcClient, result *multierror.Error, ctx context.Context) *multierror.Error {
+func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, result *multierror.Error, ctx context.Context) *multierror.Error {
 	// validate that the volume size fits the exported data
 	if exDogu.Volume.SizeInBytes > imDogu.Volume.SizeInBytes {
 		// try to resize the volume
-		pvc, err := pvcs.Get(ctx, imDogu.Name, metav1.GetOptions{})
+		dogu, err := v.doguClient.Get(ctx, imDogu.Name, metav1.GetOptions{})
 		if err != nil {
 			result = multierror.Append(result, fmt.Errorf("dogu %s volume could not be found: %s \n", imDogu.Name, err.Error()))
 		} else {
 			slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
-			pvc.Spec.Resources.Requests[kubv1.ResourceStorage] = resource.MustParse(strconv.FormatInt(exDogu.Volume.SizeInBytes, 10))
-			_, err = pvcs.Update(ctx, pvc, metav1.UpdateOptions{})
+			// use Gi and round up
+			roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(1024*1024*1024)))
+			dogu.Spec.Resources.DataVolumeSize = roundedDoguSizeGB
+			_, err = v.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
 			if err != nil {
 				result = multierror.Append(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
 			} else {
-				sizeInGB := float64(exDogu.Volume.SizeInBytes) / (1024 * 1024 * 1024)
-				slog.Info(fmt.Sprintf("Dogu %s volume resized to %.2f GB", imDogu.Name, sizeInGB))
+				slog.Info(fmt.Sprintf("Dogu %s volume resized to %s GB", imDogu.Name, roundedDoguSizeGB))
 			}
 		}
 	}
