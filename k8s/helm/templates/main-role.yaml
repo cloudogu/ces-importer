@@ -13,7 +13,7 @@ rules:
   verbs:
     - get
     - update
-  # allow for systeminfo comparison and pvc size update
+  # allow for systeminfo comparison and storage size update
 - apiGroups:
     - k8s.cloudogu.com
   resources:
@@ -22,6 +22,12 @@ rules:
     - get
     - list
     - update
+# allow to inspect pvc size
+- apiGroups: [""]
+  resources:
+    - persistentvolumeclaims
+  verbs:
+    - get
   # allow for systeminfo comparison
 - apiGroups:
   - k8s.cloudogu.com
