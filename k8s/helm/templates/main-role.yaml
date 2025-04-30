@@ -13,19 +13,14 @@ rules:
   verbs:
     - get
     - update
-  # allow listing of dogus for systeminfo comparison
+  # allow for systeminfo comparison and pvc size update
 - apiGroups:
     - k8s.cloudogu.com
   resources:
     - dogus
   verbs:
-    - list
-  # allow for dogu resizing
-- apiGroups: [""]
-  resources:
-    - persistentvolumeclaims
-  verbs:
     - get
+    - list
     - update
   # allow for systeminfo comparison
 - apiGroups:

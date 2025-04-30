@@ -7,7 +7,6 @@ import (
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/hashicorp/go-multierror"
-	kubv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"math"
@@ -18,12 +17,6 @@ import (
 type doguClient interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguv2.Dogu, error)
 	Update(ctx context.Context, dogu *doguv2.Dogu, opts metav1.UpdateOptions) (*doguv2.Dogu, error)
-}
-
-// client used for interacting with persistent volume claims
-type pvcClient interface {
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*kubv1.PersistentVolumeClaim, error)
-	Update(ctx context.Context, persistentVolumeClaim *kubv1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*kubv1.PersistentVolumeClaim, error)
 }
 
 type systemInfoProvider interface {
@@ -141,7 +134,7 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, r
 	return result
 }
 
-// resize the dogus pvc if is it not large enough
+// resize the dogus pvc if it is not large enough
 func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, result *multierror.Error, ctx context.Context) *multierror.Error {
 	// validate that the volume size fits the exported data
 	if exDogu.Volume.SizeInBytes > imDogu.Volume.SizeInBytes {
