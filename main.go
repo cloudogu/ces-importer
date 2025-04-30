@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/logging"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-
 	ctrl "sigs.k8s.io/controller-runtime"
+	"syscall"
 
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 
@@ -32,7 +32,10 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	configureLogger(config)
+	err = logging.Initialize(config)
+	if err != nil {
+		panic(err)
+	}
 
 	logUsedConfig(config)
 
@@ -239,21 +242,4 @@ func logUsedConfig(config configuration.Configuration) {
 	slog.Info("ces-importer started using this configuration:",
 		"config", fmt.Sprintf("%#v", config),
 	)
-}
-
-func configureLogger(conf configuration.Configuration) {
-	var level slog.Level
-	var err = level.UnmarshalText([]byte(conf.LogLevel))
-	if err != nil {
-		slog.Error("error parsing log level. Setting log level to INFO.", "err", err)
-		level = slog.LevelInfo
-	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: false,
-		Level:     level,
-	}))
-	slog.SetDefault(logger)
-
-	slog.Info("configured logger", "level", level.String())
 }

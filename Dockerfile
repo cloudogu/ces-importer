@@ -18,6 +18,7 @@ COPY configuration configuration
 COPY cron cron
 COPY systeminfo systeminfo
 COPY sync sync
+COPY logging logging
 
 # Build
 RUN go mod vendor
@@ -31,7 +32,10 @@ LABEL maintainer="hello@cloudogu.com" \
 
 RUN apk update && apk upgrade && apk --no-cache add bash openssh rsync && \
     addgroup -S -g 65532 ces-importer && \
-    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer
+    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer && \
+    mkdir -p /home/ces-importer/migration-log && \
+    chown -R ces-importer:ces-importer /home/ces-importer/migration-log && \
+    chmod 0700 /home/ces-importer/migration-log
 
 # note that this app will start deployments that must run as root
 # use numeric IDs to avoid clash with runAsNonRoot so that k8s can validate it as non-root user

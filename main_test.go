@@ -530,48 +530,6 @@ func Test_logUsedConfig(t *testing.T) {
 	assert.Contains(t, logOutput, `config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"my-key\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\"}"`)
 }
 
-func Test_configureLogger(t *testing.T) {
-	t.Run("should fallback to INFO on config error", func(t *testing.T) {
-		// given
-		brokenConfig := configuration.Configuration{LogLevel: "banana"}
-
-		// when
-		configureLogger(brokenConfig)
-
-		// then
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
-	})
-	t.Run("should set loglevel to ERROR", func(t *testing.T) {
-		// given
-		brokenConfig := configuration.Configuration{LogLevel: "ERROR"}
-
-		// when
-		configureLogger(brokenConfig)
-
-		// then
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
-	})
-	t.Run("should set loglevel to WARN", func(t *testing.T) {
-		// given
-		config := configuration.Configuration{LogLevel: "WARN"}
-
-		// when
-		configureLogger(config)
-
-		// then
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
-		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelWarn))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelInfo))
-		assert.False(t, slog.Default().Enabled(testCtx, slog.LevelDebug))
-	})
-}
-
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.
 func Test_main(t *testing.T) {
 	t.Run("should panic on missing kube config", func(t *testing.T) {

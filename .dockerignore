@@ -8,6 +8,7 @@
 !/configuration/**/*
 !/cron/**/*
 !/systeminfo/**/*
+!/logging/**/*
 !/sync/**/*
 !/validate/**/*
 
