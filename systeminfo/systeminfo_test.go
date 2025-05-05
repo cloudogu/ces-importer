@@ -206,16 +206,3 @@ func TestGetExporterSystemInfo(t *testing.T) {
 		require.EqualError(t, err, "could not read exporter response: unexpected end of JSON input")
 	})
 }
-
-func TestGetPvcClient(t *testing.T) {
-	t.Run("should return pvc client", func(t *testing.T) {
-		k := newMockKubernetesClient(t)
-		p := Provider{
-			componentLister: nil,
-			doguLister:      nil,
-			pvcClient:       k,
-			apiClient:       nil,
-		}
-		require.Equal(t, k, p.getPvcClient())
-	})
-}

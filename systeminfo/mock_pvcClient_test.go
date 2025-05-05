@@ -85,66 +85,6 @@ func (_c *mockPvcClient_Get_Call) RunAndReturn(run func(context.Context, string,
 	return _c
 }
 
-// Update provides a mock function with given fields: ctx, persistentVolumeClaim, opts
-func (_m *mockPvcClient) Update(ctx context.Context, persistentVolumeClaim *corev1.PersistentVolumeClaim, opts v1.UpdateOptions) (*corev1.PersistentVolumeClaim, error) {
-	ret := _m.Called(ctx, persistentVolumeClaim, opts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Update")
-	}
-
-	var r0 *corev1.PersistentVolumeClaim
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PersistentVolumeClaim, v1.UpdateOptions) (*corev1.PersistentVolumeClaim, error)); ok {
-		return rf(ctx, persistentVolumeClaim, opts)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *corev1.PersistentVolumeClaim, v1.UpdateOptions) *corev1.PersistentVolumeClaim); ok {
-		r0 = rf(ctx, persistentVolumeClaim, opts)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*corev1.PersistentVolumeClaim)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *corev1.PersistentVolumeClaim, v1.UpdateOptions) error); ok {
-		r1 = rf(ctx, persistentVolumeClaim, opts)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// mockPvcClient_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
-type mockPvcClient_Update_Call struct {
-	*mock.Call
-}
-
-// Update is a helper method to define mock.On call
-//   - ctx context.Context
-//   - persistentVolumeClaim *corev1.PersistentVolumeClaim
-//   - opts v1.UpdateOptions
-func (_e *mockPvcClient_Expecter) Update(ctx interface{}, persistentVolumeClaim interface{}, opts interface{}) *mockPvcClient_Update_Call {
-	return &mockPvcClient_Update_Call{Call: _e.mock.On("Update", ctx, persistentVolumeClaim, opts)}
-}
-
-func (_c *mockPvcClient_Update_Call) Run(run func(ctx context.Context, persistentVolumeClaim *corev1.PersistentVolumeClaim, opts v1.UpdateOptions)) *mockPvcClient_Update_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*corev1.PersistentVolumeClaim), args[2].(v1.UpdateOptions))
-	})
-	return _c
-}
-
-func (_c *mockPvcClient_Update_Call) Return(_a0 *corev1.PersistentVolumeClaim, _a1 error) *mockPvcClient_Update_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *mockPvcClient_Update_Call) RunAndReturn(run func(context.Context, *corev1.PersistentVolumeClaim, v1.UpdateOptions) (*corev1.PersistentVolumeClaim, error)) *mockPvcClient_Update_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // newMockPvcClient creates a new instance of mockPvcClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func newMockPvcClient(t interface {
