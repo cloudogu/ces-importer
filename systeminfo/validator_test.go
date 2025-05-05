@@ -341,6 +341,11 @@ func TestUpdatePVC(t *testing.T) {
 			Status: v2.DoguStatus{},
 		}
 
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
 		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
@@ -375,6 +380,12 @@ func TestUpdatePVC(t *testing.T) {
 			},
 		}
 		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
 		c := make(chan error)
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)
 		err := <-c
@@ -414,6 +425,12 @@ func TestUpdatePVC(t *testing.T) {
 		}
 		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
 		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
 		c := make(chan error)
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)
 		err := <-c

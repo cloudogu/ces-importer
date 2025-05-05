@@ -16,6 +16,17 @@ import (
 	"time"
 )
 
+const (
+	defaultWaitSecondsBetweenRetries = 10
+	defaultMaxWaitMinutes            = 10
+)
+
+var (
+	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+	maxWaitMinutes            = defaultMaxWaitMinutes
+	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+)
+
 // client used for interacting with persistent volume claims
 type doguClient interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguv2.Dogu, error)
@@ -187,8 +198,7 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c c
 			if err != nil {
 				result = errors.Join(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
 			} else {
-				maxRetries := 60
-				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, maxRetries, ctx)
+				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, ctx)
 				if err != nil {
 					result = errors.Join(result, err)
 				}
@@ -199,7 +209,7 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c c
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
-func (v *Validator) waitForPVCResize(expectedSize string, doguName string, maxRetries int, ctx context.Context) error {
+func (v *Validator) waitForPVCResize(expectedSize string, doguName string, ctx context.Context) error {
 	retries := 0
 	for {
 		retries++
@@ -207,7 +217,7 @@ func (v *Validator) waitForPVCResize(expectedSize string, doguName string, maxRe
 			return fmt.Errorf("maximum amount of retries reached for the resize of Dogu %s volume", doguName)
 		}
 		// repeat every 10 seconds
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Duration(waitSecondsBetweenRetries) * time.Second)
 
 		pvc, err := v.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
 		if err != nil {
