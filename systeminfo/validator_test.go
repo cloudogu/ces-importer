@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/hashicorp/go-multierror"
+	v2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	kubv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
@@ -16,7 +17,8 @@ func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		n := "namespace"
-		v := NewValidator(configuration.Configuration{}, n, p)
+		v, err := NewValidator(configuration.Configuration{}, n, p)
+		require.NoError(t, err)
 		require.Equal(t, v.conf, configuration.Configuration{})
 		require.Equal(t, v.namespace, n)
 		require.Equal(t, v.systemInfoProvider, p)
@@ -45,9 +47,6 @@ func TestValidateSystemInfo(t *testing.T) {
 		s := newMockSystemInfoProvider(t)
 		s.EXPECT().getSystemInfo(context.Background()).Return(&sysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&sysInfo, nil)
-
-		client := newMockKubernetesClient(t)
-		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -96,8 +95,6 @@ func TestValidateSystemInfo(t *testing.T) {
 		s := newMockSystemInfoProvider(t)
 		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
-		client := newMockKubernetesClient(t)
-		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -138,8 +135,6 @@ func TestValidateSystemInfo(t *testing.T) {
 		s := newMockSystemInfoProvider(t)
 		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
-		client := newMockKubernetesClient(t)
-		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -183,8 +178,6 @@ func TestValidateSystemInfo(t *testing.T) {
 		s := newMockSystemInfoProvider(t)
 		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
-		client := newMockKubernetesClient(t)
-		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -233,8 +226,6 @@ func TestValidateSystemInfo(t *testing.T) {
 		s := newMockSystemInfoProvider(t)
 		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
-		client := newMockKubernetesClient(t)
-		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
 			conf:               configuration.Configuration{},
@@ -295,27 +286,36 @@ func TestUpdatePVC(t *testing.T) {
 				SizeInBytes: 10,
 			},
 		}
-		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, nil, result, context.Background())
-		require.Nil(t, result)
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.NoError(t, err)
+		}
 	})
 	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		pvcClient := newMockPvcClient(t)
+		pvClient := newMockPvClient(t)
 		v := Validator{
-			conf:      configuration.Configuration{},
-			namespace: "",
+			conf:       configuration.Configuration{},
+			namespace:  "",
+			doguClient: doguClient,
+			pvcClient:  pvcClient,
+			pvClient:   pvClient,
 		}
 		exDogu := dogu{
 			Name:    "",
 			Version: "",
 			Volume: volume{
-				SizeInBytes: 10,
+				SizeInBytes: 2147483648,
 			},
 		}
 		imDogu := dogu{
 			Name:    "",
 			Version: "",
 			Volume: volume{
-				SizeInBytes: 3,
+				SizeInBytes: 1073741824,
 			},
 		}
 		pvc := &kubv1.PersistentVolumeClaim{
@@ -328,18 +328,43 @@ func TestUpdatePVC(t *testing.T) {
 			},
 			Status: kubv1.PersistentVolumeClaimStatus{},
 		}
-		pvcClient := newMockPvcClient(t)
+		dogu := v2.Dogu{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
+			},
+			Status: v2.DoguStatus{},
+		}
+		pv := &kubv1.PersistentVolume{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: kubv1.PersistentVolumeSpec{
+				Capacity: kubv1.ResourceList{
+					kubv1.ResourceStorage: resource.MustParse("2Gi"),
+				},
+			},
+			Status: kubv1.PersistentVolumeStatus{},
+		}
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
-		pvcClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
-		require.Nil(t, result)
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+		pvClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pv, nil)
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.NoError(t, err)
+		}
 	})
 
 	t.Run("can not find dogus volume", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:      configuration.Configuration{},
-			namespace: "",
+			conf:       configuration.Configuration{},
+			namespace:  "",
+			doguClient: doguClient,
 		}
 		exDogu := dogu{
 			Name:    "",
@@ -355,17 +380,21 @@ func TestUpdatePVC(t *testing.T) {
 				SizeInBytes: 3,
 			},
 		}
-		pvcClient := newMockPvcClient(t)
-		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
-		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
-		require.ErrorContains(t, result, "dogu testDogu volume could not be found")
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "dogu testDogu volume could not be found")
+		}
 	})
 
 	t.Run("can not update dogus volume", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:      configuration.Configuration{},
-			namespace: "",
+			conf:       configuration.Configuration{},
+			namespace:  "",
+			doguClient: doguClient,
 		}
 		exDogu := dogu{
 			Name:    "",
@@ -381,21 +410,21 @@ func TestUpdatePVC(t *testing.T) {
 				SizeInBytes: 3,
 			},
 		}
-		pvcClient := newMockPvcClient(t)
-		pvc := &kubv1.PersistentVolumeClaim{
+		dogu := v2.Dogu{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},
-			Spec: kubv1.PersistentVolumeClaimSpec{
-				Resources: kubv1.VolumeResourceRequirements{
-					Requests: kubv1.ResourceList{},
-				},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
 			},
-			Status: kubv1.PersistentVolumeClaimStatus{},
+			Status: v2.DoguStatus{},
 		}
-		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
-		pvcClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
-		var result *multierror.Error
-		result = v.updatePVC(exDogu, imDogu, pvcClient, result, context.Background())
-		require.ErrorContains(t, result, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
+		}
 	})
 }
