@@ -206,8 +206,8 @@ func (v *Validator) waitForPVCResize(expectedSize string, doguName string, maxRe
 		if retries > maxRetries {
 			return fmt.Errorf("maximum amount of retries reached for the resize of Dogu %s volume", doguName)
 		}
-		// repeat every 2 seconds
-		time.Sleep(2 * time.Second)
+		// repeat every 10 seconds
+		time.Sleep(10 * time.Second)
 
 		pvc, err := v.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
 		if err != nil {
@@ -217,13 +217,11 @@ func (v *Validator) waitForPVCResize(expectedSize string, doguName string, maxRe
 		actualStorage := pvc.Status.Capacity.Storage()
 
 		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(actualStorage.AsApproximateFloat64()/(1024*1024*1024)))
-		slog.Info(fmt.Sprintf("requested: %d", requestedStorage.Value()))
-		slog.Info(fmt.Sprintf("actual: %d", actualStorage.Value()))
 		if requestedStorage.Equal(*actualStorage) {
 			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, roundedPVSizeGB))
 			return nil
 		}
 
-		slog.Info(fmt.Sprintf("current size: %s, expected size: %s", roundedPVSizeGB, expectedSize))
+		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, roundedPVSizeGB, expectedSize))
 	}
 }
