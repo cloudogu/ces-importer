@@ -148,16 +148,9 @@ require (
 )
 
 require (
-	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
-	github.com/cloudogu/k8s-apply-lib v0.5.0 // indirect
-	github.com/cloudogu/k8s-host-change v0.7.0 // indirect
-	github.com/cloudogu/k8s-registry-lib v0.5.1 // indirect
-	github.com/cloudogu/remote-dogu-descriptor-lib v0.1.1 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
-	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/google/go-containerregistry v0.20.3 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/vbatts/tar-split v0.11.6 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.33.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.16.4 // indirect
 	k8s.io/apiextensions-apiserver v0.32.1 // indirect
