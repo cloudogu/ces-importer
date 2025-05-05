@@ -26,10 +26,6 @@ type pvcClient interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*kubv1.PersistentVolumeClaim, error)
 }
 
-type pvClient interface {
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*kubv1.PersistentVolume, error)
-}
-
 type systemInfoProvider interface {
 	getSystemInfo(ctx context.Context) (*systemInfo, error)
 	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
@@ -41,7 +37,6 @@ type Validator struct {
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
-	pvClient           pvClient
 }
 
 func NewValidator(conf configuration.Configuration, namespace string, p systemInfoProvider) (*Validator, error) {
@@ -61,7 +56,6 @@ func NewValidator(conf configuration.Configuration, namespace string, p systemIn
 		return nil, fmt.Errorf("failed to create k8s kubernetesClient: %s", err)
 	}
 	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(namespace)
-	pvClient := kubernetesClient.CoreV1().PersistentVolumes()
 
 	return &Validator{
 		conf:               conf,
@@ -69,7 +63,6 @@ func NewValidator(conf configuration.Configuration, namespace string, p systemIn
 		systemInfoProvider: p,
 		doguClient:         doguClient,
 		pvcClient:          pvcClient,
-		pvClient:           pvClient,
 	}, nil
 }
 
@@ -194,7 +187,8 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c c
 			if err != nil {
 				result = errors.Join(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
 			} else {
-				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, ctx)
+				maxRetries := 300
+				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, maxRetries, ctx)
 				if err != nil {
 					result = errors.Join(result, err)
 				}
@@ -205,27 +199,31 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c c
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
-func (v *Validator) waitForPVCResize(expectedSize string, doguName string, ctx context.Context) error {
-	pvc, err := v.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("could not get dogu %s pvc: %w", doguName, err)
-	}
-	pvName := pvc.Spec.VolumeName
+func (v *Validator) waitForPVCResize(expectedSize string, doguName string, maxRetries int, ctx context.Context) error {
+	retries := 0
 	for {
-		// repeat every 20 seconds
-		time.Sleep(5 * time.Second)
-
-		pv, err := v.pvClient.Get(ctx, pvName, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("could not get dogu %s pv: %w", doguName, err)
+		retries++
+		if retries > maxRetries {
+			return fmt.Errorf("maximum amount of retries reached for the resize of Dogu %s volume", doguName)
 		}
-		pvStorage := pv.Spec.Capacity["storage"]
-		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(pvStorage.AsApproximateFloat64()/(1024*1024*1024)))
+		// repeat every 2 seconds
+		time.Sleep(2 * time.Second)
 
-		if roundedPVSizeGB == expectedSize {
+		pvc, err := v.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("could not get dogu %s pvc: %w", doguName, err)
+		}
+		requestedStorage := pvc.Spec.Resources.Requests.Storage()
+		actualStorage := pvc.Status.Capacity.Storage()
+
+		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(actualStorage.AsApproximateFloat64()/(1024*1024*1024)))
+		slog.Info(fmt.Sprintf("requested: %d", requestedStorage.Value()))
+		slog.Info(fmt.Sprintf("actual: %d", actualStorage.Value()))
+		if requestedStorage.Equal(*actualStorage) {
 			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, roundedPVSizeGB))
 			return nil
 		}
+
 		slog.Info(fmt.Sprintf("current size: %s, expected size: %s", roundedPVSizeGB, expectedSize))
 	}
 }

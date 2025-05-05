@@ -296,13 +296,11 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		pvcClient := newMockPvcClient(t)
-		pvClient := newMockPvClient(t)
 		v := Validator{
 			conf:       configuration.Configuration{},
 			namespace:  "",
 			doguClient: doguClient,
 			pvcClient:  pvcClient,
-			pvClient:   pvClient,
 		}
 		exDogu := dogu{
 			Name:    "",
@@ -323,10 +321,16 @@ func TestUpdatePVC(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{},
 			Spec: kubv1.PersistentVolumeClaimSpec{
 				Resources: kubv1.VolumeResourceRequirements{
-					Requests: kubv1.ResourceList{},
+					Requests: kubv1.ResourceList{
+						kubv1.ResourceStorage: resource.MustParse("2Gi"),
+					},
 				},
 			},
-			Status: kubv1.PersistentVolumeClaimStatus{},
+			Status: kubv1.PersistentVolumeClaimStatus{
+				Capacity: kubv1.ResourceList{
+					kubv1.ResourceStorage: resource.MustParse("2Gi"),
+				},
+			},
 		}
 		dogu := v2.Dogu{
 			TypeMeta:   metav1.TypeMeta{},
@@ -336,20 +340,10 @@ func TestUpdatePVC(t *testing.T) {
 			},
 			Status: v2.DoguStatus{},
 		}
-		pv := &kubv1.PersistentVolume{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: kubv1.PersistentVolumeSpec{
-				Capacity: kubv1.ResourceList{
-					kubv1.ResourceStorage: resource.MustParse("2Gi"),
-				},
-			},
-			Status: kubv1.PersistentVolumeStatus{},
-		}
+
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
 		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-		pvClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pv, nil)
 
 		c := make(chan error)
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)
