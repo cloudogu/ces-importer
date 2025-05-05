@@ -187,7 +187,7 @@ func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c c
 			if err != nil {
 				result = errors.Join(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
 			} else {
-				maxRetries := 300
+				maxRetries := 60
 				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, maxRetries, ctx)
 				if err != nil {
 					result = errors.Join(result, err)
