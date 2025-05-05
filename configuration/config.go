@@ -7,9 +7,6 @@ import (
 
 const (
 	logLevelEnv                 = "LOG_LEVEL"
-	exporterHostEnv             = "EXPORTER_HOST"
-	exporterSSHUserEnv          = "EXPORTER_SSH_USER"
-	exporterApiKeyEnv           = "EXPORTER_API_KEY"
 	importerNamespaceKeyEnv     = "IMPORTER_NAMESPACE"
 	migrationRegularScheduleEnv = "MIGRATION_REGULAR_SCHEDULE"
 	migrationFinalScheduleEnv   = "MIGRATION_FINAL_SCHEDULE"
@@ -20,19 +17,8 @@ const errorFormat = "environment variable %s is not set"
 // Configuration consists of configuration data. The most fields are obtained from the Helm chart
 // values file through a configmap, while others are hardcoded or obtained from secrets.
 type Configuration struct {
-	// ExporterHost configures the FQDN under which the exporter will be available for CES data export. The importer
-	// will contact the exporter API which returns all required data like data paths etc.
-	// The exporter API endpoint is fixed and will be routed on exporter side. This value is required.
-	ExporterHost string
-	// ExporterSSHUser contains the SSH account name that will be used during copying the data from the source to the
-	// target system. This is usually the root user. This value is required.
-	ExporterSSHUser string
-	// ExporterApiKey contains the API key to authenticate against the source system's exporter system info endpoint.
-	// This value is required.
-	ExporterApiKey string
-	// ImporterPrivateSSHKeyPath contains the file path inside the container to the SSH private key used to identify
-	// against the source system.  This value is required but hardcoded in the respective Helm chart.
-	ImporterPrivateSSHKeyPath string
+	API
+	SSH
 	// ImporterNamespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
 	// "ecosystem". This value is required but inferred from the used Helm chart.
 	ImporterNamespace string
@@ -54,27 +40,24 @@ type Configuration struct {
 func ReadConfigFromEnv() (Configuration, error) {
 	conf := Configuration{}
 
+	apiConf, err := ReadAPIConfiguration()
+	if err != nil {
+		return conf, fmt.Errorf("failed to read configuration for Exporter API: %w", err)
+	}
+
+	conf.API = apiConf
+
+	sshConf, err := ReadSSHConfiguration()
+	if err != nil {
+		return conf, fmt.Errorf("failed to read configuration for SSH: %w", err)
+	}
+
+	conf.SSH = sshConf
+
 	conf.LogLevel = os.Getenv(logLevelEnv)
 	if conf.LogLevel == "" {
 		conf.LogLevel = "INFO"
 	}
-
-	conf.ExporterHost = os.Getenv(exporterHostEnv)
-	if conf.ExporterHost == "" {
-		return conf, fmt.Errorf(errorFormat, exporterHostEnv)
-	}
-
-	conf.ExporterSSHUser = os.Getenv(exporterSSHUserEnv)
-	if conf.ExporterSSHUser == "" {
-		return conf, fmt.Errorf(errorFormat, exporterSSHUserEnv)
-	}
-
-	conf.ExporterApiKey = os.Getenv(exporterApiKeyEnv)
-	if conf.ExporterApiKey == "" {
-		return conf, fmt.Errorf(errorFormat, exporterApiKeyEnv)
-	}
-
-	conf.ImporterPrivateSSHKeyPath = "/importerSshPrivateKey"
 
 	conf.MigrationRegularCron = os.Getenv(migrationRegularScheduleEnv)
 	if conf.MigrationRegularCron == "" {

@@ -26,14 +26,18 @@ func TestReadConfigFromEnv(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, Configuration{
-			ExporterHost:              "source.net",
-			ExporterSSHUser:           "root",
-			ExporterApiKey:            "example1-1234-5678-102938475",
-			ImporterPrivateSSHKeyPath: "/importerSshPrivateKey",
-			LogLevel:                  "DEBUG",
-			MigrationRegularCron:      "0 4 * * *",
-			MigrationFinalTimestamp:   "2025-04-03 12:34:56Z",
-			ImporterNamespace:         "ecosystem",
+			API: API{
+				ExporterHost:   "source.net",
+				ExporterApiKey: "example1-1234-5678-102938475",
+			},
+			SSH: SSH{
+				ExporterSSHUser:           "root",
+				ImporterPrivateSSHKeyPath: "/importerSshPrivateKey",
+			},
+			LogLevel:                "DEBUG",
+			MigrationRegularCron:    "0 4 * * *",
+			MigrationFinalTimestamp: "2025-04-03 12:34:56Z",
+			ImporterNamespace:       "ecosystem",
 		}, actualCfg)
 	})
 }
