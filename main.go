@@ -58,7 +58,10 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to create system info provider: %w", err))
 	}
-	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
+	validator, err := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
+	if err != nil {
+		panic(fmt.Errorf("failed to create validator: %w", err))
+	}
 
 	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
