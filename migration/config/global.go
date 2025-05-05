@@ -5,7 +5,6 @@ import (
 	"fmt"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
-	"path"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -24,7 +23,7 @@ func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalC
 
 	configToKeep := make(map[regConfig.Key]regConfig.Value)
 	for key, value := range previousGlobalConfig.GetAll() {
-		if shouldKeepGlobalConfigKey(key.String(), globalConfigKeysToKeep) {
+		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) {
 			configToKeep[key] = value
 		}
 	}
@@ -51,7 +50,7 @@ func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalC
 
 	// import config from exporter
 	for _, kv := range config {
-		if shouldKeepGlobalConfigKey(kv.Key, globalConfigKeysToKeep) {
+		if matchesAnyKeyByPattern(kv.Key, globalConfigKeysToKeep) {
 			slog.Debug("Ignoring global config-key", "key", kv.Key)
 			continue
 		}
@@ -70,15 +69,6 @@ func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalC
 		return fmt.Errorf("failed to save new global config: %w", err)
 	}
 
+	slog.Info("...Successfully imported global config.")
 	return nil
-}
-
-func shouldKeepGlobalConfigKey(key string, keysToKeep []string) bool {
-	for _, pattern := range keysToKeep {
-		matched, err := path.Match(pattern, key)
-		if err == nil && matched {
-			return true
-		}
-	}
-	return false
 }
