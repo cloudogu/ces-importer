@@ -6,7 +6,7 @@ require (
 	github.com/adhocore/gronx v1.19.5
 	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-component-operator v1.8.0
-	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
+	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/apimachinery v0.32.3
@@ -41,7 +41,7 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.5.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v27.4.1+incompatible // indirect
+	github.com/docker/docker v27.5.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -148,6 +148,16 @@ require (
 )
 
 require (
+	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
+	github.com/cloudogu/k8s-apply-lib v0.5.0 // indirect
+	github.com/cloudogu/k8s-host-change v0.7.0 // indirect
+	github.com/cloudogu/k8s-registry-lib v0.5.1 // indirect
+	github.com/cloudogu/remote-dogu-descriptor-lib v0.1.1 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
+	github.com/dlclark/regexp2 v1.11.5 // indirect
+	github.com/google/go-containerregistry v0.20.3 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/vbatts/tar-split v0.11.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.16.4 // indirect
 	k8s.io/apiextensions-apiserver v0.32.1 // indirect
