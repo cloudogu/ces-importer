@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cloudogu/ces-importer/systeminfo"
+	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
 	"os"
@@ -44,6 +45,12 @@ func main() {
 		panic(fmt.Errorf("failed to read kube config: %w", err))
 	}
 
+	kubernetesClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to create kube-client: %w", err))
+	}
+	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(config.ImporterNamespace)
+
 	doguCli, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
 		panic(fmt.Errorf("failed to create dogu client: %w", err))
@@ -58,7 +65,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to create system info provider: %w", err))
 	}
-	validator, err := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
+	validator, err := systeminfo.NewValidator(config, provider, doguClient, pvcClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create validator: %w", err))
 	}

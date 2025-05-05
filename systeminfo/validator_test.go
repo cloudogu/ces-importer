@@ -16,12 +16,14 @@ import (
 func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
-		n := "namespace"
-		v, err := NewValidator(configuration.Configuration{}, n, p)
+		dc := newMockDoguClient(t)
+		pc := newMockPvcClient(t)
+		v, err := NewValidator(configuration.Configuration{}, p, dc, pc)
 		require.NoError(t, err)
 		require.Equal(t, v.conf, configuration.Configuration{})
-		require.Equal(t, v.namespace, n)
 		require.Equal(t, v.systemInfoProvider, p)
+		require.Equal(t, v.doguClient, dc)
+		require.Equal(t, v.pvcClient, pc)
 	})
 }
 
@@ -50,7 +52,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -98,7 +99,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -138,7 +138,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -181,7 +180,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -229,7 +227,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -243,7 +240,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -258,7 +254,6 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			conf:               configuration.Configuration{},
-			namespace:          "",
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -269,8 +264,7 @@ func TestValidateSystemInfo(t *testing.T) {
 func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
 		v := Validator{
-			conf:      configuration.Configuration{},
-			namespace: "",
+			conf: configuration.Configuration{},
 		}
 		exDogu := dogu{
 			Name:    "",
@@ -298,7 +292,6 @@ func TestUpdatePVC(t *testing.T) {
 		pvcClient := newMockPvcClient(t)
 		v := Validator{
 			conf:       configuration.Configuration{},
-			namespace:  "",
 			doguClient: doguClient,
 			pvcClient:  pvcClient,
 		}
@@ -362,7 +355,6 @@ func TestUpdatePVC(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
 			conf:       configuration.Configuration{},
-			namespace:  "",
 			doguClient: doguClient,
 		}
 		exDogu := dogu{
@@ -398,7 +390,6 @@ func TestUpdatePVC(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
 			conf:       configuration.Configuration{},
-			namespace:  "",
 			doguClient: doguClient,
 		}
 		exDogu := dogu{

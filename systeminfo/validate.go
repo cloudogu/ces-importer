@@ -5,14 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	kubv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"math"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 )
 
@@ -44,33 +41,14 @@ type systemInfoProvider interface {
 
 type Validator struct {
 	conf               configuration.Configuration
-	namespace          string
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
 }
 
-func NewValidator(conf configuration.Configuration, namespace string, p systemInfoProvider) (*Validator, error) {
-	clusterConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	ecoSystemV2Client, err := ecoSystemV2.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dogu client: %s", err)
-	}
-	doguClient := ecoSystemV2Client.Dogus(namespace)
-
-	kubernetesClient, err := kubernetes.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create k8s kubernetesClient: %s", err)
-	}
-	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(namespace)
-
+func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
 	return &Validator{
 		conf:               conf,
-		namespace:          namespace,
 		systemInfoProvider: p,
 		doguClient:         doguClient,
 		pvcClient:          pvcClient,
