@@ -23,19 +23,14 @@ type ImportExecutor struct {
 }
 
 func NewImportExecutor() (*ImportExecutor, error) {
-	apiConfig, err := configuration.ReadAPIConfiguration()
+	jobConfig, err := configuration.ReadJobConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read API configuration: %w", err)
+		return nil, fmt.Errorf("failed to read job configuration: %w", err)
 	}
 
-	sshConfig, err := configuration.ReadSSHConfiguration()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read SSH configuration: %w", err)
-	}
+	_ = exporter.NewClient(jobConfig.API.ExporterApiKey, http.DefaultClient)
 
-	_ = exporter.NewClient(apiConfig.ExporterApiKey, http.DefaultClient)
-
-	_ = sync.NewRsyncSyncer(apiConfig.ExporterHost, sshConfig.ExporterSSHUser, sshConfig.ImporterPrivateSSHKeyPath)
+	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
 
 	return &ImportExecutor{}, nil
 }

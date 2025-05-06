@@ -29,22 +29,29 @@ job:
       cpu: 100m
       memory: 128Mi
 config:
-  # valid values are: DEBUG, INFO, WARN, ERROR
-  logLevel: DEBUG
-  exporter:
+  logging:
+    # valid values are: DEBUG, INFO, WARN, ERROR
+    level: DEBUG
+  api:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
     # contact the exporter API which returns all required data like data paths etc.
     # The exporter API endpoint is fixed and will be routed on source side.
     host: classic-ces.exporter
-    # apiSecretName contains the secret with the exporter API key
-    apiSecretName: "ces-exporter-secret"
-    # apiSecretDataKey contains the key name that accommodates the actual exporter API key as value.
-    apiSecretDataKey: "apiKey"
-  importer:
-    # sshSecretName contains the name of the secret that contains the SSH private key which the importer will use to access the source system.
-    sshSecretName: "ces-importer-secret"
-    # sshSecretDataKey contains the key name that accommodates the actual exporter SSH private key as value.
-    sshSecretDataKey: "privateKey"
+    # secretName contains the secret with the exporter API key
+    secretName: "ces-exporter-secret"
+    # secretDataKey contains the key name that accommodates the actual exporter API key as value.
+    secretDataKey: "apiKey"
+    # apiKey is the actual api key read from the specified env var.
+    apiKey: "${API_KEY}"
+  ssh:
+    # secretName contains the name of the secret that contains the SSH private key which the importer will use to access the source system.
+    secretName: "ces-importer-secret"
+    # secretDataKey contains the key name that accommodates the actual exporter SSH private key as value.
+    secretDataKey: "privateKey"
+    # user is the user used for ssh login at the exporter
+    user: "root"
+    # privateKeyPath is the path to which the private key gets mounted within the container.
+    privateKeyPath: "/.ssh/privateKey"
   migration:
     # regularSchedule triggers recurring migration jobs while the whole source system is running.
     # Uses CRON notation like "0 4 * * *"
@@ -53,6 +60,16 @@ config:
     # users.
     # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
     finalSchedule: "2025-04-03 12:34:56Z"
+  job:
+    # doguVolumeBasePath is the path to which dogu volumes are mounted.
+    doguVolumeBasePath: "/data"
+    # exclude contains dogus with a pattern to exclude specific files during the import
+    # example:
+    #   exclude:
+    #   - dogu: "jenkins"
+    #     pattern: "EXCLUDE_PATTERN"
+    exclude: []
+
 controllerManager:
   image:
     tag: 0.0.1

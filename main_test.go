@@ -20,19 +20,21 @@ var testCtx = context.Background()
 
 const testFqdn = "server.fqdn"
 
-var testConfig = configuration.Configuration{
+var testConfig = configuration.Coordinator{
 	API: configuration.API{
 		ExporterHost:   testFqdn,
 		ExporterApiKey: "my-key",
 	},
 	SSH: configuration.SSH{
-		ExporterSSHUser:           "root",
-		ImporterPrivateSSHKeyPath: "/something",
+		User:              "root",
+		PrivateSSHKeyPath: "/something",
 	},
-	ImporterNamespace:       "ecosystem",
-	LogLevel:                "INFO",
-	MigrationRegularCron:    "0,30 * * * * *",
-	MigrationFinalTimestamp: "2025-something",
+	Namespace: "ecosystem",
+	Logging:   configuration.Logging{Level: "INFO"},
+	Migration: configuration.Migration{
+		RegularCron:    "0,30 * * * * *",
+		FinalTimestamp: "2025-something",
+	},
 }
 
 func Test_isApiExportReady(t *testing.T) {
@@ -537,7 +539,9 @@ func Test_logUsedConfig(t *testing.T) {
 func Test_configureLogger(t *testing.T) {
 	t.Run("should fallback to INFO on config error", func(t *testing.T) {
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "banana"}
+		brokenConfig := configuration.Coordinator{
+			Logging: configuration.Logging{Level: "banana"},
+		}
 
 		// when
 		configureLogger(brokenConfig)
@@ -550,10 +554,12 @@ func Test_configureLogger(t *testing.T) {
 	})
 	t.Run("should set loglevel to ERROR", func(t *testing.T) {
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "ERROR"}
+		config := configuration.Coordinator{
+			Logging: configuration.Logging{Level: "ERROR"},
+		}
 
 		// when
-		configureLogger(brokenConfig)
+		configureLogger(config)
 
 		// then
 		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
@@ -563,7 +569,9 @@ func Test_configureLogger(t *testing.T) {
 	})
 	t.Run("should set loglevel to WARN", func(t *testing.T) {
 		// given
-		config := configuration.Configuration{LogLevel: "WARN"}
+		config := configuration.Coordinator{
+			Logging: configuration.Logging{Level: "WARN"},
+		}
 
 		// when
 		configureLogger(config)
@@ -589,12 +597,8 @@ func Test_main(t *testing.T) {
 		}
 
 		// given
-		t.Setenv("LOG_LEVEL", "DEBUG")
-		t.Setenv("EXPORTER_HOST", "source.net")
-		t.Setenv("EXPORTER_SSH_USER", "root")
-		t.Setenv("EXPORTER_API_KEY", "example1-1234-5678-102938475")
-		t.Setenv("MIGRATION_REGULAR_SCHEDULE", "0 4 * * *")
-		t.Setenv("MIGRATION_FINAL_SCHEDULE", "2025-04-03 12:34:56Z")
+		t.Setenv("API_KEY", "testKey")
+		t.Setenv("CONFIG_PATH", "testdata/config")
 		t.Setenv("IMPORTER_NAMESPACE", "ecosystem")
 
 		defer func() {

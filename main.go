@@ -27,7 +27,7 @@ var hostProtocolScheme = "https://"
 func main() {
 	ctx := context.Background()
 
-	config, err := configuration.ReadConfigFromEnv()
+	config, err := configuration.ReadCoordinatorConfig()
 	if err != nil {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
@@ -49,21 +49,21 @@ func main() {
 		panic(fmt.Errorf("failed to create dogu client: %w", err))
 	}
 
-	doguClient := doguCli.Dogus(config.ImporterNamespace)
+	doguClient := doguCli.Dogus(config.Namespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.SSH.User, config.SSH.PrivateSSHKeyPath)
 
-	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
+	provider, err := systeminfo.NewSystemInfoProvider(config.Namespace)
 	if err != nil {
 		panic(fmt.Errorf("failed to create system info provider: %w", err))
 	}
-	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
+	validator := systeminfo.NewValidator(config, config.Namespace, provider)
 
 	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
-	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
+	cronLooper, err := cron.New(ctx, config.Migration.RegularCron, mainLoop)
 	if err != nil {
-		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
+		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.Migration.RegularCron, err))
 	}
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
@@ -87,7 +87,7 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Coordinator, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
 		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
 		if err != nil {
@@ -223,7 +223,7 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli export
 	return &systemInfo, nil
 }
 
-func logUsedConfig(config configuration.Configuration) {
+func logUsedConfig(config configuration.Coordinator) {
 	slog.Info("                     ./////,                    ")
 	slog.Info("                 ./////==//////,                ")
 	slog.Info("                ////.  ___   ////.              ")
@@ -241,9 +241,9 @@ func logUsedConfig(config configuration.Configuration) {
 	)
 }
 
-func configureLogger(conf configuration.Configuration) {
+func configureLogger(conf configuration.Coordinator) {
 	var level slog.Level
-	var err = level.UnmarshalText([]byte(conf.LogLevel))
+	var err = level.UnmarshalText([]byte(conf.Logging.Level))
 	if err != nil {
 		slog.Error("error parsing log level. Setting log level to INFO.", "err", err)
 		level = slog.LevelInfo

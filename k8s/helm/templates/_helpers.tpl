@@ -23,11 +23,3 @@ app.kubernetes.io/name: {{ include "ces-importer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 k8s.cloudogu.com/part-of: ces-migration
 {{- end }}
-
-{{- define "ces-importer.sshPrivateKeyPath" -}}
-/importerSshPrivateKey
-{{- end }}
-
-{{- define "ces-importer.sshUser" -}}
-root
-{{- end }}

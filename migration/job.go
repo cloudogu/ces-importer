@@ -1,7 +1,9 @@
 package migration
 
 import (
+	"context"
 	"fmt"
+	"github.com/cloudogu/ces-importer/configuration"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +15,7 @@ type volumeMounts struct {
 	mounts  []v1.VolumeMount
 }
 
-func createVolumeMounts(pvcList []doguPVC) volumeMounts {
+func createDoguVolumeMounts(pvcList []doguPVC) volumeMounts {
 	volumes := make([]v1.Volume, 0, len(pvcList))
 	mounts := make([]v1.VolumeMount, 0, len(pvcList))
 
@@ -47,70 +49,90 @@ func createVolumeMounts(pvcList []doguPVC) volumeMounts {
 	}
 }
 
-func createImportJob() *batchv1.Job {
+func createSSHPrivateKeyMount(privateSSHKeyPath string) volumeMounts {
+	permissions := int32(0400)
+
+	secretVolume := v1.Volume{
+		Name: "ssh-privateKey",
+		VolumeSource: v1.VolumeSource{
+			Secret: &v1.SecretVolumeSource{
+				SecretName:  "TODO",
+				DefaultMode: &permissions,
+			},
+		},
+	}
+
+	secretVolumeMount := v1.VolumeMount{
+		Name:      "ssh-privateKey",
+		MountPath: privateSSHKeyPath,
+		ReadOnly:  true,
+	}
+
+	return volumeMounts{
+		volumes: []v1.Volume{secretVolume},
+		mounts:  []v1.VolumeMount{secretVolumeMount},
+	}
+}
+
+type pvcClient interface {
+	GetDoguVolumes(ctx context.Context) ([]doguPVC, error)
+}
+
+type JobProvider struct {
+	apiConfig configuration.API
+	sshConfig configuration.SSH
+	pvcClient
+}
+
+func (j JobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) {
+	backoffLimit := int32(0) // Allow no retries for the job before failing the job
+
+	pvcList, err := j.GetDoguVolumes(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dogu volumes: %w", err)
+	}
+
+	var jobVolumeMounts volumeMounts
+
+	doguVolumeMounts := createDoguVolumeMounts(pvcList)
+	jobVolumeMounts.volumes = append(jobVolumeMounts.volumes, doguVolumeMounts.volumes...)
+	jobVolumeMounts.mounts = append(jobVolumeMounts.mounts, doguVolumeMounts.mounts...)
+
+	sshKeyVolumeMount := createSSHPrivateKeyMount(j.sshConfig.PrivateSSHKeyPath)
+	jobVolumeMounts.volumes = append(jobVolumeMounts.volumes, sshKeyVolumeMount.volumes...)
+	jobVolumeMounts.mounts = append(jobVolumeMounts.mounts, sshKeyVolumeMount.mounts...)
+
 	return &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "migration-job",
+			Labels: map[string]string{
+				"app.kubernetes.io/name":      "migration-job",
+				"app.kubernetes.io/instance":  "migration-job-1",
+				"app.kubernetes.io/component": "job",
+				"app.kubernetes.io/part-of":   "migration",
+			},
+		},
 		Spec: batchv1.JobSpec{
-			Parallelism:           nil,
-			Completions:           nil,
-			ActiveDeadlineSeconds: nil,
-			PodFailurePolicy:      nil,
-			SuccessPolicy:         nil,
-			BackoffLimit:          nil,
-			BackoffLimitPerIndex:  nil,
-			MaxFailedIndexes:      nil,
-			Selector:              nil,
-			ManualSelector:        nil,
+			BackoffLimit: &backoffLimit,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: v1.PodSpec{
-					Volumes:                       nil,
-					InitContainers:                nil,
-					Containers:                    nil,
-					EphemeralContainers:           nil,
-					RestartPolicy:                 "",
-					TerminationGracePeriodSeconds: nil,
-					ActiveDeadlineSeconds:         nil,
-					DNSPolicy:                     "",
-					NodeSelector:                  nil,
-					ServiceAccountName:            "",
-					DeprecatedServiceAccount:      "",
-					AutomountServiceAccountToken:  nil,
-					NodeName:                      "",
-					HostNetwork:                   false,
-					HostPID:                       false,
-					HostIPC:                       false,
-					ShareProcessNamespace:         nil,
-					SecurityContext:               nil,
-					ImagePullSecrets:              nil,
-					Hostname:                      "",
-					Subdomain:                     "",
-					Affinity:                      nil,
-					SchedulerName:                 "",
-					Tolerations:                   nil,
-					HostAliases:                   nil,
-					PriorityClassName:             "",
-					Priority:                      nil,
-					DNSConfig:                     nil,
-					ReadinessGates:                nil,
-					RuntimeClassName:              nil,
-					EnableServiceLinks:            nil,
-					PreemptionPolicy:              nil,
-					Overhead:                      nil,
-					TopologySpreadConstraints:     nil,
-					SetHostnameAsFQDN:             nil,
-					OS:                            nil,
-					HostUsers:                     nil,
-					SchedulingGates:               nil,
-					ResourceClaims:                nil,
-					Resources:                     nil,
+					Volumes: jobVolumeMounts.volumes,
+					Containers: []v1.Container{
+						{
+							Name:         "",
+							Image:        "",
+							Env:          []v1.EnvVar{},
+							VolumeMounts: jobVolumeMounts.mounts,
+							// This is important for dev purposes but not the best decision for productive code later
+							ImagePullPolicy: "Always",
+						},
+					},
+					RestartPolicy:      v1.RestartPolicyNever,
+					ServiceAccountName: "TODO",
+					ImagePullSecrets:   nil,
 				},
 			},
-			TTLSecondsAfterFinished: nil,
-			CompletionMode:          nil,
-			Suspend:                 nil,
-			PodReplacementPolicy:    nil,
-			ManagedBy:               nil,
 		},
-	}
+	}, nil
 }

@@ -16,8 +16,8 @@ func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		n := "namespace"
-		v := NewValidator(configuration.Configuration{}, n, p)
-		require.Equal(t, v.conf, configuration.Configuration{})
+		v := NewValidator(configuration.Coordinator{}, n, p)
+		require.Equal(t, v.conf, configuration.Coordinator{})
 		require.Equal(t, v.namespace, n)
 		require.Equal(t, v.systemInfoProvider, p)
 	})
@@ -50,7 +50,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -100,7 +100,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -142,7 +142,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -187,7 +187,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -237,7 +237,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getPvcClient().Return(client)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -251,7 +251,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -266,7 +266,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			namespace:          "",
 			systemInfoProvider: s,
 		}
@@ -278,7 +278,7 @@ func TestValidateSystemInfo(t *testing.T) {
 func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
 		v := Validator{
-			conf:      configuration.Configuration{},
+			conf:      configuration.Coordinator{},
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -301,7 +301,7 @@ func TestUpdatePVC(t *testing.T) {
 	})
 	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
 		v := Validator{
-			conf:      configuration.Configuration{},
+			conf:      configuration.Coordinator{},
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -338,7 +338,7 @@ func TestUpdatePVC(t *testing.T) {
 
 	t.Run("can not find dogus volume", func(t *testing.T) {
 		v := Validator{
-			conf:      configuration.Configuration{},
+			conf:      configuration.Coordinator{},
 			namespace: "",
 		}
 		exDogu := dogu{
@@ -364,7 +364,7 @@ func TestUpdatePVC(t *testing.T) {
 
 	t.Run("can not update dogus volume", func(t *testing.T) {
 		v := Validator{
-			conf:      configuration.Configuration{},
+			conf:      configuration.Coordinator{},
 			namespace: "",
 		}
 		exDogu := dogu{

@@ -2,77 +2,253 @@ package configuration
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
+	"path"
 )
 
 const (
-	logLevelEnv                 = "LOG_LEVEL"
-	importerNamespaceKeyEnv     = "IMPORTER_NAMESPACE"
-	migrationRegularScheduleEnv = "MIGRATION_REGULAR_SCHEDULE"
-	migrationFinalScheduleEnv   = "MIGRATION_FINAL_SCHEDULE"
+	envBaseConfigPathKey    = "CONFIG_PATH"
+	envImporterNamespaceKey = "IMPORTER_NAMESPACE"
+)
+
+const (
+	fileLoggingConfig      = "logging.yaml"
+	fileAPIConfig          = "api.yaml"
+	fileMigrationConfig    = "migration.yaml"
+	fileSSHConfig          = "ssh.yaml"
+	fileJobContainerConfig = "job-container.yaml"
+	fileJobConfig          = "job.yaml"
 )
 
 const errorFormat = "environment variable %s is not set"
 
-// Configuration consists of configuration data. The most fields are obtained from the Helm chart
-// values file through a configmap, while others are hardcoded or obtained from secrets.
-type Configuration struct {
-	API
-	SSH
-	// ImporterNamespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
-	// "ecosystem". This value is required but inferred from the used Helm chart.
-	ImporterNamespace string
-	// LogLevel manages to granularity of log output. Values are (all in uppercase) in decreasing verbosity:
+// Logging contains the configuration data for the logging.
+type Logging struct {
+	// Level manages to granularity of log output. Values are (all in uppercase) in decreasing verbosity:
 	// DEBUG, INFO, WARN, ERROR
-	//  This value is optional and will default to INFO.
-	LogLevel string
-	// MigrationRegularCron triggers recurring migration jobs while the whole source system is running.
+	Level string `yaml:"level"`
+}
+
+// API contains the configuration data for the API connection to the source system.
+type API struct {
+	// ExporterHost configures the FQDN under which the exporter will be available for CES data export. The importer
+	// will contact the exporter API which returns all required data like data paths etc.
+	// The exporter API endpoint is fixed and will be routed on exporter side. This value is required.
+	ExporterHost string `yaml:"host"`
+	// ExporterApiKey contains the API key to authenticate against the source system's exporter system info endpoint.
+	// This value is required.
+	ExporterApiKey string `yaml:"apiKey"`
+}
+
+// Migration contains the configuration data for the migration schedule.
+type Migration struct {
+	// RegularCron triggers recurring migration jobs while the whole source system is running.
 	// Uses CRON notation f. e. "0 4 * * *"
 	// This value is required.
-	MigrationRegularCron string
-	// MigrationFinalTimestamp triggers the finishing migration job while the source system is supposed to be void of
+	RegularCron string `yaml:"regularSchedule"`
+	// FinalTimestamp triggers the finishing migration job while the source system is supposed to be void of
 	// active users.
 	// Uses RFC 3339 notation f. e. "2025-04-03 12:34:56Z"
 	// This value is optional, but a final migration without this value will then be impossible.
-	MigrationFinalTimestamp string
+	FinalTimestamp string `yaml:"finalSchedule"`
 }
 
-func ReadConfigFromEnv() (Configuration, error) {
-	conf := Configuration{}
+// SSH contains the configuration data for the SSH connection to the source system.
+type SSH struct {
+	// User contains the SSH account name that will be used during copying the data from the source to the
+	// target system. This is usually the root user. This value is required.
+	User string `yaml:"user"`
+	// PrivateSSHKeyPath contains the file path inside the container to the SSH private key used to identify
+	// against the source system.  This value is required but hardcoded in the respective Helm chart.
+	PrivateSSHKeyPath string `yaml:"privateKeyPath"`
+	// SecretName specifies the Kubernetes secret name containing private SSH key data for authentication.
+	SecretName string `yaml:"secretName"`
+	// SecretDataKey specifies the key inside the secret containing the private SSH key data.
+	SecretDataKey string `yaml:"secretDataKey"`
+}
 
-	apiConf, err := ReadAPIConfiguration()
+// JobContainer defines the configuration for the container that runs migration jobs.
+// It includes image details, pull policy, secrets, and resource requirements.
+type JobContainer struct {
+	// Image contains the container image information
+	Image struct {
+		// Registry specifies the container registry to pull the image from
+		Registry string `yaml:"registry"`
+		// Repository specifies the image repository
+		Repository string `yaml:"repository"`
+		// Tag specifies the image version tag
+		Tag string `yaml:"tag"`
+	} `yaml:"image"`
+	// ImagePullPolicy defines when the kubelet should pull the image (Always, IfNotPresent, Never)
+	ImagePullPolicy string `yaml:"imagePullPolicy"`
+	// ImagePullSecrets contains names of secrets used for pulling the image from private registries
+	ImagePullSecrets []struct {
+		Name string `yaml:"name"`
+	} `yaml:"imagePullSecrets"`
+	// Resources defines the compute resources required by the container
+	Resources struct {
+		// Limits specify the maximum resources that can be consumed
+		Limits struct {
+			// CPU specifies the maximum amount of CPU the container can use
+			CPU string `yaml:"cpu"`
+			// Memory specifies the maximum amount of memory the container can use
+			Memory string `yaml:"memory"`
+		} `yaml:"limits"`
+		// Requests specify the minimum resources that must be available
+		Requests struct {
+			// CPU specifies the minimum amount of CPU the container needs
+			CPU string `yaml:"cpu"`
+			// Memory specifies the minimum amount of memory the container needs
+			Memory string `yaml:"memory"`
+		} `yaml:"requests"`
+	}
+}
+
+// JobConfig contains the configuration data for the job container.
+type JobConfig struct {
+	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
+	DoguVolumeBasePath string `yaml:"doguVolumeBasePath"`
+	// Exclude specifies a list of dogus for which specific files should not be synchronized.
+	Exclude []struct {
+		// DoguName specifies the name of the dogu for which the files should not be synchronized.
+		DoguName string `yaml:"dogu"`
+		// Pattern specifies the file pattern for the excluded files.
+		Pattern string `yaml:"pattern"`
+	} `yaml:"exclude"`
+}
+
+// Coordinator consists of configuration data. The most fields are obtained from the Helm chart
+// values file through a configmap, while others are hardcoded or obtained from secrets.
+type Coordinator struct {
+	Logging
+	API
+	Migration
+	SSH
+	JobContainer
+
+	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
+	// "ecosystem". This value is required but inferred from the used Helm chart.
+	Namespace string
+}
+
+func ReadCoordinatorConfig() (Coordinator, error) {
+	configBaseDir := os.Getenv(envBaseConfigPathKey)
+	if configBaseDir == "" {
+		return Coordinator{}, fmt.Errorf(errorFormat, envBaseConfigPathKey)
+	}
+
+	namespace := os.Getenv(envImporterNamespaceKey)
+	if namespace == "" {
+		return Coordinator{}, fmt.Errorf(errorFormat, envImporterNamespaceKey)
+	}
+
+	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))
 	if err != nil {
-		return conf, fmt.Errorf("failed to read configuration for Exporter API: %w", err)
+		return Coordinator{}, fmt.Errorf("failed to read logging configuration: %w", err)
 	}
 
-	conf.API = apiConf
-
-	sshConf, err := ReadSSHConfiguration()
+	apiConfig, err := readConfigYAML[API](path.Join(configBaseDir, fileAPIConfig))
 	if err != nil {
-		return conf, fmt.Errorf("failed to read configuration for SSH: %w", err)
+		return Coordinator{}, fmt.Errorf("failed to read API configuration: %w", err)
 	}
 
-	conf.SSH = sshConf
-
-	conf.LogLevel = os.Getenv(logLevelEnv)
-	if conf.LogLevel == "" {
-		conf.LogLevel = "INFO"
+	migrationConfig, err := readConfigYAML[Migration](path.Join(configBaseDir, fileMigrationConfig))
+	if err != nil {
+		return Coordinator{}, fmt.Errorf("failed to read migration configuration: %w", err)
 	}
 
-	conf.MigrationRegularCron = os.Getenv(migrationRegularScheduleEnv)
-	if conf.MigrationRegularCron == "" {
-		return conf, fmt.Errorf(errorFormat, migrationRegularScheduleEnv)
+	sshConfig, err := readConfigYAML[SSH](path.Join(configBaseDir, fileSSHConfig))
+	if err != nil {
+		return Coordinator{}, fmt.Errorf("failed to read ssh configuration: %w", err)
 	}
 
-	conf.MigrationFinalTimestamp = os.Getenv(migrationFinalScheduleEnv)
-	if conf.MigrationFinalTimestamp == "" {
-		return conf, fmt.Errorf(errorFormat, migrationFinalScheduleEnv)
+	jobContainerConfig, err := readConfigYAML[JobContainer](path.Join(configBaseDir, fileJobContainerConfig))
+	if err != nil {
+		return Coordinator{}, fmt.Errorf("failed to read job container configuration: %w", err)
 	}
 
-	conf.ImporterNamespace = os.Getenv(importerNamespaceKeyEnv)
-	if conf.ImporterNamespace == "" {
-		return conf, fmt.Errorf(errorFormat, importerNamespaceKeyEnv)
+	return Coordinator{
+		Logging:      loggingConfig,
+		API:          apiConfig,
+		Migration:    migrationConfig,
+		SSH:          sshConfig,
+		JobContainer: jobContainerConfig,
+		Namespace:    namespace,
+	}, nil
+}
+
+// Job consists of configuration data. The most fields are obtained from the Helm chart
+// values file through the YAML files.
+type Job struct {
+	Logging
+	API
+	SSH
+	JobConfig
+
+	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
+	// "ecosystem". This value is required but inferred from the used Helm chart.
+	Namespace string
+}
+
+func ReadJobConfig() (Job, error) {
+	configBaseDir := os.Getenv(envBaseConfigPathKey)
+	if configBaseDir == "" {
+		return Job{}, fmt.Errorf(errorFormat, envBaseConfigPathKey)
 	}
 
-	return conf, nil
+	namespace := os.Getenv(envImporterNamespaceKey)
+	if namespace == "" {
+		return Job{}, fmt.Errorf(errorFormat, envImporterNamespaceKey)
+	}
+
+	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))
+	if err != nil {
+		return Job{}, fmt.Errorf("failed to read logging configuration: %w", err)
+	}
+
+	apiConfig, err := readConfigYAML[API](path.Join(configBaseDir, fileAPIConfig))
+	if err != nil {
+		return Job{}, fmt.Errorf("failed to read API configuration: %w", err)
+	}
+
+	sshConfig, err := readConfigYAML[SSH](path.Join(configBaseDir, fileSSHConfig))
+	if err != nil {
+		return Job{}, fmt.Errorf("failed to read ssh configuration: %w", err)
+	}
+
+	jobConfig, err := readConfigYAML[JobConfig](path.Join(configBaseDir, fileJobConfig))
+	if err != nil {
+		return Job{}, fmt.Errorf("failed to read job configuration: %w", err)
+	}
+
+	return Job{
+		Logging:   loggingConfig,
+		API:       apiConfig,
+		SSH:       sshConfig,
+		JobConfig: jobConfig,
+		Namespace: namespace,
+	}, nil
+}
+
+type ConfigTypes interface {
+	API | Logging | Migration | JobContainer | JobConfig | SSH
+}
+
+func readConfigYAML[T ConfigTypes](configPath string) (T, error) {
+	var config T
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return config, fmt.Errorf("failed to read config file %s: %w", configPath, err)
+	}
+
+	// Expand environment variables like ${VAR}
+	fullContent := os.ExpandEnv(string(content))
+
+	if err = yaml.Unmarshal([]byte(fullContent), &config); err != nil {
+		return config, fmt.Errorf("failed to unmarshal config file %s: %w", configPath, err)
+	}
+
+	return config, nil
 }

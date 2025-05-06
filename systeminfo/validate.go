@@ -18,17 +18,17 @@ type pvcClient interface {
 
 type systemInfoProvider interface {
 	getSystemInfo(ctx context.Context) (*systemInfo, error)
-	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
+	getExporterSystemInfo(conf configuration.Coordinator, ctx context.Context) (*systemInfo, error)
 	getPvcClient() kubernetesClient
 }
 
 type Validator struct {
-	conf               configuration.Configuration
+	conf               configuration.Coordinator
 	namespace          string
 	systemInfoProvider systemInfoProvider
 }
 
-func NewValidator(conf configuration.Configuration, namespace string, p systemInfoProvider) *Validator {
+func NewValidator(conf configuration.Coordinator, namespace string, p systemInfoProvider) *Validator {
 	return &Validator{
 		conf:               conf,
 		namespace:          namespace,
