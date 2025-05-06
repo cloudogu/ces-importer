@@ -6,11 +6,17 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
 	stateMigrationSuccess = "erfolgreich"
 	stateMigrationFailure = "nicht erfolgreich"
+)
+
+const (
+	typeMigrationFinal   = "finale"
+	typeMigrationPartial = "partielle"
 )
 
 const (
@@ -24,7 +30,7 @@ const (
 
 const (
 	mailSubject = "Migration war %s."
-	mailBody    = "Die Migration von '%s' zu '%s' war %s.\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
+	mailBody    = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
 )
 
 type SenderService func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
@@ -102,18 +108,23 @@ func (s *Sender) subject(success bool) string {
 	return fmt.Sprintf("Subject: %s\r\n", fmt.Sprintf(mailSubject, result))
 }
 
-func (s *Sender) body(success bool) string {
+func (s *Sender) body(success bool, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) string {
 	result := stateMigrationSuccess
 	if !success {
 		result = stateMigrationFailure
 	}
 
-	return fmt.Sprintf("Subject: %s\r\n", fmt.Sprintf(mailBody, "", "", result))
+	migrationType := typeMigrationPartial
+	if isFinal {
+		migrationType = typeMigrationFinal
+	}
+
+	return fmt.Sprintf("%s\r\n", fmt.Sprintf(mailBody, migrationType, sourceInstance, targetInstance, result, start, end))
 }
 
-func (s *Sender) SendWithAttachments(success bool, attachments []string) error {
+func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) error {
 	from := fmt.Sprintf("From: %s\r\n", s.config.from)
-	body := fmt.Sprintf("%s\r\n", s.body(success))
+	body := s.body(success, sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
 	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
 	message := mime +

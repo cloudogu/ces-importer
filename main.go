@@ -13,6 +13,8 @@ import (
 	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/repository"
+	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
 	"net/smtp"
@@ -20,9 +22,11 @@ import (
 	"os/signal"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"syscall"
+	"time"
 )
 
-var hostProtocolScheme = "https://"
+const hostProtocolScheme = "https://"
+const keyFQDN = "fqdn"
 
 func main() {
 	ctx := context.Background()
@@ -52,6 +56,13 @@ func main() {
 		panic(fmt.Errorf("failed to create dogu client: %w", err))
 	}
 
+	k8sClient, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to create k8s client: %w", err))
+	}
+
+	globalConfig := repository.NewGlobalConfigRepository(k8sClient.CoreV1().ConfigMaps(config.ImporterNamespace))
+
 	doguClient := doguCli.Dogus(config.ImporterNamespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
@@ -63,7 +74,7 @@ func main() {
 	}
 	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, smtp.SendMail)
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, globalConfig, smtp.SendMail)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
@@ -90,9 +101,9 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, globalConfig *repository.GlobalConfigRepository, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
-
+		startTime := time.Now()
 		err := logging.Initialize(config)
 		if err != nil {
 			return 0, fmt.Errorf("failed to reset logger: %w", err)
@@ -152,7 +163,25 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 
 		// TODO: get job logs and append to mail
 
-		err = sender.SendWithAttachments(err != nil, []string{logging.AppLogFile})
+		global, err := globalConfig.Get(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get global config: %w", err)
+		}
+
+		fqdn, _ := global.Get(keyFQDN)
+
+		logFilesToAppend := []string{logging.AppLogFile}
+		success := err != nil
+		err = sender.SendMigrationResult(
+			success,
+			logFilesToAppend,
+			hostProtocolScheme+config.ExporterHost,
+			hostProtocolScheme+fqdn.String(),
+			startTime,
+			time.Now(),
+			false,
+		)
+
 		if err != nil {
 			return 0, fmt.Errorf("failed to send mail: %w", err)
 		}
