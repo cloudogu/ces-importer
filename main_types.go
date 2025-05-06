@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-
 	"github.com/cloudogu/ces-importer/api/exporter"
+	"io"
 )
 
 type exporterApiClient interface {
 	// DoGetRequest allows issuing HTTP requests towards the exporter API. The result will be a byte slice that must
 	// be parsed by the caller respectively.
 	DoGetRequest(ctx context.Context, url string) ([]byte, error)
+	DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error)
 }
 
 // doguStopper provides functions to stop a running dogu.
