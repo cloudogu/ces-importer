@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -128,4 +129,85 @@ func TestMergeNginxExternalsConfigIntoGlobalConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_createDoguConfigForNginxIngress(t *testing.T) {
+	t.Run("should return a dogu config for the nginx-ingress dogu", func(t *testing.T) {
+		cfg := doguConfig{
+			Name: "nginx",
+			NormalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/html_content_url", Value: "content_url"},
+			},
+			SensitiveConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/html_content_url", Value: "content_url"},
+			},
+			LocalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/html_content_url", Value: "content_url"},
+			},
+		}
+
+		newCfg := createDoguConfigForNginxIngress(cfg)
+
+		assert.Equal(t, "nginx-ingress", newCfg.Name)
+
+		assert.Len(t, newCfg.NormalConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.NormalConfig[0])
+
+		assert.Len(t, newCfg.SensitiveConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.SensitiveConfig[0])
+
+		assert.Len(t, newCfg.LocalConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.LocalConfig[0])
+	})
+}
+
+func Test_createDoguConfigForNginxStatic(t *testing.T) {
+	t.Run("should return a dogu config for the nginx-static dogu", func(t *testing.T) {
+		cfg := doguConfig{
+			Name: "nginx",
+			NormalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/google_tracking_id", Value: "tracking_id"},
+				{Key: "/disable_access_log", Value: "test"},
+			},
+			SensitiveConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/google_tracking_id", Value: "tracking_id"},
+				{Key: "/disable_access_log", Value: "test"},
+			},
+			LocalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "/buffering/test", Value: "buf_test"},
+				{Key: "/externals/test", Value: "ext_test"},
+				{Key: "/google_tracking_id", Value: "tracking_id"},
+				{Key: "/disable_access_log", Value: "test"},
+			},
+		}
+
+		newCfg := createDoguConfigForNginxStatic(cfg)
+
+		assert.Equal(t, "nginx-static", newCfg.Name)
+
+		assert.Len(t, newCfg.NormalConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.NormalConfig[0])
+
+		assert.Len(t, newCfg.SensitiveConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.SensitiveConfig[0])
+
+		assert.Len(t, newCfg.LocalConfig, 1)
+		assert.Equal(t, keyValue{Key: "key1", Value: "value1"}, newCfg.LocalConfig[0])
+	})
 }
