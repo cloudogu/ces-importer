@@ -15,22 +15,27 @@ var getLocalConfigFileForDogu = func(dogu string) string {
 	return fmt.Sprintf(localConfigPathTemplate, dogu)
 }
 
-func (ci *ConfigImporter) importDoguConfigs(ctx context.Context, config []doguConfig) error {
+type cesDoguConfigImporter struct {
+	doguConfigRepo          doguConfigRepo
+	sensitiveDoguConfigRepo doguConfigRepo
+}
+
+func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []doguConfig) error {
 	slog.Info("Importing dogu config...")
 
 	for _, dc := range config {
 		if dc.Name == nginxDoguName {
 			nginxStaticConfig := createDoguConfigForNginxStatic(dc)
-			if err := ci.importDoguConfig(ctx, nginxStaticConfig); err != nil {
+			if err := dci.importDoguConfig(ctx, nginxStaticConfig); err != nil {
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxStaticConfig.Name, err)
 			}
 
 			nginxIngressConfig := createDoguConfigForNginxIngress(dc)
-			if err := ci.importDoguConfig(ctx, nginxIngressConfig); err != nil {
+			if err := dci.importDoguConfig(ctx, nginxIngressConfig); err != nil {
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxIngressConfig.Name, err)
 			}
 		} else {
-			if err := ci.importDoguConfig(ctx, dc); err != nil {
+			if err := dci.importDoguConfig(ctx, dc); err != nil {
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)
 			}
 		}
@@ -40,12 +45,12 @@ func (ci *ConfigImporter) importDoguConfigs(ctx context.Context, config []doguCo
 	return nil
 }
 
-func (ci *ConfigImporter) importDoguConfig(ctx context.Context, dc doguConfig) error {
-	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.NormalConfig, ci.doguConfigRepo); err != nil {
+func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc doguConfig) error {
+	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.NormalConfig, dci.doguConfigRepo); err != nil {
 		return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)
 	}
 
-	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.SensitiveConfig, ci.sensitiveDoguConfigRepo); err != nil {
+	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.SensitiveConfig, dci.sensitiveDoguConfigRepo); err != nil {
 		return fmt.Errorf("failed to import sensitive dogu config for dogu '%s': %w", dc.Name, err)
 	}
 

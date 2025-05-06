@@ -1,6 +1,232 @@
 package configuration
 
-import "testing"
+import (
+	"context"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+func TestConfigImporter_ImportConfiguration(t *testing.T) {
+	testCtx := context.Background()
+
+	t.Run("should import the configuration", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+			DoguConfigs: []doguConfig{
+				{
+					Name: "dogu1",
+					NormalConfig: []keyValue{
+						{Key: "key1", Value: "value1"},
+					},
+				},
+			},
+			BackupSchedules: []backupSchedule{
+				{Name: "schedule 1", Schedule: "* * * *"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalConfig(testCtx, cfg.GlobalConfig).Return(nil)
+
+		mockDci := newMockDoguConfigImporter(t)
+		mockDci.EXPECT().importDoguConfigs(testCtx, cfg.DoguConfigs).Return(nil)
+
+		mockBsi := newMockBackupScheduleImporter(t)
+		mockBsi.EXPECT().importBackupSchedules(testCtx, cfg.BackupSchedules).Return(nil)
+
+		ci := &ConfigImporter{
+			getter:                 mGetter,
+			globalConfigImporter:   mockGci,
+			doguConfigImporter:     mockDci,
+			backupScheduleImporter: mockBsi,
+		}
+
+		err := ci.ImportConfiguration(testCtx)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("should fail to import the configuration on error in getter", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+			DoguConfigs: []doguConfig{
+				{
+					Name: "dogu1",
+					NormalConfig: []keyValue{
+						{Key: "key1", Value: "value1"},
+					},
+				},
+			},
+			BackupSchedules: []backupSchedule{
+				{Name: "schedule 1", Schedule: "* * * *"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, assert.AnError)
+
+		mockGci := newMockGlobalConfigImporter(t)
+
+		mockDci := newMockDoguConfigImporter(t)
+
+		mockBsi := newMockBackupScheduleImporter(t)
+
+		ci := &ConfigImporter{
+			getter:                 mGetter,
+			globalConfigImporter:   mockGci,
+			doguConfigImporter:     mockDci,
+			backupScheduleImporter: mockBsi,
+		}
+
+		err := ci.ImportConfiguration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to get configuration from exporter:")
+	})
+
+	t.Run("should fail to import the configuration on error in global config", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+			DoguConfigs: []doguConfig{
+				{
+					Name: "dogu1",
+					NormalConfig: []keyValue{
+						{Key: "key1", Value: "value1"},
+					},
+				},
+			},
+			BackupSchedules: []backupSchedule{
+				{Name: "schedule 1", Schedule: "* * * *"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalConfig(testCtx, cfg.GlobalConfig).Return(assert.AnError)
+
+		mockDci := newMockDoguConfigImporter(t)
+
+		mockBsi := newMockBackupScheduleImporter(t)
+
+		ci := &ConfigImporter{
+			getter:                 mGetter,
+			globalConfigImporter:   mockGci,
+			doguConfigImporter:     mockDci,
+			backupScheduleImporter: mockBsi,
+		}
+
+		err := ci.ImportConfiguration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to import global configuration:")
+	})
+
+	t.Run("should fail to import the configuration on error in dogu config", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+			DoguConfigs: []doguConfig{
+				{
+					Name: "dogu1",
+					NormalConfig: []keyValue{
+						{Key: "key1", Value: "value1"},
+					},
+				},
+			},
+			BackupSchedules: []backupSchedule{
+				{Name: "schedule 1", Schedule: "* * * *"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalConfig(testCtx, cfg.GlobalConfig).Return(nil)
+
+		mockDci := newMockDoguConfigImporter(t)
+		mockDci.EXPECT().importDoguConfigs(testCtx, cfg.DoguConfigs).Return(assert.AnError)
+
+		mockBsi := newMockBackupScheduleImporter(t)
+
+		ci := &ConfigImporter{
+			getter:                 mGetter,
+			globalConfigImporter:   mockGci,
+			doguConfigImporter:     mockDci,
+			backupScheduleImporter: mockBsi,
+		}
+
+		err := ci.ImportConfiguration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to import dogu configuration:")
+	})
+
+	t.Run("should fail to import the configuration on error in backup schedules", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+			DoguConfigs: []doguConfig{
+				{
+					Name: "dogu1",
+					NormalConfig: []keyValue{
+						{Key: "key1", Value: "value1"},
+					},
+				},
+			},
+			BackupSchedules: []backupSchedule{
+				{Name: "schedule 1", Schedule: "* * * *"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalConfig(testCtx, cfg.GlobalConfig).Return(nil)
+
+		mockDci := newMockDoguConfigImporter(t)
+		mockDci.EXPECT().importDoguConfigs(testCtx, cfg.DoguConfigs).Return(nil)
+
+		mockBsi := newMockBackupScheduleImporter(t)
+		mockBsi.EXPECT().importBackupSchedules(testCtx, cfg.BackupSchedules).Return(assert.AnError)
+
+		ci := &ConfigImporter{
+			getter:                 mGetter,
+			globalConfigImporter:   mockGci,
+			doguConfigImporter:     mockDci,
+			backupScheduleImporter: mockBsi,
+		}
+
+		err := ci.ImportConfiguration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to import backup schedules:")
+	})
+}
 
 func TestMatchesAnyKeyByPattern(t *testing.T) {
 	tests := []struct {
