@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/systeminfo"
+	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	"log/slog"
 	"net/http"
+	"net/smtp"
 	"os"
 	"os/signal"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"syscall"
-
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -63,7 +64,7 @@ func main() {
 	}
 	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, smtp.SendMail)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
@@ -90,56 +91,74 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, mailSender mail.MailSenderService) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
-		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
+
+		err := logging.Initialize(config)
 		if err != nil {
-			// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
-			slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
-			slog.Info("Waiting for the next run...")
+			return 0, fmt.Errorf("failed to reset logger: %w", err)
+		}
+		sender := mail.CreateSender(config.MailConfig, mailSender)
+
+		retVal, err := func() (int, error) {
+			isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
+			if err != nil {
+				// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
+				slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
+				slog.Info("Waiting for the next run...")
+				return 0, nil
+			}
+
+			if !isExporterSyncReady {
+				// This condition is recoverable, but it is still unclear when the ready status will be triggered
+				slog.Info("Exporter does not seem to be ready. Waiting for the next run...")
+				return 0, nil // continue to the next main loop iteration
+			}
+
+			systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
+			if err != nil {
+				// this error is recoverable, the exporter system API might be down, or the API server errs
+				slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
+				slog.Info("Waiting for the next run...")
+				return 0, nil
+			}
+
+			err = sysInfoValidator.ValidateSystemInfo(ctx)
+			if err != nil {
+				slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
+				// TODO should this break the main loop or not?
+				slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+				return 0, nil
+			}
+
+			err = deactivateImporterDogus(ctx, systemInfo, doguStop)
+			if err != nil {
+				return 1, err
+			}
+
+			err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
+			if err != nil {
+				return 2, err
+			}
+
+			err = activateImporterDogus(ctx, systemInfo, doguStart)
+			if err != nil {
+				return 3, err
+			}
+
+			slog.Info("Sync successful")
+
 			return 0, nil
-		}
+		}()
 
-		if !isExporterSyncReady {
-			// This condition is recoverable, but it is still unclear when the ready status will be triggered
-			slog.Info("Exporter does not seem to be ready. Waiting for the next run...")
-			return 0, nil // continue to the next main loop iteration
-		}
+		// TODO: get job logs and append to mail
 
-		systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
+		err = sender.Send()
 		if err != nil {
-			// this error is recoverable, the exporter system API might be down, or the API server errs
-			slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
-			slog.Info("Waiting for the next run...")
-			return 0, nil
+			return 0, fmt.Errorf("failed to send mail: %w", err)
 		}
 
-		err = sysInfoValidator.ValidateSystemInfo(ctx)
-		if err != nil {
-			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
-			// TODO should this break the main loop or not?
-			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
-			return 0, nil
-		}
-
-		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
-		if err != nil {
-			return 1, err
-		}
-
-		err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
-		if err != nil {
-			return 2, err
-		}
-
-		err = activateImporterDogus(ctx, systemInfo, doguStart)
-		if err != nil {
-			return 3, err
-		}
-
-		slog.Info("Sync successful")
-
-		return 0, nil
+		return retVal, err
 	}
 }
 
@@ -238,6 +257,9 @@ func logUsedConfig(config configuration.Configuration) {
 	slog.Info("   V///   '°°°°      (/////)      °°°°'   ////  ")
 	slog.Info("    V/////(////////o. '°°°' ./////////(///(/'   ")
 	slog.Info("       'V/(/////////////////////////////V'      ")
+
+	// Set api key to empty value to prevent logging secrets
+	config.ExporterApiKey = "<removed for log output>"
 
 	slog.Info("ces-importer started using this configuration:",
 		"config", fmt.Sprintf("%#v", config),

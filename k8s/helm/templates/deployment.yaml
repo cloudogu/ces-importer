@@ -22,6 +22,8 @@ spec:
         - name: exporter-ssh-private-key-volume
           secret:
             secretName: "{{ .Values.config.importer.sshSecretName}}"
+        - name: migration-log
+          emptyDir: {}
       containers:
         - env:
             - name: LOG_LEVEL
@@ -58,10 +60,24 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: SMTP_SERVER
+              value: {{ .Values.config.smtp.server | quote }}
+            - name: SMTP_PORT
+              value: {{ .Values.config.smtp.port | quote }}
+            - name: SMTP_USERNAME
+              value: {{ .Values.config.smtp.username | quote }}
+            - name: SMTP_PASSWORD
+              value: {{ .Values.config.smtp.password | quote }}
+            - name: SMTP_FROM
+              value: {{ .Values.config.smtp.from | quote }}
+            - name: SMTP_TO
+              value: {{ join "," .Values.config.smtp.to | quote }}
           volumeMounts:
             - name: exporter-ssh-private-key-volume
               readOnly: true
               mountPath: "{{ include "ces-importer.sshPrivateKeyPath" . }}"
+            - mountPath: /home/ces-importer/migration-log
+              name: migration-log
           image: "{{ .Values.main.image.registry }}/{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main

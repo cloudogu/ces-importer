@@ -11,6 +11,7 @@
 !/logging/**/*
 !/sync/**/*
 !/validate/**/*
+!/mail/**/*
 
 # and other resources
 !build/**/*

@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"fmt"
+	"github.com/cloudogu/ces-importer/mail"
 	"os"
 )
 
@@ -49,9 +50,12 @@ type Configuration struct {
 	// Uses RFC 3339 notation f. e. "2025-04-03 12:34:56Z"
 	// This value is optional, but a final migration without this value will then be impossible.
 	MigrationFinalTimestamp string
+	// MailConfig contains the smtp configuration for the mail server to which the migration log is sent
+	MailConfig mail.SmtpConfig
 }
 
 func ReadConfigFromEnv() (Configuration, error) {
+	var err error
 	conf := Configuration{}
 
 	conf.LogLevel = os.Getenv(logLevelEnv)
@@ -89,6 +93,11 @@ func ReadConfigFromEnv() (Configuration, error) {
 	conf.ImporterNamespace = os.Getenv(importerNamespaceKeyEnv)
 	if conf.ImporterNamespace == "" {
 		return conf, fmt.Errorf(errorFormat, importerNamespaceKeyEnv)
+	}
+
+	conf.MailConfig, err = mail.SmtpConfigFromEnv()
+	if err != nil {
+		return conf, fmt.Errorf("failed to get smtp config: %w", err)
 	}
 
 	return conf, nil

@@ -283,7 +283,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
-		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)
+		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)
 		code, err := sut(testCtx)
 
 		// then
@@ -313,7 +313,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -346,7 +346,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -379,7 +379,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -413,7 +413,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -450,7 +450,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -486,7 +486,7 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
 
 		// then
 		require.Error(t, err)
