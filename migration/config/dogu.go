@@ -5,7 +5,6 @@ import (
 	"fmt"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
-	"github.com/cloudogu/k8s-registry-lib/repository"
 	"log/slog"
 	"os"
 )
@@ -26,7 +25,7 @@ func (ci *ConfigImporter) importDoguConfigs(ctx context.Context, config []doguCo
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxStaticConfig.Name, err)
 			}
 
-			nginxIngressConfig := createDoguConfigForNginxStatic(dc)
+			nginxIngressConfig := createDoguConfigForNginxIngress(dc)
 			if err := ci.importDoguConfig(ctx, nginxIngressConfig); err != nil {
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxIngressConfig.Name, err)
 			}
@@ -57,17 +56,17 @@ func (ci *ConfigImporter) importDoguConfig(ctx context.Context, dc doguConfig) e
 	return nil
 }
 
-func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []keyValue, repo *repository.DoguConfigRepository) error {
+func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []keyValue, repo doguConfigRepo) error {
 	doguName := doguCommons.SimpleName(dogu)
 
 	err := repo.Delete(ctx, doguName)
 	if err != nil {
-		return fmt.Errorf("failed to delete original dogu-config: %w", err)
+		return fmt.Errorf("failed to delete original dogu config: %w", err)
 	}
 
 	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
 	if err != nil {
-		return fmt.Errorf("failed to create new dogu data: %w", err)
+		return fmt.Errorf("failed to create new dogu config: %w", err)
 	}
 
 	for _, kv := range dc {
@@ -92,11 +91,6 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []keyValue, r
 }
 
 func importLocalConfig(dogu string, dc []keyValue) error {
-	if len(dc) <= 0 {
-		// no local config to import
-		return nil
-	}
-
 	localConfigFile := getLocalConfigFileForDogu(dogu)
 
 	file, err := os.OpenFile(localConfigFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)

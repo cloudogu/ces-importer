@@ -8,9 +8,9 @@ import (
 )
 
 var globalConfigKeysToKeep = []string{
-	"/certificate/*",
-	"/k8s/*",
-	"/proxy/*",
+	"certificate/*",
+	"k8s/*",
+	"proxy/*",
 }
 
 func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalConfig) error {
