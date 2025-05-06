@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/api/importer"
+	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
 	"github.com/cloudogu/ces-importer/mail"
+	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	"log/slog"
@@ -15,12 +20,6 @@ import (
 	"os/signal"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"syscall"
-
-	"github.com/cloudogu/ces-importer/api/exporter"
-	"github.com/cloudogu/ces-importer/api/importer"
-	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/ces-importer/cron"
-	"github.com/cloudogu/ces-importer/sync"
 )
 
 var hostProtocolScheme = "https://"
@@ -91,7 +90,7 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, mailSender mail.MailSenderService) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
 
 		err := logging.Initialize(config)
@@ -153,7 +152,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 
 		// TODO: get job logs and append to mail
 
-		err = sender.Send()
+		err = sender.SendWithAttachments(err != nil, []string{logging.AppLogFile})
 		if err != nil {
 			return 0, fmt.Errorf("failed to send mail: %w", err)
 		}

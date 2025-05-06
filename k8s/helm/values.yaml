@@ -54,8 +54,8 @@ config:
     # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
     finalSchedule: "2025-04-03 12:34:56Z"
   smtp:
-    server: postfix
-    port: "389"
+    server: 192.168.56.1
+    port: 1025
     username:
     password:
     from: importer@ces.com
