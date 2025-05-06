@@ -13,10 +13,14 @@ var globalConfigKeysToKeep = []string{
 	"proxy/*",
 }
 
-func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalConfig) error {
+type cesGlobalConfigImporter struct {
+	globalConfigRepo globalConfigRepo
+}
+
+func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config globalConfig) error {
 	slog.Info("Importing global config...")
 
-	previousGlobalConfig, err := ci.globalConfigRepo.Get(ctx)
+	previousGlobalConfig, err := gci.globalConfigRepo.Get(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get global config: %w", err)
 	}
@@ -28,12 +32,12 @@ func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalC
 		}
 	}
 
-	err = ci.globalConfigRepo.Delete(ctx)
+	err = gci.globalConfigRepo.Delete(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete global config: %w", err)
 	}
 
-	gc, err := ci.globalConfigRepo.Create(ctx, regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{}))
+	gc, err := gci.globalConfigRepo.Create(ctx, regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{}))
 	if err != nil {
 		return fmt.Errorf("failed to create global config: %w", err)
 	}
@@ -64,7 +68,7 @@ func (ci *ConfigImporter) importGlobalConfig(ctx context.Context, config globalC
 		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
 	}
 
-	_, err = ci.globalConfigRepo.SaveOrMerge(ctx, gc)
+	_, err = gci.globalConfigRepo.SaveOrMerge(ctx, gc)
 	if err != nil {
 		return fmt.Errorf("failed to save new global config: %w", err)
 	}

@@ -35,7 +35,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -86,7 +86,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -131,7 +131,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"proxy/foo2", "bar2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -152,7 +152,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -176,7 +176,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -203,7 +203,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 
@@ -239,7 +239,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			{"key2", "value2"},
 		}
 
-		importer := &ConfigImporter{
+		importer := &cesGlobalConfigImporter{
 			globalConfigRepo: mockConfigRepo,
 		}
 

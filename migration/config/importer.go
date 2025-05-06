@@ -20,25 +20,39 @@ type globalConfigRepo interface {
 }
 
 type doguConfigRepo interface {
-	Get(ctx context.Context, name dogu.SimpleName) (regConfig.DoguConfig, error)
 	Create(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	SaveOrMerge(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	Delete(ctx context.Context, name dogu.SimpleName) error
 }
 
-type ConfigImporter struct {
-	getter                  configGetter
-	globalConfigRepo        globalConfigRepo
-	doguConfigRepo          doguConfigRepo
-	sensitiveDoguConfigRepo doguConfigRepo
+type globalConfigImporter interface {
+	importGlobalConfig(ctx context.Context, config globalConfig) error
 }
 
-func NewConfigImporter(getter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo) *ConfigImporter {
+type doguConfigImporter interface {
+	importDoguConfigs(ctx context.Context, config []doguConfig) error
+}
+
+type backupScheduleImporter interface {
+	importBackupSchedules(ctx context.Context, config []backupSchedule) error
+}
+
+type ConfigImporter struct {
+	getter                 configGetter
+	globalConfigImporter   globalConfigImporter
+	doguConfigImporter     doguConfigImporter
+	backupScheduleImporter backupScheduleImporter
+}
+
+func NewConfigImporter(exporterHost string, apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo) *ConfigImporter {
+	getter := newExporterConfigGetter(exporterHost, apiClient)
+	gci := &cesGlobalConfigImporter{globalConfigRepo}
+	dci := &cesDoguConfigImporter{doguConfigRepo, sensitiveDoguConfigRepo}
+
 	return &ConfigImporter{
-		getter:                  getter,
-		globalConfigRepo:        globalConfigRepo,
-		doguConfigRepo:          doguConfigRepo,
-		sensitiveDoguConfigRepo: sensitiveDoguConfigRepo,
+		getter:               getter,
+		globalConfigImporter: gci,
+		doguConfigImporter:   dci,
 	}
 }
 
@@ -50,22 +64,17 @@ func (ci *ConfigImporter) ImportConfiguration(ctx context.Context) error {
 
 	mergeNginxExternalsConfigIntoGlobalConfig(config)
 
-	if err := ci.importGlobalConfig(ctx, config.GlobalConfig); err != nil {
+	if err := ci.globalConfigImporter.importGlobalConfig(ctx, config.GlobalConfig); err != nil {
 		return fmt.Errorf("failed to import global configuration: %w", err)
 	}
 
-	if err := ci.importDoguConfigs(ctx, config.DoguConfigs); err != nil {
+	if err := ci.doguConfigImporter.importDoguConfigs(ctx, config.DoguConfigs); err != nil {
 		return fmt.Errorf("failed to import dogu configuration: %w", err)
 	}
 
-	if err := ci.importBackupSchedules(ctx, config.BackupSchedules); err != nil {
+	if err := ci.backupScheduleImporter.importBackupSchedules(ctx, config.BackupSchedules); err != nil {
 		return fmt.Errorf("failed to import backup schedules: %w", err)
 	}
-
-	return nil
-}
-
-func (ci *ConfigImporter) importBackupSchedules(ctx context.Context, config []backupSchedule) error {
 
 	return nil
 }

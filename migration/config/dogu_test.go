@@ -321,7 +321,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,
 			sensitiveDoguConfigRepo: mockSensitiveRepo,
 		}
@@ -356,7 +356,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo: mockNormalRepo,
 		}
 
@@ -403,7 +403,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,
 			sensitiveDoguConfigRepo: mockSensitiveRepo,
 		}
@@ -473,7 +473,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,
 			sensitiveDoguConfigRepo: mockSensitiveRepo,
 		}
@@ -611,7 +611,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,
 			sensitiveDoguConfigRepo: mockSensitiveRepo,
 		}
@@ -648,7 +648,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo: mockNormalRepo,
 		}
 
@@ -725,7 +725,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,
 			sensitiveDoguConfigRepo: mockSensitiveRepo,
 		}
@@ -759,7 +759,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			},
 		}
 
-		ci := &ConfigImporter{
+		ci := &cesDoguConfigImporter{
 			doguConfigRepo: mockNormalRepo,
 		}
 
