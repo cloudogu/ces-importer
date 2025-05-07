@@ -44,15 +44,17 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(exporterHost string, apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo) *ConfigImporter {
+func NewConfigImporter(exporterHost string, apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
 	getter := newExporterConfigGetter(exporterHost, apiClient)
 	gci := &cesGlobalConfigImporter{globalConfigRepo}
 	dci := &cesDoguConfigImporter{doguConfigRepo, sensitiveDoguConfigRepo}
+	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
 	return &ConfigImporter{
-		getter:               getter,
-		globalConfigImporter: gci,
-		doguConfigImporter:   dci,
+		getter:                 getter,
+		globalConfigImporter:   gci,
+		doguConfigImporter:     dci,
+		backupScheduleImporter: bsi,
 	}
 }
 
