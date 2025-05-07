@@ -47,42 +47,21 @@ func TestReadCoordinatorConfig(t *testing.T) {
 
 		// job-container
 		assert.Equal(t, JobContainer{
-			Image: struct {
-				Registry   string `yaml:"registry"`
-				Repository string `yaml:"repository"`
-				Tag        string `yaml:"tag"`
-			}{
+			Image: ContainerImage{
 				Registry:   "docker.io",
 				Repository: "cloudogu/ces-importer",
 				Tag:        "0.0.1",
 			},
 			ImagePullPolicy: "IfNotPresent",
-			ImagePullSecrets: []struct {
-				Name string `yaml:"name"`
-			}{
+			ImagePullSecrets: []ImagePullSecret{
 				{Name: "ces-container-registries"},
 			},
-			Resources: struct {
-				Limits struct {
-					CPU    string `yaml:"cpu"`
-					Memory string `yaml:"memory"`
-				} `yaml:"limits"`
-				Requests struct {
-					CPU    string `yaml:"cpu"`
-					Memory string `yaml:"memory"`
-				} `yaml:"requests"`
-			}{
-				Limits: struct {
-					CPU    string `yaml:"cpu"`
-					Memory string `yaml:"memory"`
-				}{
+			Resources: ResourceRequirements{
+				Limits: ResourceList{
 					CPU:    "500m",
 					Memory: "256Mi",
 				},
-				Requests: struct {
-					CPU    string `yaml:"cpu"`
-					Memory string `yaml:"memory"`
-				}{
+				Requests: ResourceList{
 					CPU:    "100m",
 					Memory: "128Mi",
 				},
@@ -311,10 +290,7 @@ func TestReadJobConfig(t *testing.T) {
 		// job
 		assert.Equal(t, JobConfig{
 			DoguVolumeBasePath: "/data",
-			Exclude: []struct {
-				DoguName string `yaml:"dogu"`
-				Pattern  string `yaml:"pattern"`
-			}{
+			Exclude: []ExcludePattern{
 				{
 					DoguName: "jenkins",
 					Pattern:  "JENKINS_PATTERN",

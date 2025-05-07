@@ -68,6 +68,37 @@ type SSH struct {
 	SecretDataKey string `yaml:"secretDataKey"`
 }
 
+// ContainerImage contains the container image information
+type ContainerImage struct {
+	// Registry specifies the container registry to pull the image from
+	Registry string `yaml:"registry"`
+	// Repository specifies the image repository
+	Repository string `yaml:"repository"`
+	// Tag specifies the image version tag
+	Tag string `yaml:"tag"`
+}
+
+// ImagePullSecret contains the name of a secret used for pulling images from private registries
+type ImagePullSecret struct {
+	Name string `yaml:"name"`
+}
+
+// ResourceRequirements defines the compute resources required by the container
+type ResourceRequirements struct {
+	// Limits specify the maximum resources that can be consumed
+	Limits ResourceList `yaml:"limits"`
+	// Requests specify the minimum resources that must be available
+	Requests ResourceList `yaml:"requests"`
+}
+
+// ResourceList specifies CPU and memory resources
+type ResourceList struct {
+	// CPU specifies the amount of CPU the container can use
+	CPU string `yaml:"cpu"`
+	// Memory specifies the amount of memory the container can use
+	Memory string `yaml:"memory"`
+}
+
 // JobContainer defines the configuration for the container that runs migration jobs.
 // It includes image details, pull policy, secrets, and resource requirements.
 type JobContainer struct {
@@ -76,37 +107,21 @@ type JobContainer struct {
 	// JobServiceAccount specifies the Kubernetes service account to be used for running the migration job pod.
 	JobServiceAccount string `yaml:"jobServiceAccount"`
 	// Image contains the container image information
-	Image struct {
-		// Registry specifies the container registry to pull the image from
-		Registry string `yaml:"registry"`
-		// Repository specifies the image repository
-		Repository string `yaml:"repository"`
-		// Tag specifies the image version tag
-		Tag string `yaml:"tag"`
-	} `yaml:"image"`
+	Image ContainerImage `yaml:"image"`
 	// ImagePullPolicy defines when the kubelet should pull the image (Always, IfNotPresent, Never)
 	ImagePullPolicy string `yaml:"imagePullPolicy"`
 	// ImagePullSecrets contains names of secrets used for pulling the image from private registries
-	ImagePullSecrets []struct {
-		Name string `yaml:"name"`
-	} `yaml:"imagePullSecrets"`
+	ImagePullSecrets []ImagePullSecret `yaml:"imagePullSecrets"`
 	// Resources defines the compute resources required by the container
-	Resources struct {
-		// Limits specify the maximum resources that can be consumed
-		Limits struct {
-			// CPU specifies the maximum amount of CPU the container can use
-			CPU string `yaml:"cpu"`
-			// Memory specifies the maximum amount of memory the container can use
-			Memory string `yaml:"memory"`
-		} `yaml:"limits"`
-		// Requests specify the minimum resources that must be available
-		Requests struct {
-			// CPU specifies the minimum amount of CPU the container needs
-			CPU string `yaml:"cpu"`
-			// Memory specifies the minimum amount of memory the container needs
-			Memory string `yaml:"memory"`
-		} `yaml:"requests"`
-	}
+	Resources ResourceRequirements `yaml:"resources"`
+}
+
+// ExcludePattern defines a pattern for files that should not be synchronized for a specific dogu
+type ExcludePattern struct {
+	// DoguName specifies the name of the dogu for which the files should not be synchronized.
+	DoguName string `yaml:"dogu"`
+	// Pattern specifies the file pattern for the excluded files.
+	Pattern string `yaml:"pattern"`
 }
 
 // JobConfig contains the configuration data for the job container.
@@ -114,12 +129,7 @@ type JobConfig struct {
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
-	Exclude []struct {
-		// DoguName specifies the name of the dogu for which the files should not be synchronized.
-		DoguName string `yaml:"dogu"`
-		// Pattern specifies the file pattern for the excluded files.
-		Pattern string `yaml:"pattern"`
-	} `yaml:"exclude"`
+	Exclude []ExcludePattern `yaml:"exclude"`
 }
 
 // Coordinator consists of configuration data. The most fields are obtained from the Helm chart
