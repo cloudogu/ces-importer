@@ -1,0 +1,15 @@
+---
+image:
+  registry: "docker.io"
+  repository: "cloudogu/ces-importer"
+  tag: "0.0.1"
+imagePullPolicy: "IfNotPresent"
+imagePullSecrets:
+  - name: "ces-container-registries"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"

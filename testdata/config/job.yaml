@@ -1,0 +1,7 @@
+---
+doguVolumeBasePath: "/data"
+exclude:
+  - dogu: "jenkins"
+    pattern: "JENKINS_PATTERN"
+  - dogu: "redmine"
+    pattern: "REDMINE_PATTERN"

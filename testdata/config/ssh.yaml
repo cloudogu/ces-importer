@@ -1,0 +1,5 @@
+---
+privateKeyPath: "/.ssh/privateKey"
+secretDataKey: "privateKey"
+secretName: "ces-importer-secret"
+user: "root"

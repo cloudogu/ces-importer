@@ -107,7 +107,7 @@ func (s *Provider) getSystemInfo(ctx context.Context) (*systemInfo, error) {
 }
 
 // GetExporterSystemInfo gets the exporters system info via get request
-func (s *Provider) getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error) {
+func (s *Provider) getExporterSystemInfo(conf configuration.Coordinator, ctx context.Context) (*systemInfo, error) {
 	var sInfo *systemInfo
 	res, err := s.apiClient.DoGetRequest(ctx, "https://"+conf.ExporterHost+"/system-info")
 	if err != nil {

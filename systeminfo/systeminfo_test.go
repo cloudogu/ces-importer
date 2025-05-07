@@ -163,8 +163,8 @@ func TestGetExporterSystemInfo(t *testing.T) {
 			apiClient:       apiCli,
 		}
 
-		apiSystemInfo, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
+		apiSystemInfo, err := p.getExporterSystemInfo(configuration.Coordinator{
+			API: configuration.API{ExporterHost: ""},
 		}, context.Background())
 		require.NoError(t, err)
 		require.Equal(t, sInfo.Dogus, apiSystemInfo.Dogus)
@@ -182,8 +182,8 @@ func TestGetExporterSystemInfo(t *testing.T) {
 			apiClient:       apiCli,
 		}
 
-		_, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
+		_, err := p.getExporterSystemInfo(configuration.Coordinator{
+			API: configuration.API{ExporterHost: ""},
 		}, context.Background())
 		require.EqualError(t, err, "error performing http request: testerror")
 	})
@@ -200,8 +200,8 @@ func TestGetExporterSystemInfo(t *testing.T) {
 			apiClient:       apiCli,
 		}
 
-		_, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
+		_, err := p.getExporterSystemInfo(configuration.Coordinator{
+			API: configuration.API{ExporterHost: ""},
 		}, context.Background())
 		require.EqualError(t, err, "could not read exporter response: unexpected end of JSON input")
 	})

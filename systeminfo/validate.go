@@ -36,17 +36,17 @@ type pvcClient interface {
 
 type systemInfoProvider interface {
 	getSystemInfo(ctx context.Context) (*systemInfo, error)
-	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
+	getExporterSystemInfo(conf configuration.Coordinator, ctx context.Context) (*systemInfo, error)
 }
 
 type Validator struct {
-	conf               configuration.Configuration
+	conf               configuration.Coordinator
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
 }
 
-func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
+func NewValidator(conf configuration.Coordinator, p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
 	return &Validator{
 		conf:               conf,
 		systemInfoProvider: p,

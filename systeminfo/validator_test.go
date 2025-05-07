@@ -18,9 +18,9 @@ func TestNewValidator(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		dc := newMockDoguClient(t)
 		pc := newMockPvcClient(t)
-		v, err := NewValidator(configuration.Configuration{}, p, dc, pc)
+		v, err := NewValidator(configuration.Coordinator{}, p, dc, pc)
 		require.NoError(t, err)
-		require.Equal(t, v.conf, configuration.Configuration{})
+		require.Equal(t, v.conf, configuration.Coordinator{})
 		require.Equal(t, v.systemInfoProvider, p)
 		require.Equal(t, v.doguClient, dc)
 		require.Equal(t, v.pvcClient, pc)
@@ -51,7 +51,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&sysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -98,7 +98,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -137,7 +137,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -179,7 +179,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -226,7 +226,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -239,7 +239,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -253,7 +253,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
+			conf:               configuration.Coordinator{},
 			systemInfoProvider: s,
 		}
 		err := v.ValidateSystemInfo(context.Background())
@@ -264,7 +264,7 @@ func TestValidateSystemInfo(t *testing.T) {
 func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
 		v := Validator{
-			conf: configuration.Configuration{},
+			conf: configuration.Coordinator{},
 		}
 		exDogu := dogu{
 			Name:    "",
@@ -291,7 +291,7 @@ func TestUpdatePVC(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		pvcClient := newMockPvcClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
+			conf:       configuration.Coordinator{},
 			doguClient: doguClient,
 			pvcClient:  pvcClient,
 		}
@@ -354,7 +354,7 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("can not find dogus volume", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
+			conf:       configuration.Coordinator{},
 			doguClient: doguClient,
 		}
 		exDogu := dogu{
@@ -389,7 +389,7 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("can not update dogus volume", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
+			conf:       configuration.Coordinator{},
 			doguClient: doguClient,
 		}
 		exDogu := dogu{
