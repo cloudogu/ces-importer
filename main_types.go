@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/configuration"
 	"io"
 )
 
@@ -29,5 +30,5 @@ type doguStarter interface {
 
 type doguVolumeSyncer interface {
 	// SyncDogu starts copying the volume data of a single dogu as provided by systemInfo.
-	SyncDogu(ctx context.Context, port, source, destination string) error
+	SyncDogu(ctx context.Context, port int, source, destination string, pattern configuration.ExcludePattern) error
 }

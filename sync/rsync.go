@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os/exec"
+	"github.com/cloudogu/ces-importer/configuration"
+	"io"
+	"log/slog"
 )
 
 // RsyncSyncer allows copying data from a remote host.
@@ -12,30 +14,62 @@ type RsyncSyncer struct {
 	host           string
 	user           string
 	privateKeyPath string
+	makeCommand    commandMaker
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, makeCommand commandMaker) *RsyncSyncer {
 	return &RsyncSyncer{
 		host:           host,
 		user:           user,
 		privateKeyPath: privateKeyPath,
+		makeCommand:    makeCommand,
 	}
 }
 
+type commandMaker func(name string, arg ...string) Command
+
+type Command interface {
+	StdoutPipe() (io.ReadCloser, error)
+	StderrPipe() (io.ReadCloser, error)
+	Start() error
+	Wait() error
+	String() string
+}
+
 // SyncDogu copies dogu volume data from a remote Cloudogu EcoSystem instance.
-func (rs *RsyncSyncer) SyncDogu(_ context.Context, port, source, destination string) error {
+// rsync -avhz --delete -e "ssh -p 7000 -l ces-exporter -i /my-private-key" localhost:/data/ ./destination/
+func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination string, excludePattern configuration.ExcludePattern, verbose bool) error {
+	var args []string
+	// archive mode
+	// verbose
+	// human-readable sizes
+	// compress file data during transfer
+	if verbose {
+		args = append(args, "-avhz")
+	} else {
+		args = append(args, "-ahz")
+	}
 
-	//rsync -avhz --delete -e "ssh -p 7000 -l ces-exporter -i /my-private-key" localhost:/data/ ./destination/
+	// delete extraneous files from dest dirs
+	args = append(args, "--delete")
 
-	sshOpts := fmt.Sprintf("ssh -p %s -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", port, rs.user, rs.privateKeyPath)
+	// exclude pattern
+	if excludePattern != "" {
+		args = append(args, "--exclude="+excludePattern)
+	}
 
-	sourceWithHost := fmt.Sprintf("%s:%s", rs.host, source)
+	// ssh options
+	args = append(args, "-e")
+	args = append(args, fmt.Sprintf("ssh -p %d -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", port, rs.user, rs.privateKeyPath))
+
+	// source with host
+	args = append(args, fmt.Sprintf("%s:%s", rs.host, source))
 
 	// Define the rsync command and arguments
-	cmd := exec.Command("rsync", "-avhz", "-e", sshOpts, sourceWithHost, destination)
+	cmd := rs.makeCommand("rsync", args...)
 
-	fmt.Println(cmd.String())
+	slog.Info(fmt.Sprintf("executing rsync command: %s", cmd.String()))
 
 	// Get stdout and stderr pipes
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -53,27 +87,25 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port, source, destination str
 		return fmt.Errorf("error starting rsync: %w", err)
 	}
 
-	fmt.Println("started rsync")
+	slog.Info("started rsync")
 
 	// Create a channel to signal when output is complete
 	done := make(chan struct{})
 
 	// Function to read and print output in real-time
 	go func() {
-		fmt.Println("started stdout")
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
-			fmt.Println("STDOUT:", scanner.Text()) // Print real-time stdout
+			slog.Info(scanner.Text()) // Print real-time stdout
 		}
 		done <- struct{}{}
 	}()
 
 	// Function to read and print errors in real-time
 	go func() {
-		fmt.Println("started stderror")
 		scanner := bufio.NewScanner(stderrPipe)
 		for scanner.Scan() {
-			fmt.Println("STDERR:", scanner.Text()) // Print real-time stderr
+			slog.Error(scanner.Text()) // Print real-time stderr
 		}
 		done <- struct{}{}
 	}()

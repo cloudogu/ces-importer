@@ -12,6 +12,8 @@ const (
 	EndpointExportMode = "/export/mode"
 	// EndpointSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
 	EndpointSystemInfo = "/system-info"
+	// EndpointExportDogu contains the endpoint for getting the current export dogu or setting a new export dogu
+	EndpointExportDogu = "/export/dogu"
 )
 
 // ExportMode contains data about the export readiness of the exporter system.
@@ -56,4 +58,10 @@ type SystemInfo struct {
 	Dogus []Dogu `json:"dogus"`
 	// Components contain data on all installed components on the exporter side.
 	Components []Component `json:"components"`
+}
+
+type DoguExport struct {
+	Dogu         string `json:"dogu"`
+	VolumePath   string `json:"volumePath"`
+	ExporterPort int    `json:"exporterPort"`
 }

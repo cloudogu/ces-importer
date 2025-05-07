@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -59,7 +61,11 @@ func main() {
 	doguClient := doguCli.Dogus(config.ImporterNamespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	cmdFunc := func(name string, args ...string) sync.Command {
+		return exec.Command(name, args...)
+	}
+
+	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath, cmdFunc)
 
 	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
 	if err != nil {
@@ -134,7 +140,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return 1, err
 		}
 
-		err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
+		err = syncDogus(ctx, systemInfo, exportApiCli, syncer, config.ExporterHost, config.ExcludePatterns)
 		if err != nil {
 			return 2, err
 		}
@@ -178,25 +184,39 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	return nil
 }
 
-func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, _ exporterApiClient, syncer doguVolumeSyncer) error {
-	// FIXME: #4: actually implement the core functionality in a proper way. This is part of an upcoming feature
-
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, apiCli exporterApiClient, syncer doguVolumeSyncer, hostname string, excludePatterns map[configuration.DoguName]configuration.ExcludePattern) error {
+	var err error
 	for _, dogu := range systemInfo.Dogus {
 		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
 
-		exporterSource, importerDestination, exporterPort := func(dogu exporter.Dogu) (string, string, string) {
-			return "call your your exporterApiClient for data here", "and here", "and here"
-		}(dogu)
-
-		if err := syncer.SyncDogu(ctx, exporterPort, exporterSource, importerDestination); err != nil {
-			// TODO: should we continue syncing other dogus on a best-effort basis?
-			return fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSource, importerDestination, err)
+		// set the current dogu as export dogu in exporter
+		pathParams := []string{
+			dogu.Name,
 		}
+		exporterUrl := hostProtocolScheme + hostname + exporter.EndpointExportDogu
+		result, err := apiCli.DoPostRequest(ctx, exporterUrl, nil, pathParams)
+		if err != nil {
+			errors.Join(err, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
+		}
+
+		var doguExport exporter.DoguExport
+		err = json.Unmarshal(result, &doguExport)
+		if err != nil {
+			errors.Join(fmt.Errorf("failed to parse dogu export response: %q: %w", result, err))
+		}
+
+		// exclude pattern might be an empty string
+		excludePattern := excludePatterns[dogu.Name]
+		importerDestination := "/data/" + dogu.Name
+
+		if err := syncer.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern); err != nil {
+			errors.Join(err, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
+		}
+
 		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
 	}
 
-	return nil
-
+	return err
 }
 
 func isApiExportReady(ctx context.Context, hostname string, apiCli exporterApiClient) (isActive bool, err error) {

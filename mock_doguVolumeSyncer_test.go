@@ -21,17 +21,17 @@ func (_m *mockDoguVolumeSyncer) EXPECT() *mockDoguVolumeSyncer_Expecter {
 	return &mockDoguVolumeSyncer_Expecter{mock: &_m.Mock}
 }
 
-// SyncDogu provides a mock function with given fields: ctx, port, source, destination
-func (_m *mockDoguVolumeSyncer) SyncDogu(ctx context.Context, port string, source string, destination string) error {
-	ret := _m.Called(ctx, port, source, destination)
+// SyncDogu provides a mock function with given fields: ctx, port, source, destination, pattern
+func (_m *mockDoguVolumeSyncer) SyncDogu(ctx context.Context, port int, source string, destination string, pattern string) error {
+	ret := _m.Called(ctx, port, source, destination, pattern)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncDogu")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, port, source, destination)
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, string) error); ok {
+		r0 = rf(ctx, port, source, destination, pattern)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,16 +46,17 @@ type mockDoguVolumeSyncer_SyncDogu_Call struct {
 
 // SyncDogu is a helper method to define mock.On call
 //   - ctx context.Context
-//   - port string
+//   - port int
 //   - source string
 //   - destination string
-func (_e *mockDoguVolumeSyncer_Expecter) SyncDogu(ctx interface{}, port interface{}, source interface{}, destination interface{}) *mockDoguVolumeSyncer_SyncDogu_Call {
-	return &mockDoguVolumeSyncer_SyncDogu_Call{Call: _e.mock.On("SyncDogu", ctx, port, source, destination)}
+//   - pattern string
+func (_e *mockDoguVolumeSyncer_Expecter) SyncDogu(ctx interface{}, port interface{}, source interface{}, destination interface{}, pattern interface{}) *mockDoguVolumeSyncer_SyncDogu_Call {
+	return &mockDoguVolumeSyncer_SyncDogu_Call{Call: _e.mock.On("SyncDogu", ctx, port, source, destination, pattern)}
 }
 
-func (_c *mockDoguVolumeSyncer_SyncDogu_Call) Run(run func(ctx context.Context, port string, source string, destination string)) *mockDoguVolumeSyncer_SyncDogu_Call {
+func (_c *mockDoguVolumeSyncer_SyncDogu_Call) Run(run func(ctx context.Context, port int, source string, destination string, pattern string)) *mockDoguVolumeSyncer_SyncDogu_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -65,7 +66,7 @@ func (_c *mockDoguVolumeSyncer_SyncDogu_Call) Return(_a0 error) *mockDoguVolumeS
 	return _c
 }
 
-func (_c *mockDoguVolumeSyncer_SyncDogu_Call) RunAndReturn(run func(context.Context, string, string, string) error) *mockDoguVolumeSyncer_SyncDogu_Call {
+func (_c *mockDoguVolumeSyncer_SyncDogu_Call) RunAndReturn(run func(context.Context, int, string, string, string) error) *mockDoguVolumeSyncer_SyncDogu_Call {
 	_c.Call.Return(run)
 	return _c
 }
