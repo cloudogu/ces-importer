@@ -23,3 +23,8 @@ app.kubernetes.io/name: {{ include "ces-importer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 k8s.cloudogu.com/part-of: ces-migration
 {{- end }}
+
+{{/* Name of the configMap for the job */}}
+{{- define "job-config.name" -}}
+{{ include "ces-importer.name" . }}-job-config
+{{- end }}

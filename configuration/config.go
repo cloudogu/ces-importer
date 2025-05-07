@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	envBaseConfigPathKey    = "CONFIG_PATH"
-	envImporterNamespaceKey = "IMPORTER_NAMESPACE"
+	EnvBaseConfigPathKey    = "CONFIG_PATH"
+	EnvImporterNamespaceKey = "IMPORTER_NAMESPACE"
 )
 
 const (
@@ -71,6 +71,10 @@ type SSH struct {
 // JobContainer defines the configuration for the container that runs migration jobs.
 // It includes image details, pull policy, secrets, and resource requirements.
 type JobContainer struct {
+	// JobConfigMap specifies the name of the configmap containing the job configuration.
+	JobConfigMap string `yaml:"jobConfigMap"`
+	// JobServiceAccount specifies the Kubernetes service account to be used for running the migration job pod.
+	JobServiceAccount string `yaml:"jobServiceAccount"`
 	// Image contains the container image information
 	Image struct {
 		// Registry specifies the container registry to pull the image from
@@ -133,14 +137,14 @@ type Coordinator struct {
 }
 
 func ReadCoordinatorConfig() (Coordinator, error) {
-	configBaseDir := os.Getenv(envBaseConfigPathKey)
+	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
 	if configBaseDir == "" {
-		return Coordinator{}, fmt.Errorf(errorFormat, envBaseConfigPathKey)
+		return Coordinator{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)
 	}
 
-	namespace := os.Getenv(envImporterNamespaceKey)
+	namespace := os.Getenv(EnvImporterNamespaceKey)
 	if namespace == "" {
-		return Coordinator{}, fmt.Errorf(errorFormat, envImporterNamespaceKey)
+		return Coordinator{}, fmt.Errorf(errorFormat, EnvImporterNamespaceKey)
 	}
 
 	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))
@@ -192,14 +196,14 @@ type Job struct {
 }
 
 func ReadJobConfig() (Job, error) {
-	configBaseDir := os.Getenv(envBaseConfigPathKey)
+	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
 	if configBaseDir == "" {
-		return Job{}, fmt.Errorf(errorFormat, envBaseConfigPathKey)
+		return Job{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)
 	}
 
-	namespace := os.Getenv(envImporterNamespaceKey)
+	namespace := os.Getenv(EnvImporterNamespaceKey)
 	if namespace == "" {
-		return Job{}, fmt.Errorf(errorFormat, envImporterNamespaceKey)
+		return Job{}, fmt.Errorf(errorFormat, EnvImporterNamespaceKey)
 	}
 
 	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))

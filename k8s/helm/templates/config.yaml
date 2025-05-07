@@ -15,4 +15,6 @@ data:
   {{- toYaml .Values.config.migration | nindent 4 }}
 
   job-container.yaml: |
-  {{- toYaml .Values.job | nindent 4 }}
+    jobConfigMap: {{ include "job-config.name" . | quote }}
+    jobServiceAccount: {{ include "ces-importer.name" . }}-main-manager
+    {{- toYaml .Values.job | nindent 4 }}

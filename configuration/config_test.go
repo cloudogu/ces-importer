@@ -10,8 +10,8 @@ import (
 
 func TestReadCoordinatorConfig(t *testing.T) {
 	t.Run("read config for coordinator", func(t *testing.T) {
-		t.Setenv(envBaseConfigPathKey, "../testdata/config")
-		t.Setenv(envImporterNamespaceKey, "test")
+		t.Setenv(EnvBaseConfigPathKey, "../testdata/config")
+		t.Setenv(EnvImporterNamespaceKey, "test")
 		t.Setenv("API_KEY", "testAPIKEY")
 
 		cfg, err := ReadCoordinatorConfig()
@@ -98,22 +98,22 @@ func TestReadCoordinatorConfig(t *testing.T) {
 		}{
 			"should fail when CONFIG_PATH env var is not set": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles:     func(t *testing.T, tmpDir string) {},
 				expectedErrMsg: "environment variable CONFIG_PATH is not set",
 			},
 			"should fail when IMPORTER_NAMESPACE env var is not set": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/some/path")
+					t.Setenv(EnvBaseConfigPathKey, "/some/path")
 				},
 				setupFiles:     func(t *testing.T, tmpDir string) {},
 				expectedErrMsg: "environment variable IMPORTER_NAMESPACE is not set",
 			},
 			"should fail when logging config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					// Don't create logging config
@@ -126,8 +126,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when api config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -140,8 +140,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when migration config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -154,8 +154,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when ssh config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -168,8 +168,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when job container config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -182,8 +182,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when logging config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					writeInvalidYaml(t, tmpDir, fileLoggingConfig)
@@ -196,8 +196,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when api config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -210,8 +210,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when migration config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -224,8 +224,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when ssh config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -238,8 +238,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			},
 			"should fail when job container config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -259,8 +259,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 				tc.setupEnv(t)
 
 				// If CONFIG_PATH is set to /tmp, update it to the actual temp directory
-				if os.Getenv(envBaseConfigPathKey) == "/tmp" {
-					t.Setenv(envBaseConfigPathKey, tmpDir)
+				if os.Getenv(EnvBaseConfigPathKey) == "/tmp" {
+					t.Setenv(EnvBaseConfigPathKey, tmpDir)
 				}
 
 				tc.setupFiles(t, tmpDir)
@@ -279,8 +279,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 
 func TestReadJobConfig(t *testing.T) {
 	t.Run("read config for job", func(t *testing.T) {
-		t.Setenv(envBaseConfigPathKey, "../testdata/config")
-		t.Setenv(envImporterNamespaceKey, "test")
+		t.Setenv(EnvBaseConfigPathKey, "../testdata/config")
+		t.Setenv(EnvImporterNamespaceKey, "test")
 		t.Setenv("API_KEY", "testAPIKEY")
 
 		cfg, err := ReadJobConfig()
@@ -335,22 +335,22 @@ func TestReadJobConfig(t *testing.T) {
 		}{
 			"should fail when CONFIG_PATH env var is not set": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles:     func(t *testing.T, tmpDir string) {},
 				expectedErrMsg: "environment variable CONFIG_PATH is not set",
 			},
 			"should fail when IMPORTER_NAMESPACE env var is not set": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/some/path")
+					t.Setenv(EnvBaseConfigPathKey, "/some/path")
 				},
 				setupFiles:     func(t *testing.T, tmpDir string) {},
 				expectedErrMsg: "environment variable IMPORTER_NAMESPACE is not set",
 			},
 			"should fail when logging config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					// Don't create logging config
@@ -362,8 +362,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when api config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -375,8 +375,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when job config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -388,8 +388,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when ssh config is missing": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -401,8 +401,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when logging config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					writeInvalidYaml(t, tmpDir, fileLoggingConfig)
@@ -414,8 +414,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when api config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -427,8 +427,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when job config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -440,8 +440,8 @@ func TestReadJobConfig(t *testing.T) {
 			},
 			"should fail when ssh config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
-					t.Setenv(envBaseConfigPathKey, "/tmp")
-					t.Setenv(envImporterNamespaceKey, "test-namespace")
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
 				},
 				setupFiles: func(t *testing.T, tmpDir string) {
 					createValidConfig(t, tmpDir, fileLoggingConfig)
@@ -460,8 +460,8 @@ func TestReadJobConfig(t *testing.T) {
 				tc.setupEnv(t)
 
 				// If CONFIG_PATH is set to /tmp, update it to the actual temp directory
-				if os.Getenv(envBaseConfigPathKey) == "/tmp" {
-					t.Setenv(envBaseConfigPathKey, tmpDir)
+				if os.Getenv(EnvBaseConfigPathKey) == "/tmp" {
+					t.Setenv(EnvBaseConfigPathKey, tmpDir)
 				}
 
 				tc.setupFiles(t, tmpDir)

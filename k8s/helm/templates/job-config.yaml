@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "ces-importer.name" . }}-job-config
+  name: {{ include "job-config.name" . }}
   labels:
     {{- include "ces-importer.labels" . | nindent 4 }}
 data:
