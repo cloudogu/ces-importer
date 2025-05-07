@@ -26,6 +26,7 @@ rules:
   resources:
     - pvc
   verbs:
+    - list
     - get
     - update
   # allow for systeminfo comparison
