@@ -105,17 +105,21 @@ type JobContainer struct {
 	}
 }
 
+type Exclude struct {
+	// DoguName specifies the name of the dogu for which the files should not be synchronized.
+	DoguName string `yaml:"dogu"`
+	// Pattern specifies the file pattern for the excluded files.
+	Pattern string `yaml:"pattern"`
+}
+
 // JobConfig contains the configuration data for the job container.
 type JobConfig struct {
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
-	Exclude []struct {
-		// DoguName specifies the name of the dogu for which the files should not be synchronized.
-		DoguName string `yaml:"dogu"`
-		// Pattern specifies the file pattern for the excluded files.
-		Pattern string `yaml:"pattern"`
-	} `yaml:"exclude"`
+	Exclude []Exclude `yaml:"exclude"`
+	// Verbose makes the sync process log on verbose mode
+	Verbose bool `yaml:"verbose"`
 }
 
 // Coordinator consists of configuration data. The most fields are obtained from the Helm chart

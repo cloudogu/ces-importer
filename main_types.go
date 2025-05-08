@@ -30,5 +30,5 @@ type doguStarter interface {
 
 type doguVolumeSyncer interface {
 	// SyncDogu starts copying the volume data of a single dogu as provided by systemInfo.
-	SyncDogu(ctx context.Context, port int, source, destination string, pattern configuration.ExcludePattern) error
+	SyncDogu(ctx context.Context, port int, source, destination string, pattern configuration.Exclude, verbose bool) error
 }

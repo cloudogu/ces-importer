@@ -69,6 +69,8 @@ config:
     #   - dogu: "jenkins"
     #     pattern: "EXCLUDE_PATTERN"
     exclude: []
+    # verbose sets the migrator to verbose logging
+    verbose: true
 
 controllerManager:
   image:

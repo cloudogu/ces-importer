@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	"k8s.io/client-go/kubernetes"
@@ -51,7 +50,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to create kube-client: %w", err))
 	}
-	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(config.ImporterNamespace)
+	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(config.Namespace)
 
 	doguCli, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
@@ -61,12 +60,11 @@ func main() {
 	doguClient := doguCli.Dogus(config.Namespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.SSH.User, config.SSH.PrivateSSHKeyPath)
 	cmdFunc := func(name string, args ...string) sync.Command {
 		return exec.Command(name, args...)
 	}
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath, cmdFunc)
+	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.SSH.User, config.SSH.PrivateSSHKeyPath, cmdFunc)
 
 	provider, err := systeminfo.NewSystemInfoProvider(config.Namespace)
 	if err != nil {
@@ -141,10 +139,10 @@ func createMainLoop(config configuration.Coordinator, exportApiCli exporterApiCl
 			return 1, err
 		}
 
-		err = syncDogus(ctx, systemInfo, exportApiCli, syncer, config.ExporterHost, config.ExcludePatterns)
-		if err != nil {
-			return 2, err
-		}
+		//err = syncDogus(ctx, systemInfo, exportApiCli, syncer, config.ExporterHost, config.)
+		//if err != nil {
+		//	return 2, err
+		//}
 
 		err = activateImporterDogus(ctx, systemInfo, doguStart)
 		if err != nil {
@@ -185,38 +183,37 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	return nil
 }
 
-func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, apiCli exporterApiClient, syncer doguVolumeSyncer, hostname string, excludePatterns map[configuration.DoguName]configuration.ExcludePattern) error {
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, apiCli exporterApiClient, syncer doguVolumeSyncer, hostname string, excludePatterns []configuration.Exclude) error {
 	var err error
-	for _, dogu := range systemInfo.Dogus {
-		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
-
-		// set the current dogu as export dogu in exporter
-		pathParams := []string{
-			dogu.Name,
-		}
-		exporterUrl := hostProtocolScheme + hostname + exporter.EndpointExportDogu
-		result, err := apiCli.DoPostRequest(ctx, exporterUrl, nil, pathParams)
-		if err != nil {
-			errors.Join(err, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
-		}
-
-		var doguExport exporter.DoguExport
-		err = json.Unmarshal(result, &doguExport)
-		if err != nil {
-			errors.Join(fmt.Errorf("failed to parse dogu export response: %q: %w", result, err))
-		}
-
-		// exclude pattern might be an empty string
-		excludePattern := excludePatterns[dogu.Name]
-		importerDestination := "/data/" + dogu.Name
-
-		if err := syncer.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern); err != nil {
-			errors.Join(err, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
-		}
-
-		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
-	}
-
+	//for _, dogu := range systemInfo.Dogus {
+	//	slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
+	//
+	//	// set the current dogu as export dogu in exporter
+	//	pathParams := []string{
+	//		dogu.Name,
+	//	}
+	//	exporterUrl := hostProtocolScheme + hostname + exporter.EndpointExportDogu
+	//	result, err := apiCli.DoPostRequest(ctx, exporterUrl, nil, pathParams)
+	//	if err != nil {
+	//		errors.Join(err, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
+	//	}
+	//
+	//	var doguExport exporter.DoguExport
+	//	err = json.Unmarshal(result, &doguExport)
+	//	if err != nil {
+	//		errors.Join(fmt.Errorf("failed to parse dogu export response: %q: %w", result, err))
+	//	}
+	//
+	//	// exclude pattern might be an empty string
+	//	excludePattern := excludePatterns[dogu.Name]
+	//	importerDestination := "/data/" + dogu.Name
+	//
+	//	if err := syncer.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern); err != nil {
+	//		errors.Join(err, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
+	//	}
+	//
+	//	slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
+	//}
 	return err
 }
 
@@ -258,8 +255,8 @@ func logUsedConfig(config configuration.Coordinator) {
 	slog.Info("                     ./////,                    ")
 	slog.Info("                 ./////==//////,                ")
 	slog.Info("                ////.  ___   ////.              ")
-	slog.Info("         ,OO,. ////  ,////A,  */// ,OO,.        ")
-	slog.Info("    ,/////////////*  */////*  *////////////A    ")
+	slog.Info("         ,OO,. ////  ,////ApiCli,  */// ,OO,.        ")
+	slog.Info("    ,/////////////*  */////*  *////////////ApiCli    ")
 	slog.Info("   ////'        `VA.   '|'   .///'       '///*  ")
 	slog.Info("  *///  .*///*,         |         .*//*,   ///* ")
 	slog.Info("  (///  (//////)**--_./////_----*//////)   ///) ")
