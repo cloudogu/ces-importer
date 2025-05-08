@@ -14,6 +14,7 @@ type requestExecuter interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// TODO: Refactor client to use baseURL and path params instead of exporterUrl.
 type client struct {
 	apiKey     string
 	httpClient requestExecuter
