@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 type requestExecuter interface {
@@ -29,6 +30,40 @@ func NewClient(apiKey string, httpClient requestExecuter) *client {
 // provided API key.
 func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
+	}
+
+	request.Header.Set(apiKeyAuthName, c.apiKey)
+
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return result, fmt.Errorf("request to %s failed with an error: %w", exporterUrl, err)
+	}
+
+	defer func() { _ = response.Body.Close() }()
+	responseMsg, err := io.ReadAll(response.Body)
+	if err != nil {
+		return result, fmt.Errorf("failed to read response body for %s", exporterUrl)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
+			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+	}
+
+	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
+	return responseMsg, nil
+}
+
+// DoPostRequest creates an HTTP POST request towards the exporter API. Path params will be appended to the given url.
+// Any unexpected HTTP codes (other than 200 OK) or errors will be returned as an error. For authentication, request
+// headers will automatically be enriched with the provided API key.
+func (c *client) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error) {
+	if len(pathParams) > 0 {
+		exporterUrl = exporterUrl + "/" + strings.Join(pathParams, "/")
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, exporterUrl, body)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
 	}

@@ -76,3 +76,65 @@ func Test_client_DoGetRequest(t *testing.T) {
 		assert.ErrorContains(t, err, "oh noez, something bad happened")
 	})
 }
+
+func Test_client_DoPostRequest(t *testing.T) {
+	httpClient := &http.Client{}
+
+	t.Run("should successfully execute POST request", func(t *testing.T) {
+		// given
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
+
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, testApiKey, r.Header.Get(apiKeyAuthName))
+
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(testResponse))
+			require.NoError(t, err)
+		}))
+
+		sut := NewClient(testApiKey, httpClient)
+
+		// when
+		actualBytes, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, testResponse, string(actualBytes))
+	})
+	t.Run("should error on invalid URL", func(t *testing.T) {
+		// given
+
+		sut := NewClient(testApiKey, httpClient)
+
+		// when
+		_, err := sut.DoPostRequest(testCtx, "pc:/h\x12", nil, []string{})
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to create request to pc:/h\x12: parse")
+	})
+	t.Run("should error non-OK status code", func(t *testing.T) {
+		// given
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
+
+			assert.Equal(t, "POST", r.Method)
+			assert.Equal(t, testApiKey, r.Header.Get(apiKeyAuthName))
+
+			w.WriteHeader(http.StatusNotFound)
+			_, err := w.Write([]byte("oh noez, something bad happened"))
+			require.NoError(t, err)
+		}))
+
+		sut := NewClient(testApiKey, httpClient)
+
+		// when
+		_, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})
+
+		// then
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "received unexpected response to")
+		assert.ErrorContains(t, err, "oh noez, something bad happened")
+	})
+}

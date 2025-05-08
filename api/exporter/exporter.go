@@ -12,6 +12,8 @@ const (
 	EndpointExportMode = "/export/mode"
 	// EndpointSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
 	EndpointSystemInfo = "/system-info"
+	// EndpointMaintenanceMode contains the endpoint which returns data which describe the current
+	EndpointMaintenanceMode = "/maintenance/mode"
 )
 
 // ExportMode contains data about the export readiness of the exporter system.
@@ -56,4 +58,21 @@ type SystemInfo struct {
 	Dogus []Dogu `json:"dogus"`
 	// Components contain data on all installed components on the exporter side.
 	Components []Component `json:"components"`
+}
+
+// MaintenanceMode contains data of the current maintenance state
+type MaintenanceMode struct {
+	Activate bool    `json:"activate"`
+	Message  Message `json:"message"`
+}
+
+// Struct for the maintenance page title and text
+type Message struct {
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+// MaintenanceModeStatus returns just the current state of the maintenance mode on exporter side
+type MaintenanceModeStatus struct {
+	IsActive bool `json:"isActive"`
 }
