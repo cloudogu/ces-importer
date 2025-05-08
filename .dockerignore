@@ -10,6 +10,8 @@
 !/systeminfo/**/*
 !/sync/**/*
 !/validate/**/*
+!/cmd/**/*
+!/migration/**/*
 
 # and other resources
 !build/**/*
