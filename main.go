@@ -14,6 +14,9 @@ import (
 	"github.com/cloudogu/ces-importer/systeminfo"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	"github.com/cloudogu/k8s-registry-lib/repository"
+	"io"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
@@ -27,6 +30,7 @@ import (
 
 const hostProtocolScheme = "https://"
 const keyFQDN = "fqdn"
+const migrationJobLabelSelector = "app.kubernetes.io/instance=ces-exporter" // TODO: Replace with real selector after job actually exists
 
 func main() {
 	ctx := context.Background()
@@ -74,7 +78,7 @@ func main() {
 	}
 	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, globalConfig, smtp.SendMail)
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, globalConfig, k8sClient, smtp.SendMail)
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
@@ -101,7 +105,7 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, globalConfig *repository.GlobalConfigRepository, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, globalConfig *repository.GlobalConfigRepository, client *kubernetes.Clientset, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
 		startTime := time.Now()
 		err := logging.Initialize(config)
@@ -161,7 +165,14 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return 0, nil
 		}()
 
-		// TODO: get job logs and append to mail
+		logFilesToAppend := []string{logging.AppLogFile}
+
+		logFile, err := copyLogsToContainer(client, config.ImporterNamespace)
+		if err != nil {
+			return 0, fmt.Errorf("failed to collect import job logs: %w", err)
+		} else if logFile != "" {
+			logFilesToAppend = append(logFilesToAppend, logFile)
+		}
 
 		global, err := globalConfig.Get(ctx)
 		if err != nil {
@@ -170,7 +181,6 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 
 		fqdn, _ := global.Get(keyFQDN)
 
-		logFilesToAppend := []string{logging.AppLogFile}
 		success := err != nil
 		err = sender.SendMigrationResult(
 			success,
@@ -190,6 +200,69 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 	}
 }
 
+func copyLogsToContainer(clientset *kubernetes.Clientset, namespace string) (string, error) {
+	const jobLogFile = "/home/ces-importer/migration-log/job.log"
+
+	err := os.Remove(jobLogFile)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to clear old job log file: %w", err)
+	}
+
+	logFile, err := os.Create(jobLogFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to create log file: %w", err)
+	}
+	defer func() {
+		_ = logFile.Close()
+	}()
+
+	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: migrationJobLabelSelector,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list pods with matching label: %w", err)
+	}
+
+	if len(pods.Items) == 0 {
+		return "", nil
+	}
+
+	for _, pod := range pods.Items {
+		err = func() error {
+			req := clientset.CoreV1().Pods(namespace).GetLogs(pod.Name, &v1.PodLogOptions{})
+
+			podLogs, err := req.Stream(context.TODO())
+			if err != nil {
+				return fmt.Errorf("error opening log stream for pod %s: %w", pod.Name, err)
+			}
+			defer func() {
+				_ = podLogs.Close()
+			}()
+
+			_, err = logFile.WriteString(fmt.Sprintf("=== Logs for Pod: %s ===\n", pod.Name))
+			if err != nil {
+				return fmt.Errorf("failed to write to log file: %w", err)
+			}
+
+			_, err = io.Copy(logFile, podLogs)
+			if err != nil {
+				return fmt.Errorf("failed to copy log for pod %s: %w", pod.Name, err)
+			}
+
+			_, err = logFile.WriteString("\n\n")
+			if err != nil {
+				return fmt.Errorf("failed to write to log file: %w", err)
+			}
+
+			return nil
+		}()
+		if err != nil {
+			return "", fmt.Errorf("failed to get log for pod %s: %w", pod.Name, err)
+		}
+	}
+
+	return jobLogFile, nil
+}
 func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStop doguStopper) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Info("Deactivating dogu ", "doguName", dogu.Name)
