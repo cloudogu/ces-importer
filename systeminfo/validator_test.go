@@ -259,6 +259,161 @@ func TestValidateSystemInfo(t *testing.T) {
 		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
+
+	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
+		imSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "onlyPresentHere",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			conf:               configuration.Configuration{},
+			systemInfoProvider: s,
+		}
+		err := v.ValidateSystemInfo(context.Background())
+		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
+	})
+
+	t.Run("should validate special nginx case", func(t *testing.T) {
+		imSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "nginx-static",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "nginx-ingress",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "nginx",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			conf:               configuration.Configuration{},
+			systemInfoProvider: s,
+		}
+		err := v.ValidateSystemInfo(context.Background())
+		require.NoError(t, err)
+	})
+
+	t.Run("should throw error on nginx-static missing when validating nginx dogu", func(t *testing.T) {
+		imSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "nginx-ingress",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "nginx",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			conf:               configuration.Configuration{},
+			systemInfoProvider: s,
+		}
+		err := v.ValidateSystemInfo(context.Background())
+		require.ErrorContains(t, err, "dogu nginx-static is not installed")
+	})
 }
 
 func TestUpdatePVC(t *testing.T) {

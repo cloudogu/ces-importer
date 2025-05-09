@@ -16,12 +16,20 @@ import (
 const (
 	defaultWaitSecondsBetweenRetries = 10
 	defaultMaxWaitMinutes            = 10
+	doguNginx                        = "nginx"
+	doguNginxStatic                  = "nginx-static"
+	doguNginxIngress                 = "nginx-ingress"
 )
 
 var (
 	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 	maxWaitMinutes            = defaultMaxWaitMinutes
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+	excludedDogus             = map[string]bool{
+		"monitoring":  true,
+		"backup":      true,
+		"registrator": true,
+	}
 )
 
 // client used for interacting with persistent volume claims
@@ -108,19 +116,46 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 	for _, exDogu := range exInfo.Dogus {
 		// validate that the dogu exists
 		imDogu := imDoguMap[exDogu.Name]
-		if imDogu.Name == "" {
-			result = errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
-		} else {
-			// validate that the version is correct
-			if !(imDogu.Version == exDogu.Version) {
-				result = errors.Join(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
+
+		// sepcial case for excluded dogus and nginx
+		isExcluded := excludedDogus[exDogu.Name]
+		isNginx := exDogu.Name == doguNginx
+
+		if !isNginx {
+			if imDogu.Name == "" && !isExcluded {
+				result = errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
 			} else {
-				// validate and update the size of the dogus pvc
-				//result = errors.Join(result, v.updatePVC(exDogu, imDogu, ctx))
-				doguResizesStartedCounter++
-				go v.updatePVC(exDogu, imDogu, ctx, c)
+				// validate that the version is correct
+				if !(imDogu.Version == exDogu.Version) {
+					result = errors.Join(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
+				} else {
+					// validate and update the size of the dogus pvc
+					//result = errors.Join(result, v.updatePVC(exDogu, imDogu, ctx))
+					doguResizesStartedCounter++
+					go v.updatePVC(exDogu, imDogu, ctx, c)
+				}
+			}
+		} else {
+			// nginx is a special case because it has two corresponding mn dogus
+			nginxMnDogus := []string{doguNginxStatic, doguNginxIngress}
+			for _, d := range nginxMnDogus {
+				imDogu := imDoguMap[d]
+				if imDogu.Name == "" {
+					result = errors.Join(result, fmt.Errorf("dogu %s is not installed \n", d))
+				}
 			}
 		}
+
+		// delete the validated dogu from the map to later have a map of all dogus installed in the importing system not
+		// present in the exporting system
+		delete(imDoguMap, exDogu.Name)
+	}
+
+	// validate that the importing system does not have dogus installed that are not present in the exporting system
+	delete(imDoguMap, doguNginxStatic)
+	delete(imDoguMap, doguNginxIngress)
+	for key := range imDoguMap {
+		result = errors.Join(fmt.Errorf("dogu %s is installed in the importing system but not present in the exporting system  \n", key))
 	}
 
 	// check every started resize for errors
