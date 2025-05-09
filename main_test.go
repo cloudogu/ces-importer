@@ -667,7 +667,7 @@ func Test_logUsedConfig(t *testing.T) {
 	assert.Contains(t, logOutput, "    V/////(////////o. '°°°' ./////////(///(/'   ")
 	assert.Contains(t, logOutput, "       'V/(/////////////////////////////V'      ")
 	assert.Contains(t, logOutput, "ces-importer started using this configuration:")
-	assert.Contains(t, logOutput, `level=INFO msg="ces-importer started using this configuration:" config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"<removed for log output>\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\", MailConfig:mail.SmtpConfig{server:\"\", port:\"\", username:\"\", password:\"\", from:\"\", to:[]string(nil)}}"`)
+	assert.Contains(t, logOutput, `level=INFO msg="ces-importer started using this configuration:" config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"<removed for log output>\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\", MailConfig:mail.SmtpConfig{Server:\"\", Port:\"\", Username:\"\", Password:\"\", From:\"\", To:[]string(nil)}}"`)
 }
 
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.

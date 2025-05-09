@@ -38,12 +38,12 @@ type OsReadFile func(name string) ([]byte, error)
 type SenderService func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
 type SmtpConfig struct {
-	server   string
-	port     string
-	username string
-	password string
-	from     string
-	to       []string
+	Server   string
+	Port     string
+	Username string
+	Password string
+	From     string
+	To       []string
 }
 
 type Sender struct {
@@ -63,11 +63,11 @@ func CreateSender(config SmtpConfig, senderService SenderService, readFile OsRea
 func SmtpConfigFromEnv() (SmtpConfig, error) {
 	server := os.Getenv(envSmtpServer)
 	if server == "" {
-		return SmtpConfig{}, fmt.Errorf("smtp server address is not configured")
+		return SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
 	}
 	port := os.Getenv(envSmtpPort)
 	if port == "" {
-		return SmtpConfig{}, fmt.Errorf("smtp port is not configured")
+		return SmtpConfig{}, fmt.Errorf("smtp Port is not configured")
 	}
 
 	username := os.Getenv(envSmtpUsername)
@@ -81,27 +81,27 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 	to := strings.Split(toAsStr, ",")
 
 	return SmtpConfig{
-		server:   server,
-		port:     port,
-		username: username,
-		password: password,
-		from:     from,
-		to:       to,
+		Server:   server,
+		Port:     port,
+		Username: username,
+		Password: password,
+		From:     from,
+		To:       to,
 	}, nil
 }
 
 func (s *Sender) auth() smtp.Auth {
 	var auth smtp.Auth
 
-	if s.config.username != "" || s.config.password != "" {
-		auth = smtp.PlainAuth("", s.config.username, s.config.password, s.config.server)
+	if s.config.Username != "" || s.config.Password != "" {
+		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Server)
 	}
 
 	return auth
 }
 
 func (s *Sender) server() string {
-	return fmt.Sprintf("%s:%s", s.config.server, s.config.port)
+	return fmt.Sprintf("%s:%s", s.config.Server, s.config.Port)
 }
 
 func (s *Sender) subject(success bool) string {
@@ -127,7 +127,7 @@ func (s *Sender) body(success bool, sourceInstance string, targetInstance string
 }
 
 func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) error {
-	from := fmt.Sprintf("From: %s\r\n", s.config.from)
+	from := fmt.Sprintf("From: %s\r\n", s.config.From)
 	body := s.body(success, sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
 	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
@@ -139,7 +139,7 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 	for _, file := range attachments {
 		attachment, err := s.buildAttachment(file, boundary)
 		if err != nil {
-			return fmt.Errorf("failed to add attachment: %w", err)
+			return fmt.Errorf("failed To add attachment: %w", err)
 		}
 		message += attachment
 	}
@@ -149,8 +149,8 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 	return s.senderService(
 		s.server(),
 		s.auth(),
-		s.config.from,
-		s.config.to,
+		s.config.From,
+		s.config.To,
 		[]byte(from+s.subject(success)+message),
 	)
 }

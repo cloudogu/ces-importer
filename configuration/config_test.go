@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"fmt"
+	"github.com/cloudogu/ces-importer/mail"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,8 @@ func TestReadConfigFromEnv(t *testing.T) {
 		t.Setenv(migrationRegularScheduleEnv, "0 4 * * *")
 		t.Setenv(migrationFinalScheduleEnv, "2025-04-03 12:34:56Z")
 		t.Setenv(importerNamespaceKeyEnv, "ecosystem")
+		t.Setenv("SMTP_SERVER", "server")
+		t.Setenv("SMTP_PORT", "1")
 
 		// when
 		actualCfg, err := ReadConfigFromEnv()
@@ -34,6 +37,11 @@ func TestReadConfigFromEnv(t *testing.T) {
 			MigrationRegularCron:      "0 4 * * *",
 			MigrationFinalTimestamp:   "2025-04-03 12:34:56Z",
 			ImporterNamespace:         "ecosystem",
+			MailConfig: mail.SmtpConfig{
+				Server: "server",
+				Port:   "1",
+				To:     []string{""},
+			},
 		}, actualCfg)
 	})
 }
@@ -51,7 +59,7 @@ func TestReadConfigFromEnv_Errors(t *testing.T) {
 		{"regular sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv}, assert.Error},
 		{"final sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv}, assert.Error},
 		{"namespace unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv}, assert.Error},
-		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv}, assert.NoError},
+		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv, "SMTP_SERVER", "SMTP_PORT"}, assert.NoError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

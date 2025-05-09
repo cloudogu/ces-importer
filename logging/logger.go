@@ -14,6 +14,15 @@ const (
 	appLogPerm     = 0666
 )
 
+var createWriter = func() (io.Writer, error) {
+	logFile, err := os.OpenFile(AppLogFile, appLogFileMode, appLogPerm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create app log file: %w", err)
+	}
+
+	return io.MultiWriter(os.Stderr, logFile), nil
+}
+
 func Initialize(conf configuration.Configuration) error {
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(conf.LogLevel)); err != nil {
@@ -22,12 +31,10 @@ func Initialize(conf configuration.Configuration) error {
 		level = slog.LevelInfo
 	}
 
-	logFile, err := os.OpenFile(AppLogFile, appLogFileMode, appLogPerm)
+	multiWriter, err := createWriter()
 	if err != nil {
-		return fmt.Errorf("failed to create app log file: %w", err)
+		return fmt.Errorf("failed to create multiwriter: %w", err)
 	}
-
-	multiWriter := io.MultiWriter(os.Stderr, logFile)
 
 	handler := slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
 		Level: level,
