@@ -4,8 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/k8s-registry-lib/config"
+	"github.com/stretchr/testify/mock"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"log/slog"
+	"net/smtp"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
@@ -253,6 +259,35 @@ func Test_activateImporterDogus(t *testing.T) {
 	})
 }
 
+func createMainLoopContext(t *testing.T, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, globalConfig globalConfig, pods podInterface) mainLoopContext {
+	t.Helper()
+	return mainLoopContext{
+		testConfig,
+		exportApiCli,
+		doguStart,
+		doguStop,
+		syncer,
+		sysInfoValidator,
+		globalConfig,
+		pods,
+		func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+			return nil
+		},
+		func(name string) error {
+			return nil
+		},
+		func(name string) (*os.File, error) {
+			return &os.File{}, nil
+		},
+		func(conf configuration.Configuration) error {
+			return nil
+		},
+		func(name string) ([]byte, error) {
+			return []byte(""), nil
+		},
+	}
+}
+
 func Test_createMainLoop_int(t *testing.T) {
 	t.Run("should run the function successfully", func(t *testing.T) {
 		// given
@@ -282,8 +317,24 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
+
+		global := newMockGlobalConfig(t)
+		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)
+		sut := mlc.createMainLoop()
 		code, err := sut(testCtx)
 
 		// then
@@ -312,8 +363,24 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
+
+		global := newMockGlobalConfig(t)
+		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -345,8 +412,24 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
+
+		global := newMockGlobalConfig(t)
+		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -378,8 +461,24 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
+
+		global := newMockGlobalConfig(t)
+		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -412,8 +511,21 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		pods := newMockPodInterface(t)
+		global := newMockGlobalConfig(t)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -449,8 +561,22 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		pods := newMockPodInterface(t)
+
+		global := newMockGlobalConfig(t)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -485,8 +611,22 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		pods := newMockPodInterface(t)
+
+		global := newMockGlobalConfig(t)
+
+		mlc := createMainLoopContext(t,
+			exportApiClient,
+			starter,
+			stopper,
+			doguSyncer,
+			validator,
+			global,
+			pods,
+		)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, nil)(testCtx)
+		exitCode, err := mlc.createMainLoop()(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -527,7 +667,7 @@ func Test_logUsedConfig(t *testing.T) {
 	assert.Contains(t, logOutput, "    V/////(////////o. '°°°' ./////////(///(/'   ")
 	assert.Contains(t, logOutput, "       'V/(/////////////////////////////V'      ")
 	assert.Contains(t, logOutput, "ces-importer started using this configuration:")
-	assert.Contains(t, logOutput, `config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"my-key\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\"}"`)
+	assert.Contains(t, logOutput, `level=INFO msg="ces-importer started using this configuration:" config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"<removed for log output>\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\", MailConfig:mail.SmtpConfig{server:\"\", port:\"\", username:\"\", password:\"\", from:\"\", to:[]string(nil)}}"`)
 }
 
 // NOTE: Be careful with testing main() because the app may get stuck in the main loop indefinitely.
@@ -542,6 +682,14 @@ func Test_main(t *testing.T) {
 			return &rest.Config{}, assert.AnError
 		}
 
+		initializeLogging = func(conf configuration.Configuration) error {
+			return nil
+		}
+
+		defer func() {
+			initializeLogging = logging.Initialize
+		}()
+
 		// given
 		t.Setenv("LOG_LEVEL", "DEBUG")
 		t.Setenv("EXPORTER_HOST", "source.net")
@@ -550,6 +698,8 @@ func Test_main(t *testing.T) {
 		t.Setenv("MIGRATION_REGULAR_SCHEDULE", "0 4 * * *")
 		t.Setenv("MIGRATION_FINAL_SCHEDULE", "2025-04-03 12:34:56Z")
 		t.Setenv("IMPORTER_NAMESPACE", "ecosystem")
+		t.Setenv("SMTP_SERVER", "smtp")
+		t.Setenv("SMTP_PORT", "smtp")
 
 		defer func() {
 			if r := recover(); r != nil {

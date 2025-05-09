@@ -33,6 +33,8 @@ const (
 	mailBody    = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
 )
 
+type OsReadFile func(name string) ([]byte, error)
+
 type SenderService func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
 type SmtpConfig struct {
@@ -47,6 +49,15 @@ type SmtpConfig struct {
 type Sender struct {
 	config        SmtpConfig
 	senderService SenderService
+	readFile      OsReadFile
+}
+
+func CreateSender(config SmtpConfig, senderService SenderService, readFile OsReadFile) *Sender {
+	return &Sender{
+		config,
+		senderService,
+		readFile,
+	}
 }
 
 func SmtpConfigFromEnv() (SmtpConfig, error) {
@@ -77,13 +88,6 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 		from:     from,
 		to:       to,
 	}, nil
-}
-
-func CreateSender(config SmtpConfig, senderService SenderService) *Sender {
-	return &Sender{
-		config,
-		senderService,
-	}
 }
 
 func (s *Sender) auth() smtp.Auth {
@@ -133,7 +137,7 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 		body + "\r\n"
 
 	for _, file := range attachments {
-		attachment, err := buildAttachment(file, boundary)
+		attachment, err := s.buildAttachment(file, boundary)
 		if err != nil {
 			return fmt.Errorf("failed to add attachment: %w", err)
 		}
@@ -151,8 +155,8 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 	)
 }
 
-func buildAttachment(filename, boundary string) (string, error) {
-	data, err := os.ReadFile(filename)
+func (s *Sender) buildAttachment(filename, boundary string) (string, error) {
+	data, err := s.readFile(filename)
 	if err != nil {
 		return "", err
 	}

@@ -13,11 +13,15 @@ import (
 	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"io"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+
 	"log/slog"
 	"net/http"
 	"net/smtp"
@@ -31,6 +35,7 @@ import (
 const hostProtocolScheme = "https://"
 const keyFQDN = "fqdn"
 const migrationJobLabelSelector = "app.kubernetes.io/instance=ces-exporter" // TODO: Replace with real selector after job actually exists
+var initializeLogging = logging.Initialize
 
 func main() {
 	ctx := context.Background()
@@ -40,7 +45,7 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = logging.Initialize(config)
+	err = initializeLogging(config)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +83,22 @@ func main() {
 	}
 	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, globalConfig, k8sClient, smtp.SendMail)
+	mainLoopCtx := mainLoopContext{
+		config:           config,
+		exportApiCli:     exportApiCli,
+		doguStart:        doguStartStopper,
+		doguStop:         doguStartStopper,
+		syncer:           syncer,
+		sysInfoValidator: validator,
+		globalConfig:     globalConfig,
+		mailSender:       smtp.SendMail,
+		remove:           os.Remove,
+		create:           os.Create,
+		initLogging:      logging.Initialize,
+		pods:             k8sClient.CoreV1().Pods(config.ImporterNamespace),
+	}
+	mainLoop := mainLoopCtx.createMainLoop()
+
 	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
@@ -105,17 +125,45 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Configuration, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, globalConfig *repository.GlobalConfigRepository, client *kubernetes.Clientset, mailSender mail.SenderService) func(ctx context.Context) (int, error) {
+type osRemove func(name string) error
+type osCreate func(name string) (*os.File, error)
+type osReadFile func(name string) ([]byte, error)
+type loggingInitializer func(conf configuration.Configuration) error
+type podInterface interface {
+	List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodList, error)
+	GetLogs(name string, opts *v1.PodLogOptions) *restclient.Request
+}
+type globalConfig interface {
+	Get(ctx context.Context) (config.GlobalConfig, error)
+}
+
+type mainLoopContext struct {
+	config           configuration.Configuration
+	exportApiCli     exporterApiClient
+	doguStart        doguStarter
+	doguStop         doguStopper
+	syncer           doguVolumeSyncer
+	sysInfoValidator systemInfoValidator
+	globalConfig     globalConfig
+	pods             podInterface
+	mailSender       mail.SenderService
+	remove           osRemove
+	create           osCreate
+	initLogging      loggingInitializer
+	readFile         osReadFile
+}
+
+func (mlc *mainLoopContext) createMainLoop() func(ctx context.Context) (int, error) {
 	return func(ctx context.Context) (int, error) {
 		startTime := time.Now()
-		err := logging.Initialize(config)
+		err := mlc.initLogging(mlc.config)
 		if err != nil {
 			return 0, fmt.Errorf("failed to reset logger: %w", err)
 		}
-		sender := mail.CreateSender(config.MailConfig, mailSender)
+		sender := mail.CreateSender(mlc.config.MailConfig, mlc.mailSender, mail.OsReadFile(mlc.readFile))
 
 		retVal, err := func() (int, error) {
-			isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
+			isExporterSyncReady, err := isApiExportReady(ctx, mlc.config.ExporterHost, mlc.exportApiCli)
 			if err != nil {
 				// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
 				slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
@@ -129,7 +177,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 				return 0, nil // continue to the next main loop iteration
 			}
 
-			systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
+			systemInfo, err := fetchExporterSystemInfo(ctx, mlc.config.ExporterHost, mlc.exportApiCli)
 			if err != nil {
 				// this error is recoverable, the exporter system API might be down, or the API server errs
 				slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
@@ -137,7 +185,7 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 				return 0, nil
 			}
 
-			err = sysInfoValidator.ValidateSystemInfo(ctx)
+			err = mlc.sysInfoValidator.ValidateSystemInfo(ctx)
 			if err != nil {
 				slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
 				// TODO should this break the main loop or not?
@@ -145,17 +193,17 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 				return 0, nil
 			}
 
-			err = deactivateImporterDogus(ctx, systemInfo, doguStop)
+			err = deactivateImporterDogus(ctx, systemInfo, mlc.doguStop)
 			if err != nil {
 				return 1, err
 			}
 
-			err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
+			err = syncDogus(ctx, systemInfo, mlc.exportApiCli, mlc.syncer)
 			if err != nil {
 				return 2, err
 			}
 
-			err = activateImporterDogus(ctx, systemInfo, doguStart)
+			err = activateImporterDogus(ctx, systemInfo, mlc.doguStart)
 			if err != nil {
 				return 3, err
 			}
@@ -165,16 +213,20 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 			return 0, nil
 		}()
 
+		if err != nil {
+			return retVal, err
+		}
+
 		logFilesToAppend := []string{logging.AppLogFile}
 
-		logFile, err := copyLogsToContainer(client, config.ImporterNamespace)
+		logFile, err := mlc.copyLogsToContainer()
 		if err != nil {
 			return 0, fmt.Errorf("failed to collect import job logs: %w", err)
 		} else if logFile != "" {
 			logFilesToAppend = append(logFilesToAppend, logFile)
 		}
 
-		global, err := globalConfig.Get(ctx)
+		global, err := mlc.globalConfig.Get(ctx)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get global config: %w", err)
 		}
@@ -185,11 +237,11 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 		err = sender.SendMigrationResult(
 			success,
 			logFilesToAppend,
-			hostProtocolScheme+config.ExporterHost,
+			hostProtocolScheme+mlc.config.ExporterHost,
 			hostProtocolScheme+fqdn.String(),
 			startTime,
 			time.Now(),
-			false,
+			false, // TODO: How to determine if final or not?
 		)
 
 		if err != nil {
@@ -200,15 +252,15 @@ func createMainLoop(config configuration.Configuration, exportApiCli exporterApi
 	}
 }
 
-func copyLogsToContainer(clientset *kubernetes.Clientset, namespace string) (string, error) {
+func (mlc *mainLoopContext) copyLogsToContainer() (string, error) {
 	const jobLogFile = "/home/ces-importer/migration-log/job.log"
 
-	err := os.Remove(jobLogFile)
+	err := mlc.remove(jobLogFile)
 	if err != nil && !os.IsNotExist(err) {
 		return "", fmt.Errorf("failed to clear old job log file: %w", err)
 	}
 
-	logFile, err := os.Create(jobLogFile)
+	logFile, err := mlc.create(jobLogFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to create log file: %w", err)
 	}
@@ -216,7 +268,7 @@ func copyLogsToContainer(clientset *kubernetes.Clientset, namespace string) (str
 		_ = logFile.Close()
 	}()
 
-	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+	pods, err := mlc.pods.List(context.TODO(), metav1.ListOptions{
 		LabelSelector: migrationJobLabelSelector,
 	})
 	if err != nil {
@@ -229,7 +281,7 @@ func copyLogsToContainer(clientset *kubernetes.Clientset, namespace string) (str
 
 	for _, pod := range pods.Items {
 		err = func() error {
-			req := clientset.CoreV1().Pods(namespace).GetLogs(pod.Name, &v1.PodLogOptions{})
+			req := mlc.pods.GetLogs(pod.Name, &v1.PodLogOptions{})
 
 			podLogs, err := req.Stream(context.TODO())
 			if err != nil {
@@ -263,6 +315,7 @@ func copyLogsToContainer(clientset *kubernetes.Clientset, namespace string) (str
 
 	return jobLogFile, nil
 }
+
 func deactivateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo, doguStop doguStopper) error {
 	for _, dogu := range systemInfo.Dogus {
 		slog.Info("Deactivating dogu ", "doguName", dogu.Name)
