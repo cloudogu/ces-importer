@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestConfigImporter_ImportConfiguration(t *testing.T) {
+func TestConfigImporter_SyncConfig(t *testing.T) {
 	testCtx := context.Background()
 
 	t.Run("should import the configuration", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestConfigImporter_ImportConfiguration(t *testing.T) {
 			backupScheduleImporter: mockBsi,
 		}
 
-		err := ci.ImportConfiguration(testCtx)
+		err := ci.SyncConfig(testCtx)
 
 		require.NoError(t, err)
 	})
@@ -88,7 +88,7 @@ func TestConfigImporter_ImportConfiguration(t *testing.T) {
 			backupScheduleImporter: mockBsi,
 		}
 
-		err := ci.ImportConfiguration(testCtx)
+		err := ci.SyncConfig(testCtx)
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -131,7 +131,7 @@ func TestConfigImporter_ImportConfiguration(t *testing.T) {
 			backupScheduleImporter: mockBsi,
 		}
 
-		err := ci.ImportConfiguration(testCtx)
+		err := ci.SyncConfig(testCtx)
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -175,7 +175,7 @@ func TestConfigImporter_ImportConfiguration(t *testing.T) {
 			backupScheduleImporter: mockBsi,
 		}
 
-		err := ci.ImportConfiguration(testCtx)
+		err := ci.SyncConfig(testCtx)
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -220,7 +220,7 @@ func TestConfigImporter_ImportConfiguration(t *testing.T) {
 			backupScheduleImporter: mockBsi,
 		}
 
-		err := ci.ImportConfiguration(testCtx)
+		err := ci.SyncConfig(testCtx)
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)

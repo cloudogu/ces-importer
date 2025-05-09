@@ -58,7 +58,7 @@ func NewConfigImporter(exporterHost string, apiClient exporterApiClient, globalC
 	}
 }
 
-func (ci *ConfigImporter) ImportConfiguration(ctx context.Context) error {
+func (ci *ConfigImporter) SyncConfig(ctx context.Context) error {
 	config, err := ci.getter.GetConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get configuration from exporter: %w", err)
