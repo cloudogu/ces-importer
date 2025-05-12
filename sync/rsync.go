@@ -102,36 +102,9 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, apiCli ApiCli, config confi
 
 // SyncDogu copies dogu volume data from a remote Cloudogu EcoSystem instance.
 func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination string, exclude configuration.Exclude, verbose bool) error {
-	var args []string
-	// archive mode
-	// verbose
-	// human-readable sizes
-	// compress file data during transfer
-	if verbose {
-		args = append(args, "-avhz")
-	} else {
-		args = append(args, "-ahz")
-	}
-
-	// delete extraneous files from dest dirs
-	args = append(args, "--delete")
-
-	// exclude pattern
-	if exclude.Pattern != "" {
-		args = append(args, "--exclude="+exclude.Pattern)
-	}
-
-	// ssh options
-	args = append(args, "-e")
-	args = append(args, fmt.Sprintf("ssh -p %d -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", port, rs.user, rs.privateKeyPath))
-
-	// source with host
-	args = append(args, fmt.Sprintf("%s:%s", rs.host, source))
-
-	// destination path
-	args = append(args, destination)
 
 	// Define the rsync command and arguments
+	args := rs.buildRSyncArgs(port, source, destination, exclude, verbose)
 	cmd := rs.makeCommand("rsync", args...)
 
 	slog.Info(fmt.Sprintf("executing rsync command: %s", cmd.String()))
@@ -203,4 +176,37 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli ApiCli
 	}
 
 	return &systemInfo, nil
+}
+
+// buildRSyncArgs builds the arguments for the rsync command based on the given parameters
+func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, exclude configuration.Exclude, verbose bool) []string {
+	var args []string
+	// archive mode
+	// verbose
+	// human-readable sizes
+	// compress file data during transfer
+	if verbose {
+		args = append(args, "-avhz")
+	} else {
+		args = append(args, "-ahz")
+	}
+
+	// delete extraneous files from dest dirs
+	args = append(args, "--delete")
+
+	// exclude pattern
+	if exclude.Pattern != "" {
+		args = append(args, "--exclude="+exclude.Pattern)
+	}
+
+	// ssh options
+	args = append(args, "-e")
+	args = append(args, fmt.Sprintf("ssh -p %d -l %s -i %s -o StrictHostKeyChecking=no -o BatchMode=yes", port, rs.user, rs.privateKeyPath))
+
+	// source with host
+	args = append(args, fmt.Sprintf("%s:%s", rs.host, source))
+
+	// destination path
+	args = append(args, destination)
+	return args
 }
