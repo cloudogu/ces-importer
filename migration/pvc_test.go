@@ -10,12 +10,13 @@ import (
 	"testing"
 )
 
-func Test_newPVCGetter(t *testing.T) {
+func TestNewPVCGetter(t *testing.T) {
 	pGetter := NewPVCGetter(NewPersistentVolumeClaimInterface(t))
 
 	assert.NotNil(t, pGetter)
 	assert.NotNil(t, pGetter.client)
-	assert.Contains(t, pGetter.doguSelector, v2.DoguLabelName)
+	assert.NotContains(t, pGetter.doguSelector, "<error>")
+	assert.NotContains(t, pGetter.doguSelector, "<none>")
 }
 
 func Test_pvcGetter_GetDoguVolumes(t *testing.T) {

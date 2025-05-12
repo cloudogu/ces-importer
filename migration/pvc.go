@@ -29,9 +29,12 @@ func NewPVCGetter(client v1.PersistentVolumeClaimInterface) *PVCGetter {
 		},
 	}
 
+	// Convert the selector to a string
+	selector := metav1.FormatLabelSelector(&doguSelector)
+
 	return &PVCGetter{
 		client:       client,
-		doguSelector: doguSelector.String(),
+		doguSelector: selector,
 	}
 }
 
