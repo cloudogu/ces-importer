@@ -33,25 +33,32 @@ const (
 	mailBody    = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
 )
 
+// OsReadFile defines a function type for reading a file from the given name and returning its contents as bytes.
 type OsReadFile func(name string) ([]byte, error)
 
+// SenderService defines a function type for sending an email using SMTP with the provided address, authentication,
+// sender, recipients, and message body.
 type SenderService func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
+// SmtpConfig holds SMTP server configuration details required for sending emails.
 type SmtpConfig struct {
-	Server   string
-	Port     string
-	Username string
-	Password string
-	From     string
-	To       []string
+	Server   string   // SMTP server address (e.g., smtp.example.com)
+	Port     string   // SMTP server port (default is "25" if not specified)
+	Username string   // Username for SMTP authentication
+	Password string   // Password for SMTP authentication
+	From     string   // Sender's email address
+	To       []string // List of recipient email addresses
 }
 
+// Sender provides functionality to send emails using a configured SMTP service.
 type Sender struct {
-	config        SmtpConfig
-	senderService SenderService
-	readFile      OsReadFile
+	config        SmtpConfig    // SMTP configuration
+	senderService SenderService // Function to send email
+	readFile      OsReadFile    // Function to read email content from a file
 }
 
+// CreateSender initializes and returns a new Sender instance with the provided configuration,
+// sender service, and file reader.
 func CreateSender(config SmtpConfig, senderService SenderService, readFile OsReadFile) *Sender {
 	return &Sender{
 		config,
@@ -60,6 +67,16 @@ func CreateSender(config SmtpConfig, senderService SenderService, readFile OsRea
 	}
 }
 
+// SmtpConfigFromEnv reads SMTP configuration from environment variables and returns
+// a SmtpConfig struct. Returns an error if required fields like server or from address are missing.
+//
+// Expected environment variables:
+//   - SMTP_SERVER
+//   - SMTP_PORT (optional, defaults to "25")
+//   - SMTP_USERNAME
+//   - SMTP_PASSWORD
+//   - SMTP_FROM
+//   - SMTP_TO (comma-separated list of recipient emails)
 func SmtpConfigFromEnv() (SmtpConfig, error) {
 	server := os.Getenv(envSmtpServer)
 	if server == "" {
@@ -67,7 +84,7 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 	}
 	port := os.Getenv(envSmtpPort)
 	if port == "" {
-		return SmtpConfig{}, fmt.Errorf("smtp Port is not configured")
+		port = "25"
 	}
 
 	username := os.Getenv(envSmtpUsername)
@@ -75,7 +92,7 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 
 	from := os.Getenv(envSmtpFrom)
 	if from == "" {
-
+		return SmtpConfig{}, fmt.Errorf("smtp from is not configured")
 	}
 	toAsStr := os.Getenv(envSmtpTo)
 	to := strings.Split(toAsStr, ",")
@@ -88,6 +105,50 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 		From:     from,
 		To:       to,
 	}, nil
+}
+
+// SendMigrationResult composes and sends an email containing the result of a migration operation.
+//
+// The email includes a plain text body summarizing the migration status and optional file attachments.
+// It uses multipart MIME encoding to support attachments and plain text.
+//
+// Parameters:
+//   - success: Indicates whether the migration was successful.
+//   - attachments: List of file paths to include as attachments in the email.
+//   - sourceInstance: URL of the source system
+//   - targetInstance: URL of the target system.
+//   - start: Start time of the migration.
+//   - end: End time of the migration.
+//   - isFinal: Whether this is the final report of a migration process.
+//
+// Returns an error if email composition or sending fails.
+func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) error {
+	from := fmt.Sprintf("From: %s\r\n", s.config.From)
+	body := s.body(success, sourceInstance, targetInstance, start, end, isFinal)
+	boundary := "MIME_BOUNDARY_CES_IMPORTER"
+	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
+	message := mime +
+		"--" + boundary + "\r\n" +
+		"Content-Type: text/plain; charset=utf-8\r\n\r\n" +
+		body + "\r\n"
+
+	for _, file := range attachments {
+		attachment, err := s.buildAttachment(file, boundary)
+		if err != nil {
+			return fmt.Errorf("failed To add attachment: %w", err)
+		}
+		message += attachment
+	}
+
+	message += "--" + boundary
+
+	return s.senderService(
+		s.server(),
+		s.auth(),
+		s.config.From,
+		s.config.To,
+		[]byte(from+s.subject(success)+message),
+	)
 }
 
 func (s *Sender) auth() smtp.Auth {
@@ -123,35 +184,16 @@ func (s *Sender) body(success bool, sourceInstance string, targetInstance string
 		migrationType = typeMigrationFinal
 	}
 
-	return fmt.Sprintf("%s\r\n", fmt.Sprintf(mailBody, migrationType, sourceInstance, targetInstance, result, start, end))
-}
-
-func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) error {
-	from := fmt.Sprintf("From: %s\r\n", s.config.From)
-	body := s.body(success, sourceInstance, targetInstance, start, end, isFinal)
-	boundary := "MIME_BOUNDARY_CES_IMPORTER"
-	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
-	message := mime +
-		"--" + boundary + "\r\n" +
-		"Content-Type: text/plain; charset=utf-8\r\n\r\n" +
-		body + "\r\n"
-
-	for _, file := range attachments {
-		attachment, err := s.buildAttachment(file, boundary)
-		if err != nil {
-			return fmt.Errorf("failed To add attachment: %w", err)
-		}
-		message += attachment
-	}
-
-	message += "--" + boundary
-
-	return s.senderService(
-		s.server(),
-		s.auth(),
-		s.config.From,
-		s.config.To,
-		[]byte(from+s.subject(success)+message),
+	return fmt.Sprintf("%s\r\n",
+		fmt.Sprintf(
+			mailBody,
+			migrationType,
+			sourceInstance,
+			targetInstance,
+			result,
+			start.Format("15:04"),
+			end.Format("15:04"),
+		),
 	)
 }
 

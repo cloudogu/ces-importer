@@ -741,6 +741,7 @@ func Test_main(t *testing.T) {
 		t.Setenv("IMPORTER_NAMESPACE", "ecosystem")
 		t.Setenv("SMTP_SERVER", "smtp")
 		t.Setenv("SMTP_PORT", "smtp")
+		t.Setenv("SMTP_FROM", "smtp")
 
 		defer func() {
 			if r := recover(); r != nil {
