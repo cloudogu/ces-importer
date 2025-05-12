@@ -81,6 +81,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					Memory: "128Mi",
 				},
 			},
+			JobConfigMap:      "ces-importer-job-config",
+			JobServiceAccount: "ces-importer-main-manager",
 		}, cfg.JobContainer)
 	})
 
