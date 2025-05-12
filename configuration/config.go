@@ -139,6 +139,7 @@ type Coordinator struct {
 	API
 	Migration
 	SSH
+	JobConfig
 	JobContainer
 
 	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
@@ -177,6 +178,11 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		return Coordinator{}, fmt.Errorf("failed to read ssh configuration: %w", err)
 	}
 
+	jobConfig, err := readConfigYAML[JobConfig](path.Join(configBaseDir, fileJobConfig))
+	if err != nil {
+		return Coordinator{}, fmt.Errorf("failed to read job configuration: %w", err)
+	}
+
 	jobContainerConfig, err := readConfigYAML[JobContainer](path.Join(configBaseDir, fileJobContainerConfig))
 	if err != nil {
 		return Coordinator{}, fmt.Errorf("failed to read job container configuration: %w", err)
@@ -187,6 +193,7 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		API:          apiConfig,
 		Migration:    migrationConfig,
 		SSH:          sshConfig,
+		JobConfig:    jobConfig,
 		JobContainer: jobContainerConfig,
 		Namespace:    namespace,
 	}, nil
