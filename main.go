@@ -35,25 +35,30 @@ import (
 const hostProtocolScheme = "https://"
 const keyFQDN = "fqdn"
 const migrationJobLabelSelector = "app.kubernetes.io/instance=ces-exporter" // TODO: Replace with real selector after job actually exists
+const jobLogFile = "/home/ces-importer/migration-log/job.log"
+
 var initializeLogging = logging.Initialize
+var copyLogsToContainer = func(ctx context.Context, mlc *mainLoopContext) (string, error) {
+	return mlc.copyLogsToContainer(ctx)
+}
 
 func main() {
 	ctx := context.Background()
 
-	config, err := configuration.ReadConfigFromEnv()
+	cfg, err := configuration.ReadConfigFromEnv()
 	if err != nil {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = initializeLogging(config)
+	err = initializeLogging(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	logUsedConfig(config)
+	logUsedConfig(cfg)
 
 	httpClient := &http.Client{}
-	exportApiCli := exporter.NewClient(config.ExporterApiKey, httpClient)
+	exportApiCli := exporter.NewClient(cfg.ExporterApiKey, httpClient)
 
 	k8sRestConfig, err := ctrl.GetConfig()
 	if err != nil {
@@ -70,21 +75,21 @@ func main() {
 		panic(fmt.Errorf("failed to create k8s client: %w", err))
 	}
 
-	globalConfig := repository.NewGlobalConfigRepository(k8sClient.CoreV1().ConfigMaps(config.ImporterNamespace))
+	globalConfig := repository.NewGlobalConfigRepository(k8sClient.CoreV1().ConfigMaps(cfg.ImporterNamespace))
 
-	doguClient := doguCli.Dogus(config.ImporterNamespace)
+	doguClient := doguCli.Dogus(cfg.ImporterNamespace)
 	doguStartStopper := importer.NewDoguDeploymentClient(doguClient)
 
-	syncer := sync.NewRsyncSyncer(config.ExporterHost, config.ExporterSSHUser, config.ImporterPrivateSSHKeyPath)
+	syncer := sync.NewRsyncSyncer(cfg.ExporterHost, cfg.ExporterSSHUser, cfg.ImporterPrivateSSHKeyPath)
 
-	provider, err := systeminfo.NewSystemInfoProvider(config.ImporterNamespace)
+	provider, err := systeminfo.NewSystemInfoProvider(cfg.ImporterNamespace)
 	if err != nil {
 		panic(fmt.Errorf("failed to create system info provider: %w", err))
 	}
-	validator := systeminfo.NewValidator(config, config.ImporterNamespace, provider)
+	validator := systeminfo.NewValidator(cfg, cfg.ImporterNamespace, provider)
 
 	mainLoopCtx := mainLoopContext{
-		config:           config,
+		config:           cfg,
 		exportApiCli:     exportApiCli,
 		doguStart:        doguStartStopper,
 		doguStop:         doguStartStopper,
@@ -93,15 +98,17 @@ func main() {
 		globalConfig:     globalConfig,
 		mailSender:       smtp.SendMail,
 		remove:           os.Remove,
-		create:           os.Create,
-		initLogging:      logging.Initialize,
-		pods:             k8sClient.CoreV1().Pods(config.ImporterNamespace),
+		create: func(name string) (file, error) {
+			return os.Create(name)
+		},
+		initLogging: logging.Initialize,
+		pods:        k8sClient.CoreV1().Pods(cfg.ImporterNamespace),
 	}
 	mainLoop := mainLoopCtx.createMainLoop()
 
-	cronLooper, err := cron.New(ctx, config.MigrationRegularCron, mainLoop)
+	cronLooper, err := cron.New(ctx, cfg.MigrationRegularCron, mainLoop)
 	if err != nil {
-		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.MigrationRegularCron, err))
+		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.MigrationRegularCron, err))
 	}
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
@@ -125,8 +132,14 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
+type file interface {
+	io.Writer
+	WriteString(s string) (n int, err error)
+	Close() error
+}
+
 type osRemove func(name string) error
-type osCreate func(name string) (*os.File, error)
+type osCreate func(name string) (file, error)
 type osReadFile func(name string) ([]byte, error)
 type loggingInitializer func(conf configuration.Configuration) error
 type podInterface interface {
@@ -135,6 +148,10 @@ type podInterface interface {
 }
 type globalConfig interface {
 	Get(ctx context.Context) (config.GlobalConfig, error)
+}
+
+var streamLogs = func(ctx context.Context, req *restclient.Request) (io.ReadCloser, error) {
+	return req.Stream(ctx)
 }
 
 type mainLoopContext struct {
@@ -219,7 +236,7 @@ func (mlc *mainLoopContext) createMainLoop() func(ctx context.Context) (int, err
 
 		logFilesToAppend := []string{logging.AppLogFile}
 
-		logFile, err := mlc.copyLogsToContainer()
+		logFile, err := copyLogsToContainer(ctx, mlc)
 		if err != nil {
 			return 0, fmt.Errorf("failed to collect import job logs: %w", err)
 		} else if logFile != "" {
@@ -252,9 +269,7 @@ func (mlc *mainLoopContext) createMainLoop() func(ctx context.Context) (int, err
 	}
 }
 
-func (mlc *mainLoopContext) copyLogsToContainer() (string, error) {
-	const jobLogFile = "/home/ces-importer/migration-log/job.log"
-
+func (mlc *mainLoopContext) copyLogsToContainer(ctx context.Context) (string, error) {
 	err := mlc.remove(jobLogFile)
 	if err != nil && !os.IsNotExist(err) {
 		return "", fmt.Errorf("failed to clear old job log file: %w", err)
@@ -265,10 +280,12 @@ func (mlc *mainLoopContext) copyLogsToContainer() (string, error) {
 		return "", fmt.Errorf("failed to create log file: %w", err)
 	}
 	defer func() {
-		_ = logFile.Close()
+		if logFile != nil {
+			_ = logFile.Close()
+		}
 	}()
 
-	pods, err := mlc.pods.List(context.TODO(), metav1.ListOptions{
+	pods, err := mlc.pods.List(ctx, metav1.ListOptions{
 		LabelSelector: migrationJobLabelSelector,
 	})
 	if err != nil {
@@ -283,12 +300,14 @@ func (mlc *mainLoopContext) copyLogsToContainer() (string, error) {
 		err = func() error {
 			req := mlc.pods.GetLogs(pod.Name, &v1.PodLogOptions{})
 
-			podLogs, err := req.Stream(context.TODO())
+			podLogs, err := streamLogs(ctx, req)
 			if err != nil {
 				return fmt.Errorf("error opening log stream for pod %s: %w", pod.Name, err)
 			}
 			defer func() {
-				_ = podLogs.Close()
+				if podLogs != nil {
+					_ = podLogs.Close()
+				}
 			}()
 
 			_, err = logFile.WriteString(fmt.Sprintf("=== Logs for Pod: %s ===\n", pod.Name))

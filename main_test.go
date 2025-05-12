@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/cloudogu/ces-importer/logging"
 	"github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/stretchr/testify/mock"
+	"io"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"log/slog"
 	"net/smtp"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	"testing"
 
 	"github.com/cloudogu/ces-importer/configuration"
@@ -276,8 +279,8 @@ func createMainLoopContext(t *testing.T, exportApiCli exporterApiClient, doguSta
 		func(name string) error {
 			return nil
 		},
-		func(name string) (*os.File, error) {
-			return &os.File{}, nil
+		func(name string) (file, error) {
+			return nil, nil
 		},
 		func(conf configuration.Configuration) error {
 			return nil
@@ -290,6 +293,14 @@ func createMainLoopContext(t *testing.T, exportApiCli exporterApiClient, doguSta
 
 func Test_createMainLoop_int(t *testing.T) {
 	t.Run("should run the function successfully", func(t *testing.T) {
+		originalCopy := copyLogsToContainer
+		copyLogsToContainer = func(ctx context.Context, mlc *mainLoopContext) (string, error) {
+			return "", nil
+		}
+		defer func() {
+			copyLogsToContainer = originalCopy
+		}()
+
 		// given
 		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
@@ -318,7 +329,6 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
 		pods := newMockPodInterface(t)
-		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
 
 		global := newMockGlobalConfig(t)
 		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
@@ -332,6 +342,9 @@ func Test_createMainLoop_int(t *testing.T) {
 			global,
 			pods,
 		)
+		mlc.create = func(name string) (file, error) {
+			return nil, nil
+		}
 
 		// when
 		sut := mlc.createMainLoop()
@@ -367,7 +380,10 @@ func Test_createMainLoop_int(t *testing.T) {
 		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
 
 		global := newMockGlobalConfig(t)
-		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+		globalC := config.CreateGlobalConfig(map[config.Key]config.Value{
+			"fqdn": "fqdn",
+		})
+		global.EXPECT().Get(mock.Anything).Return(globalC, nil)
 
 		mlc := createMainLoopContext(t,
 			exportApiClient,
@@ -378,6 +394,11 @@ func Test_createMainLoop_int(t *testing.T) {
 			global,
 			pods,
 		)
+		fMock := newMockFile(t)
+		fMock.EXPECT().Close().Return(nil)
+		mlc.create = func(name string) (file, error) {
+			return fMock, nil
+		}
 
 		// when
 		exitCode, err := mlc.createMainLoop()(testCtx)
@@ -391,6 +412,14 @@ func Test_createMainLoop_int(t *testing.T) {
 		assert.Contains(t, logOutput, "level=INFO msg=\"Waiting for the next run...")
 	})
 	t.Run("should recover for the the next run when the exporter is not ready to export", func(t *testing.T) {
+		originalCopy := copyLogsToContainer
+		copyLogsToContainer = func(ctx context.Context, mlc *mainLoopContext) (string, error) {
+			return "", nil
+		}
+		defer func() {
+			copyLogsToContainer = originalCopy
+		}()
+
 		// given
 		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": false}`), nil)
@@ -413,10 +442,12 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 
 		pods := newMockPodInterface(t)
-		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
 
 		global := newMockGlobalConfig(t)
-		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+		globalC := config.CreateGlobalConfig(map[config.Key]config.Value{
+			"fqdn": "fqdn",
+		})
+		global.EXPECT().Get(mock.Anything).Return(globalC, nil)
 
 		mlc := createMainLoopContext(t,
 			exportApiClient,
@@ -439,6 +470,14 @@ func Test_createMainLoop_int(t *testing.T) {
 		assert.Contains(t, logOutput, "level=INFO msg=\"Exporter does not seem to be ready. Waiting for the next run...")
 	})
 	t.Run("should error on the exporter system info API call but return nil to recover for the next run", func(t *testing.T) {
+		originalCopy := copyLogsToContainer
+		copyLogsToContainer = func(ctx context.Context, mlc *mainLoopContext) (string, error) {
+			return "", nil
+		}
+		defer func() {
+			copyLogsToContainer = originalCopy
+		}()
+
 		// given
 		exportApiClient := newMockExporterApiClient(t)
 		exportApiClient.EXPECT().DoGetRequest(testCtx, "https://server.fqdn/export/mode").Return([]byte(`{"isActive": true}`), nil)
@@ -462,10 +501,12 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 
 		pods := newMockPodInterface(t)
-		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{Items: []v1.Pod{}}, nil)
 
 		global := newMockGlobalConfig(t)
-		global.EXPECT().Get(mock.Anything).Return(config.CreateGlobalConfig(map[config.Key]config.Value{"fqdn": "fqdn"}), nil)
+		globalC := config.CreateGlobalConfig(map[config.Key]config.Value{
+			"fqdn": "fqdn",
+		})
+		global.EXPECT().Get(mock.Anything).Return(globalC, nil)
 
 		mlc := createMainLoopContext(t,
 			exportApiClient,
@@ -735,4 +776,130 @@ func Test_main(t *testing.T) {
 		// we should never arrive here
 		t.FailNow()
 	})
+}
+
+func TestCopyLogsToContainer(t *testing.T) {
+	t.Run("fail on remove file", func(t *testing.T) {
+		mockRemove := newMockOsRemove(t)
+		mockRemove.EXPECT().Execute(jobLogFile).Return(fmt.Errorf("testerror"))
+		mlc := mainLoopContext{
+			remove: func(name string) error {
+				return mockRemove.Execute(name)
+			},
+		}
+
+		f, err := mlc.copyLogsToContainer(testCtx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "testerror")
+		assert.Equal(t, "", f)
+	})
+
+	t.Run("fail on create new log file", func(t *testing.T) {
+		mockRemove := newMockOsRemove(t)
+		mockRemove.EXPECT().Execute(jobLogFile).Return(nil)
+		mockCreate := newMockOsCreate(t)
+		mockCreate.EXPECT().Execute(jobLogFile).Return(nil, fmt.Errorf("testerror"))
+		mlc := mainLoopContext{
+			remove: func(name string) error {
+				return mockRemove.Execute(name)
+			},
+			create: func(name string) (file, error) {
+				return mockCreate.Execute(name)
+			},
+		}
+
+		f, err := mlc.copyLogsToContainer(testCtx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "testerror")
+		assert.Equal(t, "", f)
+	})
+
+	t.Run("fail on list pods", func(t *testing.T) {
+		mockRemove := newMockOsRemove(t)
+		mockRemove.EXPECT().Execute(jobLogFile).Return(nil)
+		mockCreate := newMockOsCreate(t)
+		mockCreate.EXPECT().Execute(jobLogFile).Return(nil, nil)
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{
+			Items: []v1.Pod{},
+		}, fmt.Errorf("testerror"))
+		mlc := mainLoopContext{
+			remove: func(name string) error {
+				return mockRemove.Execute(name)
+			},
+			create: func(name string) (file, error) {
+				return mockCreate.Execute(name)
+			},
+			pods: pods,
+		}
+
+		f, err := mlc.copyLogsToContainer(testCtx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "testerror")
+		assert.Equal(t, "", f)
+	})
+
+	t.Run("fail on stream logs", func(t *testing.T) {
+		mockRemove := newMockOsRemove(t)
+		mockRemove.EXPECT().Execute(jobLogFile).Return(nil)
+		mockCreate := newMockOsCreate(t)
+		mockCreate.EXPECT().Execute(jobLogFile).Return(nil, nil)
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{
+			Items: []v1.Pod{},
+		}, fmt.Errorf("testerror"))
+		mlc := mainLoopContext{
+			remove: func(name string) error {
+				return mockRemove.Execute(name)
+			},
+			create: func(name string) (file, error) {
+				return mockCreate.Execute(name)
+			},
+			pods: pods,
+		}
+
+		f, err := mlc.copyLogsToContainer(testCtx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "testerror")
+		assert.Equal(t, "", f)
+	})
+
+	t.Run("fail on write logs to file", func(t *testing.T) {
+		mockRemove := newMockOsRemove(t)
+		mockRemove.EXPECT().Execute(jobLogFile).Return(nil)
+		fMock := newMockFile(t)
+		fMock.EXPECT().Close().Return(nil)
+		fMock.EXPECT().WriteString(mock.Anything).Return(0, fmt.Errorf("testerror"))
+		mockCreate := newMockOsCreate(t)
+		mockCreate.EXPECT().Execute(jobLogFile).Return(fMock, nil)
+		pods := newMockPodInterface(t)
+		pods.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PodList{
+			Items: []v1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "mypod",
+					},
+				},
+			},
+		}, nil)
+		pods.EXPECT().GetLogs("mypod", mock.Anything).Return(nil)
+		streamLogs = func(ctx context.Context, req *rest.Request) (io.ReadCloser, error) {
+			return nil, nil
+		}
+		mlc := mainLoopContext{
+			remove: func(name string) error {
+				return mockRemove.Execute(name)
+			},
+			create: func(name string) (file, error) {
+				return mockCreate.Execute(name)
+			},
+			pods: pods,
+		}
+
+		filePath, err := mlc.copyLogsToContainer(testCtx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "testerror")
+		assert.Equal(t, "", filePath)
+	})
+
 }

@@ -21,7 +21,7 @@ func (_m *MockSenderService) EXPECT() *MockSenderService_Expecter {
 	return &MockSenderService_Expecter{mock: &_m.Mock}
 }
 
-// Execute provides a mock function with given fields: addr, a, From, To, msg
+// Execute provides a mock function with given fields: addr, a, from, to, msg
 func (_m *MockSenderService) Execute(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 	ret := _m.Called(addr, a, from, to, msg)
 
@@ -44,11 +44,11 @@ type MockSenderService_Execute_Call struct {
 	*mock.Call
 }
 
-// Execute is a helper method To define mock.On call
+// Execute is a helper method to define mock.On call
 //   - addr string
 //   - a smtp.Auth
-//   - From string
-//   - To []string
+//   - from string
+//   - to []string
 //   - msg []byte
 func (_e *MockSenderService_Expecter) Execute(addr interface{}, a interface{}, from interface{}, to interface{}, msg interface{}) *MockSenderService_Execute_Call {
 	return &MockSenderService_Execute_Call{Call: _e.mock.On("Execute", addr, a, from, to, msg)}
@@ -71,7 +71,7 @@ func (_c *MockSenderService_Execute_Call) RunAndReturn(run func(string, smtp.Aut
 	return _c
 }
 
-// NewMockSenderService creates a new instance of MockSenderService. It also registers a testing interface on the mock and a cleanup function To assert the mocks expectations.
+// NewMockSenderService creates a new instance of MockSenderService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSenderService(t interface {
 	mock.TestingT
