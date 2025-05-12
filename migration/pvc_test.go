@@ -2,7 +2,6 @@ package migration
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/migration/mocks"
 	v2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -12,7 +11,7 @@ import (
 )
 
 func Test_newPVCGetter(t *testing.T) {
-	pGetter := newPVCGetter(mocks.NewPersistentVolumeClaimInterface(t))
+	pGetter := newPVCGetter(NewPersistentVolumeClaimInterface(t))
 
 	assert.NotNil(t, pGetter)
 	assert.NotNil(t, pGetter.client)
@@ -21,7 +20,7 @@ func Test_newPVCGetter(t *testing.T) {
 
 func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 	t.Run("get pvc volumes", func(t *testing.T) {
-		pvcClientMock := mocks.NewPersistentVolumeClaimInterface(t)
+		pvcClientMock := NewPersistentVolumeClaimInterface(t)
 		pvcClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(&v1.PersistentVolumeClaimList{
 			Items: []v1.PersistentVolumeClaim{
 				{
@@ -60,7 +59,7 @@ func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 	})
 
 	t.Run("pvc client returns error", func(t *testing.T) {
-		pvcClientMock := mocks.NewPersistentVolumeClaimInterface(t)
+		pvcClientMock := NewPersistentVolumeClaimInterface(t)
 		pvcClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 
 		pGetter := pvcGetter{
@@ -74,7 +73,7 @@ func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 	})
 
 	t.Run("client returns pvc list with value nil", func(t *testing.T) {
-		pvcClientMock := mocks.NewPersistentVolumeClaimInterface(t)
+		pvcClientMock := NewPersistentVolumeClaimInterface(t)
 		pvcClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(nil, nil)
 
 		pGetter := pvcGetter{

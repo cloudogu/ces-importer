@@ -27,6 +27,7 @@ rules:
   resources:
     - persistentvolumeclaims
   verbs:
+    - list
     - get
   # allow for systeminfo comparison
 - apiGroups:

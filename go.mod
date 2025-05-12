@@ -150,7 +150,6 @@ require (
 )
 
 require (
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.33.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect

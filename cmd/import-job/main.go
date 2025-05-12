@@ -29,4 +29,5 @@ func run() int {
 
 	slog.Info("Import job finished.")
 	return 0
+
 }
