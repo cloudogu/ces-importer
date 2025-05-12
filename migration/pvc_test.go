@@ -11,7 +11,7 @@ import (
 )
 
 func Test_newPVCGetter(t *testing.T) {
-	pGetter := newPVCGetter(NewPersistentVolumeClaimInterface(t))
+	pGetter := NewPVCGetter(NewPersistentVolumeClaimInterface(t))
 
 	assert.NotNil(t, pGetter)
 	assert.NotNil(t, pGetter.client)
@@ -42,7 +42,7 @@ func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 			},
 		}, nil)
 
-		pGetter := pvcGetter{
+		pGetter := PVCGetter{
 			client:       pvcClientMock,
 			doguSelector: "",
 		}
@@ -62,7 +62,7 @@ func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 		pvcClientMock := NewPersistentVolumeClaimInterface(t)
 		pvcClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 
-		pGetter := pvcGetter{
+		pGetter := PVCGetter{
 			client:       pvcClientMock,
 			doguSelector: "",
 		}
@@ -76,7 +76,7 @@ func Test_pvcGetter_GetDoguVolumes(t *testing.T) {
 		pvcClientMock := NewPersistentVolumeClaimInterface(t)
 		pvcClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(nil, nil)
 
-		pGetter := pvcGetter{
+		pGetter := PVCGetter{
 			client:       pvcClientMock,
 			doguSelector: "",
 		}
