@@ -22,6 +22,7 @@ func TestReadConfigFromEnv(t *testing.T) {
 		t.Setenv(importerNamespaceKeyEnv, "ecosystem")
 		t.Setenv("SMTP_SERVER", "server")
 		t.Setenv("SMTP_PORT", "1")
+		t.Setenv("SMTP_FROM", "from")
 
 		// when
 		actualCfg, err := ReadConfigFromEnv()
@@ -40,6 +41,7 @@ func TestReadConfigFromEnv(t *testing.T) {
 			MailConfig: mail.SmtpConfig{
 				Server: "server",
 				Port:   "1",
+				From:   "from",
 				To:     []string{""},
 			},
 		}, actualCfg)
@@ -59,7 +61,7 @@ func TestReadConfigFromEnv_Errors(t *testing.T) {
 		{"regular sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv}, assert.Error},
 		{"final sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv}, assert.Error},
 		{"namespace unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv}, assert.Error},
-		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv, "SMTP_SERVER", "SMTP_PORT"}, assert.NoError},
+		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv, "SMTP_SERVER", "SMTP_PORT", "SMTP_FROM"}, assert.NoError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
