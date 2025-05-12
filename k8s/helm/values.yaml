@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 0.0.1
+    tag: 0.0.1-1747032004-1747031846
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 0.0.1
+    tag: 0.0.1-1747032004-1747031846
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -69,7 +69,6 @@ config:
     #   - dogu: "jenkins"
     #     pattern: "EXCLUDE_PATTERN"
     exclude: []
-
 controllerManager:
   image:
     tag: 0.0.1

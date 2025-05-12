@@ -1,6 +1,11 @@
-ARTIFACT_ID=ces-importer
+ARTIFACT_ID_IMPORTER=ces-importer
+ARTIFACT_ID_JOB=migration-job
+
+# set default to main application
+ARTIFACT_ID=${ARTIFACT_ID_IMPORTER}
+
 MAKEFILES_VERSION=9.10.0
-VERSION=0.0.1
+VERSION=0.0.1-1747032004-1747031846
 
 GOTAG=1.24.2
 .DEFAULT_GOAL:=help
@@ -13,8 +18,11 @@ K8S_COMPONENT_TARGET_VALUES = ${HELM_TARGET_DIR}/values.yaml
 HELM_PRE_GENERATE_TARGETS = helm-values-update-image-version
 HELM_POST_GENERATE_TARGETS = helm-values-replace-image-repo template-stage template-log-level template-image-pull-policy template-importer-public-key
 CHECK_VAR_TARGETS=check-all-vars
-IMAGE_IMPORT_TARGET=image-import
-IMAGE=ces-exporter:${VERSION}
+IMAGE_IMPORT_TARGET=images-import
+
+# docker
+IMAGE=${ARTIFACT_ID}:${VERSION}
+
 
 include build/make/variables.mk
 include build/make/dependencies-gomod.mk
@@ -42,12 +50,15 @@ helm-values-update-image-version: $(BINARY_YQ)
 .PHONY: helm-values-replace-image-repo
 helm-values-replace-image-repo: $(BINARY_YQ)
 	@if [[ ${STAGE} == "development" ]]; then \
-      		echo "Setting dev image repo in target values.yaml!" ;\
-    		$(BINARY_YQ) -i e ".main.image.registry=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\1/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
-    		$(BINARY_YQ) -i e ".job.image.registry=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\1/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
-    		$(BINARY_YQ) -i e ".main.image.repository=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\2/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
-    		$(BINARY_YQ) -i e ".job.image.repository=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\2/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
-    	fi
+		echo "Setting dev image repo in target values.yaml!" ;\
+       	echo "Component target values: ${IMAGE_DEV}" ;\
+       	JOB_IMAGE=$$(echo '${IMAGE_DEV}' | sed "s|/${ARTIFACT_ID}/|/${ARTIFACT_ID_JOB}/|") ;\
+       	echo "Updated Image Reference: $$JOB_IMAGE" ;\
+     	$(BINARY_YQ) -i e ".main.image.registry=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\1/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
+     	$(BINARY_YQ) -i e ".job.image.registry=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\1/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
+     	$(BINARY_YQ) -i e ".main.image.repository=\"$(shell echo '${IMAGE_DEV}' | sed 's/\([^\/]*\)\/\(.*\)/\2/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
+		$(BINARY_YQ) -i e ".job.image.repository=\"$(shell echo '$$JOB_IMAGE' | sed 's/\([^\/]*\)\/\(.*\)/\2/')\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
+    fi
 
 .PHONY: template-stage
 template-stage: $(BINARY_YQ)
@@ -83,7 +94,7 @@ apikey-secret: $(BINARY_YQ) ## generates a K8s secret for the API key from an en
 	@kubectl delete secret ces-exporter-secret || true
 	@kubectl delete secret ces-importer-secret || true
 	@kubectl create secret generic ces-exporter-secret --from-literal=apiKey=${EXPORTER_API_KEY} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
-	@kubectl create secret generic ces-importer-secret --from-file=${IMPORTER_SSH_KEY_FILE} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
+	@kubectl create secret generic ces-importer-secret --from-file=privateKey=${IMPORTER_SSH_KEY_FILE} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
 
 .PHONY: helm-apply-dev
 helm-apply-dev:
@@ -91,3 +102,21 @@ helm-apply-dev:
 	@make helm-apply
 	@sed -i -E "s/(^VERSION=[[:digit:]].[[:digit:]].[[:digit:]])-.*/\1/g" Makefile
 	@sed -i -E "s/(tag: [[:digit:]].[[:digit:]].[[:digit:]])-.*/\1/g" k8s/helm/values.yaml
+
+.PHONY: docker-build
+docker-build: check-docker-credentials check-k8s-image-env-var ${BINARY_YQ} ## Overwrite docker-build from k8s.mk to include build arguments
+	@echo "Building docker image $(IMAGE)..."
+	@echo "Build Arguments: $(BUILD_ARGS)"
+	@DOCKER_BUILDKIT=1 docker build  . -t $(IMAGE) $(BUILD_ARGS)
+
+.PHONY: images-import
+images-import: ## import images from ces-importer and
+	@echo "Import ces-importer image"
+	@make image-import
+	@echo "Import migration-job image"
+	@make image-import \
+		IMAGE=${ARTIFACT_ID_JOB}:${VERSION} \
+		IMAGE_DEV_VERSION=$(CES_REGISTRY_HOST)$(CES_REGISTRY_NAMESPACE)/$(ARTIFACT_ID_JOB)/$(GIT_BRANCH):${VERSION} \
+		BUILD_ARGS="--build-arg BINARY=import-job --build-arg BUILD_PATH=./cmd/import-job"
+
+
