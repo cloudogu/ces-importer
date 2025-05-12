@@ -146,6 +146,7 @@ type JobProviderDependencies struct {
 	JobContainerConfig configuration.JobContainer
 	SSHConfig          configuration.SSH
 	APIKey             string
+	DoguVolumeBasePath string
 	PVCClient          pvcClient
 }
 
@@ -156,9 +157,10 @@ func NewJobProvider(deps JobProviderDependencies) (JobProvider, error) {
 	}
 
 	return JobProvider{
-		jobSpec:   jSpec,
-		sshConfig: deps.SSHConfig,
-		pvcClient: deps.PVCClient,
+		jobSpec:            jSpec,
+		sshConfig:          deps.SSHConfig,
+		pvcClient:          deps.PVCClient,
+		doguVolumeBasePath: deps.DoguVolumeBasePath,
 	}, nil
 }
 
