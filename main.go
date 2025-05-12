@@ -183,7 +183,7 @@ func activateImporterDogus(ctx context.Context, systemInfo *exporter.SystemInfo,
 	return nil
 }
 
-func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, apiCli exporterApiClient, syncer doguVolumeSyncer, hostname string, excludePatterns []configuration.Exclude) error {
+func syncDogus(ctx context.Context, systemInfo *exporter.SystemInfo, apiCli exporterApiClient, syncer doguVolumeSyncer, hostname string, excludePatterns []configuration.ExcludePattern) error {
 	var err error
 	//for _, dogu := range systemInfo.Dogus {
 	//	slog.Info("Starting sync for dogu ", "doguName", dogu.Name)

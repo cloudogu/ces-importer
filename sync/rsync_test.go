@@ -58,7 +58,7 @@ func TestSyncData(t *testing.T) {
 
 		config := configuration.Job{
 			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.Exclude{
+				Exclude: []configuration.ExcludePattern{
 					{DoguName: "testDogu", Pattern: "*.file"},
 				},
 			},
@@ -160,7 +160,7 @@ func TestSyncData(t *testing.T) {
 
 		config := configuration.Job{
 			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.Exclude{
+				Exclude: []configuration.ExcludePattern{
 					{DoguName: "testDogu", Pattern: "*.file"},
 				},
 			},
@@ -199,7 +199,7 @@ func TestSyncData(t *testing.T) {
 
 		config := configuration.Job{
 			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.Exclude{
+				Exclude: []configuration.ExcludePattern{
 					{DoguName: "testDogu", Pattern: "*.file"},
 				},
 			},
@@ -226,7 +226,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
-		exclude := configuration.Exclude{
+		exclude := configuration.ExcludePattern{
 			DoguName: "test",
 			Pattern:  "*.test",
 		}
@@ -242,7 +242,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
-		exclude := configuration.Exclude{}
+		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error creating stdout pipe: testerror")
 	})
@@ -260,7 +260,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
-		exclude := configuration.Exclude{}
+		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "error creating stderr pipe: testerror")
 	})
@@ -280,7 +280,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
-		exclude := configuration.Exclude{}
+		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error starting rsync: testerror")
 	})
@@ -301,7 +301,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
-		exclude := configuration.Exclude{}
+		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "rsync exited with error: testerror")
 	})

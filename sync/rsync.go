@@ -58,7 +58,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, apiCli ApiCli, config confi
 	}
 
 	// map exclude patterns to dogu name for easy retrieval
-	excludeMap := make(map[string]configuration.Exclude)
+	excludeMap := make(map[string]configuration.ExcludePattern)
 	for _, p := range config.Exclude {
 		excludeMap[p.DoguName] = p
 	}
@@ -101,7 +101,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, apiCli ApiCli, config confi
 }
 
 // SyncDogu copies dogu volume data from a remote Cloudogu EcoSystem instance.
-func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination string, exclude configuration.Exclude, verbose bool) error {
+func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) error {
 
 	// Define the rsync command and arguments
 	args := rs.buildRSyncArgs(port, source, destination, exclude, verbose)
@@ -179,7 +179,7 @@ func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli ApiCli
 }
 
 // buildRSyncArgs builds the arguments for the rsync command based on the given parameters
-func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, exclude configuration.Exclude, verbose bool) []string {
+func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) []string {
 	var args []string
 	// archive mode
 	// verbose

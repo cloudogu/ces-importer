@@ -117,7 +117,7 @@ type JobContainer struct {
 }
 
 // ExcludePattern defines a pattern for files that should not be synchronized for a specific dogu
-type Exclude struct {
+type ExcludePattern struct {
 	// DoguName specifies the name of the dogu for which the files should not be synchronized.
 	DoguName string `yaml:"dogu"`
 	// Pattern specifies the file pattern for the excluded files.
@@ -129,7 +129,7 @@ type JobConfig struct {
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
-	Exclude []Exclude `yaml:"exclude"`
+	Exclude []ExcludePattern `yaml:"exclude"`
 	// Verbose makes the sync process log on verbose mode
 	Verbose bool `yaml:"verbose"`
 }
