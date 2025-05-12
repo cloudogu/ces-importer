@@ -21,10 +21,9 @@ rules:
   verbs:
     - list
   # allow for dogu resizing
-- apiGroups:
-    - v1
+- apiGroups: [""]
   resources:
-    - pvc
+    - persistentvolumeclaims
   verbs:
     - list
     - get
@@ -36,3 +35,10 @@ rules:
     - components
   verbs:
     - list
+  # allow for jobs creating
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - create
