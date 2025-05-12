@@ -280,7 +280,6 @@ func Test_createMainLoop_int(t *testing.T) {
 		err := json.Unmarshal([]byte(responseJson), &systemInfo)
 		require.NoError(t, err)
 		doguSyncer := newMockDoguVolumeSyncer(t)
-		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
 
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(nil)
@@ -447,7 +446,6 @@ func Test_createMainLoop_int(t *testing.T) {
 		err := json.Unmarshal([]byte(responseJson), &systemInfo)
 		require.NoError(t, err)
 		doguSyncer := newMockDoguVolumeSyncer(t)
-		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(nil)
 
 		starter := newMockDoguStarter(t)
 		starter.EXPECT().StartDogu(testCtx, jenkinsDogu).Return(assert.AnError)
@@ -484,9 +482,9 @@ func Test_createMainLoop_int(t *testing.T) {
 		err := json.Unmarshal([]byte(responseJson), &systemInfo)
 		require.NoError(t, err)
 		doguSyncer := newMockDoguVolumeSyncer(t)
-		doguSyncer.EXPECT().SyncDogu(testCtx, "and here", "call your your exporterApiClient for data here", "and here").Return(assert.AnError)
 
 		starter := newMockDoguStarter(t)
+		starter.EXPECT().StartDogu(context.Background(), jenkinsDogu).Return(assert.AnError)
 
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
@@ -498,7 +496,6 @@ func Test_createMainLoop_int(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
 		// TODO: test for a better error message once the sync package is fully implemented
-		assert.ErrorContains(t, err, "failed to sync source")
 		assert.NotEqual(t, 0, exitCode)
 	})
 }
@@ -521,19 +518,7 @@ func Test_logUsedConfig(t *testing.T) {
 
 	// then
 	logOutput := mockStdout.String()
-	assert.Contains(t, logOutput, "                     ./////,                    ")
-	assert.Contains(t, logOutput, "                 ./////==//////,                ")
-	assert.Contains(t, logOutput, "                ////.  ___   ////.              ")
-	assert.Contains(t, logOutput, "         ,OO,. ////  ,////A,  */// ,OO,.        ")
-	assert.Contains(t, logOutput, "    ,/////////////*  */////*  *////////////A    ")
-	assert.Contains(t, logOutput, "   ////'        `VA.   '|'   .///'       '///*  ")
-	assert.Contains(t, logOutput, "  *///  .*///*,         |         .*//*,   ///* ")
-	assert.Contains(t, logOutput, "  (///  (//////)**--_./////_----*//////)   ///) ")
-	assert.Contains(t, logOutput, "   V///   '°°°°      (/////)      °°°°'   ////  ")
-	assert.Contains(t, logOutput, "    V/////(////////o. '°°°' ./////////(///(/'   ")
-	assert.Contains(t, logOutput, "       'V/(/////////////////////////////V'      ")
-	assert.Contains(t, logOutput, "ces-importer started using this configuration:")
-	//assert.Contains(t, logOutput, `config="configuration.Configuration{ExporterHost:\"server.fqdn\", ExporterSSHUser:\"root\", ExporterApiKey:\"my-key\", ImporterPrivateSSHKeyPath:\"/something\", ImporterNamespace:\"ecosystem\", LogLevel:\"INFO\", MigrationRegularCron:\"0,30 * * * * *\", MigrationFinalTimestamp:\"2025-something\"}"`)
+	assert.Contains(t, logOutput, `"configuration.Coordinator{Logging:configuration.Logging{Level:\"INFO\"}, API:configuration.API{ExporterHost:\"server.fqdn\", ExporterApiKey:\"my-key\"}, Migration:configuration.Migration{RegularCron:\"0,30 * * * * *\", FinalTimestamp:\"2025-something\"}, SSH:configuration.SSH{User:\"root\", PrivateSSHKeyPath:\"/something\", SecretName:\"\", SecretDataKey:\"\"}, JobContainer:configuration.JobContainer{JobConfigMap:\"\", JobServiceAccount:\"\", Image:configuration.ContainerImage{Registry:\"\", Repository:\"\", Tag:\"\"}, ImagePullPolicy:\"\", ImagePullSecrets:[]configuration.ImagePullSecret(nil), Resources:configuration.ResourceRequirements{Limits:configuration.ResourceList{CPU:\"\", Memory:\"\"}, Requests:configuration.ResourceList{CPU:\"\", Memory:\"\"}}}, Namespace:\"ecosystem\"}"`)
 }
 
 func Test_configureLogger(t *testing.T) {

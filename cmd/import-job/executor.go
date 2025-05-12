@@ -6,6 +6,7 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
+	"os/exec"
 
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
 
@@ -59,7 +60,11 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	}
 	backupScheduleClient := backupClient.BackupSchedules(jobConfig.Namespace)
 
-	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
+	commandMaker := func(name string, arg ...string) sync.Command {
+		return exec.Command(name, arg...)
+	}
+
+	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker)
 
 	cs := migrationConfig.NewConfigImporter(jobConfig.ExporterHost, exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
