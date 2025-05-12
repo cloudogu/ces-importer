@@ -8,7 +8,6 @@ require (
 	github.com/cloudogu/k8s-component-operator v1.8.0
 	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
 	github.com/cloudogu/k8s-registry-lib v0.5.1
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
@@ -149,6 +148,7 @@ require (
 )
 
 require (
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.16.4 // indirect
 	k8s.io/apiextensions-apiserver v0.32.1 // indirect
