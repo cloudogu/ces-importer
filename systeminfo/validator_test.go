@@ -414,6 +414,46 @@ func TestValidateSystemInfo(t *testing.T) {
 		err := v.ValidateSystemInfo(context.Background())
 		require.ErrorContains(t, err, "dogu nginx-static is not installed")
 	})
+
+	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
+		imSysInfo := systemInfo{
+			Dogus: []dogu{},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := systemInfo{
+			Dogus: []dogu{
+				{
+					Name:    "registrator",
+					Version: "1.2.3",
+					Volume: volume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			conf:               configuration.Configuration{},
+			systemInfoProvider: s,
+		}
+		err := v.ValidateSystemInfo(context.Background())
+		require.NoError(t, err)
+	})
+
 }
 
 func TestUpdatePVC(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"math"
+	"slices"
 	"time"
 )
 
@@ -25,10 +26,10 @@ var (
 	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 	maxWaitMinutes            = defaultMaxWaitMinutes
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
-	excludedDogus             = map[string]bool{
-		"monitoring":  true,
-		"backup":      true,
-		"registrator": true,
+	excludedDogus             = []string{
+		"monitoring",
+		"backup",
+		"registrator",
 	}
 )
 
@@ -114,15 +115,18 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 		imDoguMap[d.Name] = d
 	}
 	for _, exDogu := range exInfo.Dogus {
+		// special case for excluded dogus
+		isExcluded := slices.Contains(excludedDogus, exDogu.Name)
+		if isExcluded {
+			continue
+		}
+
 		// validate that the dogu exists
-		imDogu := imDoguMap[exDogu.Name]
+		imDogu, imDoguExists := imDoguMap[exDogu.Name]
 
-		// sepcial case for excluded dogus and nginx
-		isExcluded := excludedDogus[exDogu.Name]
 		isNginx := exDogu.Name == doguNginx
-
 		if !isNginx {
-			if imDogu.Name == "" && !isExcluded {
+			if !imDoguExists {
 				result = errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
 			} else {
 				// validate that the version is correct
