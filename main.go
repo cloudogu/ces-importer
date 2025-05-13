@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
 	"os"
@@ -32,6 +35,8 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
+	slog.Debug("Reading configuration successful.")
+
 	configureLogger(config)
 
 	logUsedConfig(config)
@@ -43,6 +48,15 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to read kube config: %w", err))
 	}
+
+	k8sClientSet, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to create k8s client: %w", err))
+	}
+
+	k8sCoreClient := k8sClientSet.CoreV1()
+	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(config.Namespace)
+	k8sJobClient := k8sClientSet.BatchV1().Jobs(config.Namespace)
 
 	doguCli, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
@@ -60,11 +74,21 @@ func main() {
 	}
 	validator := systeminfo.NewValidator(config, config.Namespace, provider)
 
-	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator)
+	syncJobProvider, err := migration.NewJobProvider(migration.JobProviderDependencies{
+		JobContainerConfig: config.JobContainer,
+		SSHConfig:          config.SSH,
+		APIKey:             config.API.ExporterApiKey,
+		DoguVolumeBasePath: config.JobConfig.DoguVolumeBasePath,
+		PVCClient:          migration.NewPVCGetter(k8sPVCClient),
+	})
+
+	mainLoop := createMainLoop(config, exportApiCli, doguStartStopper, doguStartStopper, syncer, validator, syncJobProvider, k8sJobClient)
 	cronLooper, err := cron.New(ctx, config.Migration.RegularCron, mainLoop)
 	if err != nil {
 		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", config.Migration.RegularCron, err))
 	}
+
+	slog.Debug("Created cron task for main application.")
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -79,7 +103,7 @@ func main() {
 		slog.Warn("shutdown reached: exiting")
 	}()
 
-	slog.Info("Starting main loop")
+	slog.Info("Starting cron task for main application.")
 	cronLooper.Run()
 }
 
@@ -87,54 +111,73 @@ type systemInfoValidator interface {
 	ValidateSystemInfo(ctx context.Context) error
 }
 
-func createMainLoop(config configuration.Coordinator, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator) func(ctx context.Context) (int, error) {
+func createMainLoop(config configuration.Coordinator, exportApiCli exporterApiClient, doguStart doguStarter, doguStop doguStopper, syncer doguVolumeSyncer, sysInfoValidator systemInfoValidator, jobProvider jobProvider, k8sJobClient jobClient) func(ctx context.Context) (int, error) {
+	/*
+		return func(ctx context.Context) (int, error) {
+			isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
+			if err != nil {
+				// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
+				slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
+				slog.Info("Waiting for the next run...")
+				return 0, nil
+			}
+
+			if !isExporterSyncReady {
+				// This condition is recoverable, but it is still unclear when the ready status will be triggered
+				slog.Info("Exporter does not seem to be ready. Waiting for the next run...")
+				return 0, nil // continue to the next main loop iteration
+			}
+
+			systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
+			if err != nil {
+				// this error is recoverable, the exporter system API might be down, or the API server errs
+				slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
+				slog.Info("Waiting for the next run...")
+				return 0, nil
+			}
+
+			err = sysInfoValidator.ValidateSystemInfo(ctx)
+			if err != nil {
+				slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
+				// TODO should this break the main loop or not?
+				slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
+				return 0, nil
+			}
+
+			err = deactivateImporterDogus(ctx, systemInfo, doguStop)
+			if err != nil {
+				return 1, err
+			}
+
+			err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
+			if err != nil {
+				return 2, err
+			}
+
+			err = activateImporterDogus(ctx, systemInfo, doguStart)
+			if err != nil {
+				return 3, err
+			}
+
+			slog.Info("Sync successful")
+
+			return 0, nil
+		}
+	*/
 	return func(ctx context.Context) (int, error) {
-		isExporterSyncReady, err := isApiExportReady(ctx, config.ExporterHost, exportApiCli)
+		slog.Info("Coordination has been triggered...")
+
+		job, err := jobProvider.CreateImportJob(ctx)
 		if err != nil {
-			// This error is recoverable except for misconfiguration, which may be detected by analyzing the logs.
-			slog.Error(fmt.Sprintf("Error while checking export sync readiness: %s", err.Error()))
-			slog.Info("Waiting for the next run...")
-			return 0, nil
+			return 1, fmt.Errorf("failed to create import job: %w", err)
 		}
 
-		if !isExporterSyncReady {
-			// This condition is recoverable, but it is still unclear when the ready status will be triggered
-			slog.Info("Exporter does not seem to be ready. Waiting for the next run...")
-			return 0, nil // continue to the next main loop iteration
-		}
-
-		systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, exportApiCli)
+		result, err := k8sJobClient.Create(context.TODO(), job, metav1.CreateOptions{})
 		if err != nil {
-			// this error is recoverable, the exporter system API might be down, or the API server errs
-			slog.Error(fmt.Sprintf("Failed to fetch the system info from the exporter: %s", err.Error()))
-			slog.Info("Waiting for the next run...")
-			return 0, nil
+			return 1, fmt.Errorf("failed to create import job: %w", err)
 		}
 
-		err = sysInfoValidator.ValidateSystemInfo(ctx)
-		if err != nil {
-			slog.Log(ctx, slog.LevelError, fmt.Sprintf("Failed to validate importer system info: %s", err.Error()))
-			// TODO should this break the main loop or not?
-			slog.Log(ctx, slog.LevelInfo, "Waiting for the next run...")
-			return 0, nil
-		}
-
-		err = deactivateImporterDogus(ctx, systemInfo, doguStop)
-		if err != nil {
-			return 1, err
-		}
-
-		err = syncDogus(ctx, systemInfo, exportApiCli, syncer)
-		if err != nil {
-			return 2, err
-		}
-
-		err = activateImporterDogus(ctx, systemInfo, doguStart)
-		if err != nil {
-			return 3, err
-		}
-
-		slog.Info("Sync successful")
+		fmt.Printf("Job created: %s\n", result.GetObjectMeta().GetName())
 
 		return 0, nil
 	}

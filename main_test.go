@@ -288,9 +288,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		sut := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)
-		code, err := sut(testCtx)
+		code, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -318,8 +320,11 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -351,8 +356,11 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -384,8 +392,11 @@ func Test_createMainLoop_int(t *testing.T) {
 
 		validator := newMockSystemInfoValidator(t)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.NoError(t, err)
@@ -418,8 +429,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -455,8 +469,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.Error(t, err)
@@ -491,8 +508,11 @@ func Test_createMainLoop_int(t *testing.T) {
 		validator := newMockSystemInfoValidator(t)
 		validator.EXPECT().ValidateSystemInfo(context.Background()).Return(nil)
 
+		jobProviderMock := newMockJobProvider(t)
+		jobClientMock := newMockJobClient(t)
+
 		// when
-		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator)(testCtx)
+		exitCode, err := createMainLoop(testConfig, exportApiClient, starter, stopper, doguSyncer, validator, jobProviderMock, jobClientMock)(testCtx)
 
 		// then
 		require.Error(t, err)

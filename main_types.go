@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cloudogu/ces-importer/api/exporter"
 )
@@ -29,4 +31,13 @@ type doguStarter interface {
 type doguVolumeSyncer interface {
 	// SyncDogu starts copying the volume data of a single dogu as provided by systemInfo.
 	SyncDogu(ctx context.Context, port, source, destination string) error
+}
+
+type jobProvider interface {
+	// CreateImportJob creates a kubernetes job for the synchronization of the data.
+	CreateImportJob(ctx context.Context) (*batchv1.Job, error)
+}
+
+type jobClient interface {
+	Create(ctx context.Context, job *batchv1.Job, opts metav1.CreateOptions) (*batchv1.Job, error)
 }
