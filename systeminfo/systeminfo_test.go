@@ -2,9 +2,8 @@ package systeminfo
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/stretchr/testify/mock"
@@ -62,7 +61,6 @@ func TestGetSystemInfo(t *testing.T) {
 		mockProvider := Provider{
 			componentLister: components,
 			doguLister:      dogus,
-			pvcClient:       nil,
 		}
 		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
@@ -76,7 +74,6 @@ func TestGetSystemInfo(t *testing.T) {
 		mockProvider := Provider{
 			componentLister: nil,
 			doguLister:      dogus,
-			pvcClient:       nil,
 		}
 		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
@@ -112,7 +109,6 @@ func TestGetSystemInfo(t *testing.T) {
 		mockProvider := Provider{
 			componentLister: components,
 			doguLister:      dogus,
-			pvcClient:       nil,
 		}
 		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
@@ -130,79 +126,57 @@ func TestNewSystemInfoProvider(t *testing.T) {
 		ctrl.GetConfig = func() (*rest.Config, error) {
 			return &rest.Config{}, nil
 		}
-
-		_, err := NewSystemInfoProvider("test")
+		componentLister := newMockComponentLister(t)
+		doguLister := newMockDoguLister(t)
+		systemInfoApiClient := newMockSystemInfoApiClient(t)
+		_, err := NewSystemInfoProvider(componentLister, doguLister, systemInfoApiClient)
 		require.NoError(t, err)
 	})
 }
 
 func TestGetExporterSystemInfo(t *testing.T) {
 	t.Run("should get exporter system info", func(t *testing.T) {
-		sInfo := systemInfo{
-			Dogus: []dogu{
+		sInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testD",
 					Version: "1.1.1",
-					Volume:  volume{},
+					Volume:  exporter.DoguVolume{},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testC",
 					Version: "1.2.3",
 				},
 			},
 		}
-		apiCli := newMockExporterApiClient(t)
-		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(json.Marshal(sInfo))
+		apiCli := newMockSystemInfoApiClient(t)
+		apiCli.EXPECT().GetSystemInfo(mock.Anything).Return(&sInfo, nil)
 
 		p := Provider{
-			componentLister: nil,
-			doguLister:      nil,
-			pvcClient:       nil,
-			apiClient:       apiCli,
+			componentLister:     nil,
+			doguLister:          nil,
+			systemInfoApiClient: apiCli,
 		}
 
-		apiSystemInfo, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
-		}, context.Background())
+		apiSystemInfo, err := p.getExporterSystemInfo(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, sInfo.Dogus, apiSystemInfo.Dogus)
 		require.Equal(t, sInfo.Components, apiSystemInfo.Components)
 	})
 
-	t.Run("should get an error on http request", func(t *testing.T) {
-		apiCli := newMockExporterApiClient(t)
-		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+	t.Run("should get an error on system info request", func(t *testing.T) {
+		apiCli := newMockSystemInfoApiClient(t)
+		apiCli.EXPECT().GetSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		p := Provider{
-			componentLister: nil,
-			doguLister:      nil,
-			pvcClient:       nil,
-			apiClient:       apiCli,
+			componentLister:     nil,
+			doguLister:          nil,
+			systemInfoApiClient: apiCli,
 		}
 
-		_, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
-		}, context.Background())
-		require.EqualError(t, err, "error performing http request: testerror")
-	})
-
-	t.Run("should get an error on json unmarshall", func(t *testing.T) {
-		b := []byte("{")
-		apiCli := newMockExporterApiClient(t)
-		apiCli.EXPECT().DoGetRequest(mock.Anything, mock.Anything).Return(b, nil)
-
-		p := Provider{
-			componentLister: nil,
-			doguLister:      nil,
-			pvcClient:       nil,
-			apiClient:       apiCli,
-		}
-
-		_, err := p.getExporterSystemInfo(configuration.Configuration{
-			ExporterHost: "",
-		}, context.Background())
-		require.EqualError(t, err, "could not read exporter response: unexpected end of JSON input")
+		_, err := p.getExporterSystemInfo(context.Background())
+		require.EqualError(t, err, "testerror")
 	})
 }
