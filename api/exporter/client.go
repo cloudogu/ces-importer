@@ -6,58 +6,57 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 )
 
-type requestExecuter interface {
-	// Do executes the given HTTP request.
-	Do(req *http.Request) (*http.Response, error)
-}
-
-type apiClient interface {
-	// DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
-	// errors will be returned as an error. For authentication, request headers will automatically be enriched with the
-	// provided API key.
-	DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error)
-}
-
 type client struct {
+	baseUrl    string
 	apiKey     string
 	httpClient requestExecuter
 }
 
 // NewClient creates a client for easy API access with the given HTTP client. This allows for generically modifying the
 // HTTP client f. i. adding proxy settings.
-func NewClient(apiKey string, httpClient requestExecuter) *client {
-	return &client{apiKey: apiKey, httpClient: httpClient}
+func NewClient(hostName string, apiKey string, httpClient requestExecuter) *client {
+	return &client{
+		baseUrl:    fmt.Sprintf("https://%s", hostName),
+		apiKey:     apiKey,
+		httpClient: httpClient,
+	}
 }
 
 // DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
 // errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 // provided API key.
-func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
+func (c *client) DoGetRequest(ctx context.Context, path string) (result []byte, err error) {
+	requestUrl, err := url.JoinPath(c.baseUrl, path)
 	if err != nil {
-		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
+		return result, fmt.Errorf("failed to create request url: %w", err)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request to %s: %w", requestUrl, err)
 	}
 
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)
 	if err != nil {
-		return result, fmt.Errorf("request to %s failed with an error: %w", exporterUrl, err)
+		return result, fmt.Errorf("request to %s failed with an error: %w", requestUrl, err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 	responseMsg, err := io.ReadAll(response.Body)
 	if err != nil {
-		return result, fmt.Errorf("failed to read response body for %s", exporterUrl)
+		return result, fmt.Errorf("failed to read response body for %s", requestUrl)
 	}
 
 	if response.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
-			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
+	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", requestUrl, responseMsg))
 	return responseMsg, nil
 }
