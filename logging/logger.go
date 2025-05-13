@@ -3,7 +3,6 @@ package logging
 import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
-	"io"
 	"log/slog"
 	"os"
 )
@@ -14,27 +13,34 @@ const (
 	appLogPerm     = 0666
 )
 
-var createWriter = func() (io.Writer, error) {
-	logFile, err := os.OpenFile(PathAppLogFile, appLogFileMode, appLogPerm)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create app log file: %w", err)
-	}
-
-	return io.MultiWriter(os.Stderr, logFile), nil
+type LogInitializer struct {
+	open           osOpenFile
+	newMultiWriter createMultiWriter
+	config         configuration.Configuration
 }
 
-func Initialize(conf configuration.Configuration) error {
+func NewLogInitializer(open osOpenFile, multiWriter createMultiWriter, cfg configuration.Configuration) *LogInitializer {
+	return &LogInitializer{
+		open:           open,
+		newMultiWriter: multiWriter,
+		config:         cfg,
+	}
+}
+
+func (li LogInitializer) Initialize() error {
 	var level slog.Level
-	if err := level.UnmarshalText([]byte(conf.LogLevel)); err != nil {
+	if err := level.UnmarshalText([]byte(li.config.LogLevel)); err != nil {
 		slog.New(slog.NewTextHandler(os.Stderr, nil)).
 			Error("Error parsing log level. Setting to INFO.", "err", err)
 		level = slog.LevelInfo
 	}
 
-	multiWriter, err := createWriter()
+	logFile, err := li.open(PathAppLogFile, appLogFileMode, appLogPerm)
 	if err != nil {
-		return fmt.Errorf("failed to create multiwriter: %w", err)
+		return fmt.Errorf("failed to create app log file: %w", err)
 	}
+
+	multiWriter := li.newMultiWriter(os.Stderr, logFile)
 
 	handler := slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
 		Level: level,

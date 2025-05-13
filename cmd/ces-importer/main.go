@@ -20,7 +20,14 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = logging.Initialize(cfg)
+	logInitializer := logging.NewLogInitializer(
+		func(name string, flag int, perm os.FileMode) (logging.File, error) {
+			return os.OpenFile(name, flag, perm)
+		},
+		io.MultiWriter,
+		cfg,
+	)
+	err = logInitializer.Initialize()
 	if err != nil {
 		panic(err)
 	}
@@ -34,6 +41,7 @@ func main() {
 			},
 			io.Copy,
 		),
+		LogInitializer: logInitializer,
 	}
 	migrator := migration.NewMigrator(deps)
 

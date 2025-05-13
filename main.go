@@ -37,7 +37,7 @@ const keyFQDN = "fqdn"
 const migrationJobLabelSelector = "app.kubernetes.io/instance=ces-exporter" // TODO: Replace with real selector after job actually exists
 const jobLogFile = "/home/ces-importer/migration-log/job.log"
 
-var initializeLogging = logging.Initialize
+var initializeLogging = func(a configuration.Configuration) error { return nil }
 var copyLogsToContainer = func(ctx context.Context, mlc *mainLoopContext) (string, error) {
 	return mlc.copyLogsToContainer(ctx)
 }
@@ -110,8 +110,7 @@ func main() {
 		create: func(name string) (file, error) {
 			return os.Create(name)
 		},
-		initLogging: logging.Initialize,
-		pods:        k8sClient.CoreV1().Pods(cfg.ImporterNamespace),
+		pods: k8sClient.CoreV1().Pods(cfg.ImporterNamespace),
 	}
 	mainLoop := mainLoopCtx.createMainLoop()
 

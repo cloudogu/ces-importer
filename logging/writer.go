@@ -17,16 +17,6 @@ type Writer struct {
 	copy   ioCopy
 }
 
-type File interface {
-	io.Writer
-	WriteString(s string) (n int, err error)
-	Close() error
-}
-
-type osRemove func(name string) error
-type osCreate func(name string) (File, error)
-type ioCopy func(dst io.Writer, src io.Reader) (written int64, err error)
-
 func NewWriter(path string, remove osRemove, create osCreate, copy ioCopy) *Writer {
 	return &Writer{
 		path:   path,
