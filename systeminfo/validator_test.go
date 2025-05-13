@@ -3,7 +3,7 @@ package systeminfo
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	v2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -18,9 +18,8 @@ func TestNewValidator(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		dc := newMockDoguClient(t)
 		pc := newMockPvcClient(t)
-		v, err := NewValidator(configuration.Configuration{}, p, dc, pc)
+		v, err := NewValidator(p, dc, pc)
 		require.NoError(t, err)
-		require.Equal(t, v.conf, configuration.Configuration{})
 		require.Equal(t, v.systemInfoProvider, p)
 		require.Equal(t, v.doguClient, dc)
 		require.Equal(t, v.pvcClient, pc)
@@ -29,17 +28,17 @@ func TestNewValidator(t *testing.T) {
 
 func TestValidateSystemInfo(t *testing.T) {
 	t.Run("should return with no error", func(t *testing.T) {
-		sysInfo := systemInfo{
-			Dogus: []dogu{
+		sysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -47,46 +46,45 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&sysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&sysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&sysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.Nil(t, err)
 	})
 
 	t.Run("should return error mismatching dogu versions", func(t *testing.T) {
-		exsysInfo := systemInfo{
-			Dogus: []dogu{
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "9.9.9",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -94,38 +92,37 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
 	t.Run("should return error dogu not installed", func(t *testing.T) {
-		exsysInfo := systemInfo{
-			Dogus: []dogu{
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := systemInfo{
-			Dogus: []dogu{},
-			Components: []component{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{},
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -133,88 +130,86 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
 	})
 
 	t.Run("should return error component not installed", func(t *testing.T) {
-		exsysInfo := systemInfo{
-			Dogus: []dogu{
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{},
+			Components: []exporter.Component{},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
 	})
 
 	t.Run("should return error component mismatching component version", func(t *testing.T) {
-		exsysInfo := systemInfo{
-			Dogus: []dogu{
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "9.9.9",
@@ -222,41 +217,38 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exsysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
 	t.Run("should return error getting importer system info", func(t *testing.T) {
 
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get importer system info: testerror")
 	})
 
 	t.Run("should return error getting exporter system info", func(t *testing.T) {
 
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&systemInfo{}, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&exporter.SystemInfo{}, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
 
@@ -458,20 +450,18 @@ func TestValidateSystemInfo(t *testing.T) {
 
 func TestUpdatePVC(t *testing.T) {
 	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
-		v := Validator{
-			conf: configuration.Configuration{},
-		}
-		exDogu := dogu{
+		v := Validator{}
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
@@ -486,21 +476,20 @@ func TestUpdatePVC(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		pvcClient := newMockPvcClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 			pvcClient:  pvcClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 2147483648,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 1073741824,
 			},
 		}
@@ -549,20 +538,19 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("can not find dogus volume", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "testDogu",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
 			},
 		}
@@ -584,20 +572,19 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("can not update dogus volume", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "testDogu",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
 			},
 		}

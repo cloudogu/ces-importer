@@ -13,6 +13,13 @@ type requestExecuter interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+type apiClient interface {
+	// DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
+	// errors will be returned as an error. For authentication, request headers will automatically be enriched with the
+	// provided API key.
+	DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error)
+}
+
 type client struct {
 	apiKey     string
 	httpClient requestExecuter

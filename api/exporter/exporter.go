@@ -9,9 +9,9 @@ const (
 // exporter endpoints
 const (
 	// EndpointExportMode contains the endpoint which returns data on the readiness of the exporter system.
-	EndpointExportMode = "/export/mode"
+	endpointExportMode = "/export/mode"
 	// EndpointSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
-	EndpointSystemInfo = "/system-info"
+	endpointSystemInfo = "/system-info"
 )
 
 // ExportMode contains data about the export readiness of the exporter system.
