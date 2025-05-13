@@ -6,9 +6,11 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"io"
 	"log/slog"
+	"net/smtp"
 	"os"
 )
 
@@ -32,6 +34,17 @@ func main() {
 		panic(err)
 	}
 
+	mailConfig, err := mail.SmtpConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
+	mailSender := mail.CreateSender(
+		mailConfig,
+		smtp.SendMail,
+		os.ReadFile,
+		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+	)
+
 	deps := migration.MigratorDependencies{
 		LogWriter: logging.NewWriter(
 			logging.PathJobLogFile,
@@ -42,6 +55,7 @@ func main() {
 			io.Copy,
 		),
 		LogInitializer: logInitializer,
+		MailSender:     mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 

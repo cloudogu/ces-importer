@@ -55,15 +55,17 @@ type Sender struct {
 	config        SmtpConfig    // SMTP configuration
 	senderService SenderService // Function to send email
 	readFile      OsReadFile    // Function to read email content from a file
+	attachments   []string      // List of files to attach to each mail
 }
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config SmtpConfig, senderService SenderService, readFile OsReadFile) *Sender {
+func CreateSender(config SmtpConfig, senderService SenderService, readFile OsReadFile, attachments []string) *Sender {
 	return &Sender{
 		config,
 		senderService,
 		readFile,
+		attachments,
 	}
 }
 
@@ -107,7 +109,7 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 	}, nil
 }
 
-// SendMigrationResult composes and sends an email containing the result of a migration operation.
+// Send composes and sends an email containing the result of a migration operation.
 //
 // The email includes a plain text body summarizing the migration status and optional file attachments.
 // It uses multipart MIME encoding to support attachments and plain text.
@@ -122,9 +124,9 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 //   - isFinal: Whether this is the final report of a migration process.
 //
 // Returns an error if email composition or sending fails.
-func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) error {
+func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time) error {
 	from := fmt.Sprintf("From: %s\r\n", s.config.From)
-	body := s.body(success, sourceInstance, targetInstance, start, end, isFinal)
+	body := s.body(migrationResult == nil, sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
 	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
 	message := mime +
@@ -132,10 +134,10 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 		"Content-Type: text/plain; charset=utf-8\r\n\r\n" +
 		body + "\r\n"
 
-	for _, file := range attachments {
+	for _, file := range s.attachments {
 		attachment, err := s.buildAttachment(file, boundary)
 		if err != nil {
-			return fmt.Errorf("failed To add attachment: %w", err)
+			return fmt.Errorf("failed to add attachment: %w", err)
 		}
 		message += attachment
 	}
@@ -147,7 +149,7 @@ func (s *Sender) SendMigrationResult(success bool, attachments []string, sourceI
 		s.auth(),
 		s.config.From,
 		s.config.To,
-		[]byte(from+s.subject(success)+message),
+		[]byte(from+s.subject(migrationResult == nil)+message),
 	)
 }
 
