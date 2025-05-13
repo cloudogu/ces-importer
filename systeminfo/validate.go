@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	kubv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,28 +35,26 @@ type pvcClient interface {
 }
 
 type systemInfoProvider interface {
-	getSystemInfo(ctx context.Context) (*systemInfo, error)
-	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
+	getImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+	getExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
 }
 
 type Validator struct {
-	conf               configuration.Configuration
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
 }
 
-func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
+func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
 	return &Validator{
-		conf:               conf,
 		systemInfoProvider: p,
 		doguClient:         doguClient,
 		pvcClient:          pvcClient,
 	}, nil
 }
 
-// ValidateSystemInfo
-// validate that the importing system has the same configuration as the exporting system
+// Validate
+// validates that the importing system has the same configuration as the exporting system
 //
 // validates:
 //
@@ -65,13 +63,13 @@ func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguCl
 // - components exist in correct version
 //
 // - pvcs are large enough (a resize is attempted)
-func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
+func (v *Validator) Validate(ctx context.Context) error {
 	slog.Info("Starting validation of system configuration")
-	imSystemInfo, err := v.systemInfoProvider.getSystemInfo(ctx)
+	imSystemInfo, err := v.systemInfoProvider.getImporterSystemInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get importer system info: %s", err)
 	}
-	exSystemInfo, err := v.systemInfoProvider.getExporterSystemInfo(v.conf, ctx)
+	exSystemInfo, err := v.systemInfoProvider.getExporterSystemInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get exporter system info: %s", err)
 	}
@@ -95,13 +93,13 @@ func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
 // - pvcs are large enough (a resize is attempted)
 //
 // returns a formatted multierror if any error occurred
-func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, ctx context.Context) error {
+func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo exporter.SystemInfo, ctx context.Context) error {
 	//validate dogus
 	var result error
 	doguResizesStartedCounter := 0
 	c := make(chan error)
 
-	imDoguMap := make(map[string]dogu)
+	imDoguMap := make(map[string]exporter.Dogu)
 	for _, d := range imInfo.Dogus {
 		imDoguMap[d.Name] = d
 	}
@@ -132,7 +130,7 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 	}
 
 	// validate components
-	imComponentsMap := make(map[string]component)
+	imComponentsMap := make(map[string]exporter.Component)
 	for _, c := range imInfo.Components {
 		imComponentsMap[c.Name] = c
 	}
@@ -153,7 +151,7 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 }
 
 // resize the dogus pvc if it is not large enough
-func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c chan error) {
+func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx context.Context, c chan error) {
 	// prevent endless running function when a panic occurs as the result will be awaited
 	defer func() {
 		if err := recover(); err != nil {

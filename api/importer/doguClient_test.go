@@ -22,7 +22,7 @@ var gibiByte int64 = 1024 * 1024 * 1024
 var jenkinsDoguNotFoundErr = errors.NewNotFound(schema.GroupResource{Group: "k8s.cloudogu.com", Resource: "dogu/v2"}, "jenkins")
 
 func TestNewDoguDeploymentClient(t *testing.T) {
-	client := NewDoguDeploymentClient(nil)
+	client := NewDoguClient(nil)
 
 	require.NotNil(t, client)
 }

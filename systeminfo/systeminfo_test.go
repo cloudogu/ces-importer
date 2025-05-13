@@ -64,7 +64,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo(context.Background())
+		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
 		require.NoError(t, err)
 	})
@@ -78,7 +78,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo(context.Background())
+		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems dogus: error")
 	})
@@ -114,7 +114,7 @@ func TestGetSystemInfo(t *testing.T) {
 			doguLister:      dogus,
 			pvcClient:       nil,
 		}
-		_, err := mockProvider.getSystemInfo(context.Background())
+		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems components: error")
 	})

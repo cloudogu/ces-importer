@@ -54,7 +54,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.Nil(t, err)
 	})
 
@@ -101,7 +101,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
@@ -140,7 +140,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
 	})
 
@@ -182,7 +182,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
 	})
 
@@ -229,7 +229,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
@@ -242,7 +242,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get importer system info: testerror")
 	})
 
@@ -256,7 +256,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
 }
