@@ -119,7 +119,3 @@ func (s *Provider) getExporterSystemInfo(conf configuration.Coordinator, ctx con
 	}
 	return sInfo, nil
 }
-
-func (s *Provider) getPvcClient() kubernetesClient {
-	return s.pvcClient
-}

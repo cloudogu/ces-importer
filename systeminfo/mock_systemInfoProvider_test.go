@@ -82,53 +82,6 @@ func (_c *mockSystemInfoProvider_getExporterSystemInfo_Call) RunAndReturn(run fu
 	return _c
 }
 
-// getPvcClient provides a mock function with no fields
-func (_m *mockSystemInfoProvider) getPvcClient() kubernetesClient {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for getPvcClient")
-	}
-
-	var r0 kubernetesClient
-	if rf, ok := ret.Get(0).(func() kubernetesClient); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(kubernetesClient)
-		}
-	}
-
-	return r0
-}
-
-// mockSystemInfoProvider_getPvcClient_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'getPvcClient'
-type mockSystemInfoProvider_getPvcClient_Call struct {
-	*mock.Call
-}
-
-// getPvcClient is a helper method to define mock.On call
-func (_e *mockSystemInfoProvider_Expecter) getPvcClient() *mockSystemInfoProvider_getPvcClient_Call {
-	return &mockSystemInfoProvider_getPvcClient_Call{Call: _e.mock.On("getPvcClient")}
-}
-
-func (_c *mockSystemInfoProvider_getPvcClient_Call) Run(run func()) *mockSystemInfoProvider_getPvcClient_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *mockSystemInfoProvider_getPvcClient_Call) Return(_a0 kubernetesClient) *mockSystemInfoProvider_getPvcClient_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *mockSystemInfoProvider_getPvcClient_Call) RunAndReturn(run func() kubernetesClient) *mockSystemInfoProvider_getPvcClient_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // getSystemInfo provides a mock function with given fields: ctx
 func (_m *mockSystemInfoProvider) getSystemInfo(ctx context.Context) (*systemInfo, error) {
 	ret := _m.Called(ctx)
