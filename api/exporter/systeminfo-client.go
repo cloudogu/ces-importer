@@ -7,14 +7,14 @@ import (
 )
 
 type SystemInfoClient struct {
-	apiClient *client
+	apiClient apiClient
 	endpoint  string
 }
 
-func NewSystemInfoClient(apiClient *client, exporterHost string) *SystemInfoClient {
+func NewSystemInfoClient(apiClient apiClient, exporterHost string) *SystemInfoClient {
 	return &SystemInfoClient{
 		apiClient: apiClient,
-		endpoint:  fmt.Sprintf("https://%s/%s", exporterHost, endpointSystemInfo),
+		endpoint:  fmt.Sprintf("https://%s%s", exporterHost, endpointSystemInfo),
 	}
 }
 
@@ -24,6 +24,7 @@ func (emc *SystemInfoClient) GetSystemInfo(ctx context.Context) (systemInfo *Sys
 		return nil, fmt.Errorf("failed to get system info: %w", err)
 	}
 
+	systemInfo = &SystemInfo{}
 	err = json.Unmarshal(result, systemInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse system info response: %q: %w", result, err)

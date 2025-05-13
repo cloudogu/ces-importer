@@ -41,7 +41,7 @@ func (dc *doguClient) StopAll(ctx context.Context) error {
 	}
 
 	for _, dogu := range list.Items {
-		err := dc.startStop(ctx, dogu.Name, true)
+		err := dc.startStop(ctx, dogu.Spec.Name, true)
 		if err != nil {
 			return fmt.Errorf("failed to stop dogu: %w", err)
 		}
@@ -68,7 +68,7 @@ func (dc *doguClient) StartAll(ctx context.Context) error {
 	}
 
 	for _, dogu := range list.Items {
-		err := dc.startStop(ctx, dogu.Name, false)
+		err := dc.startStop(ctx, dogu.Spec.Name, false)
 		if err != nil {
 			return fmt.Errorf("failed to start dogu: %w", err)
 		}

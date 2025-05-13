@@ -7,14 +7,14 @@ import (
 )
 
 type ExportModeClient struct {
-	apiClient *client
+	apiClient apiClient
 	endpoint  string
 }
 
-func NewExportModeClient(apiClient *client, exporterHost string) *ExportModeClient {
+func NewExportModeClient(apiClient apiClient, exporterHost string) *ExportModeClient {
 	return &ExportModeClient{
 		apiClient: apiClient,
-		endpoint:  fmt.Sprintf("https://%s/%s", exporterHost, endpointExportMode),
+		endpoint:  fmt.Sprintf("https://%s%s", exporterHost, endpointExportMode),
 	}
 }
 

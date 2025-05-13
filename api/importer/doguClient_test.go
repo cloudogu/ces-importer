@@ -27,6 +27,77 @@ func TestNewDoguDeploymentClient(t *testing.T) {
 	require.NotNil(t, client)
 }
 
+func Test_doguClient_StopAll(t *testing.T) {
+	t.Run("should stop all dogus", func(t *testing.T) {
+		// given
+		v2DoguJenkins := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/jenkins",
+			Stopped: false,
+		}}
+		v2DoguRedmine := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/redmine",
+			Stopped: false,
+		}}
+
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, nil)
+		doguCli.EXPECT().Get(testCtx, "redmine", mock.Anything).Return(&v2DoguRedmine, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguJenkins, mock.Anything, mock.Anything).Return(&v2DoguJenkins, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguRedmine, mock.Anything, mock.Anything).Return(&v2DoguRedmine, nil)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StopAll(testCtx)
+
+		// then
+		require.NoError(t, err)
+	})
+
+	t.Run("should fail to stop all dogus for error in list", func(t *testing.T) {
+		// given
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(nil, assert.AnError)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StopAll(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to list all dogus:")
+	})
+
+	t.Run("should fail to stop all dogus for error in startStop", func(t *testing.T) {
+		// given
+		v2DoguJenkins := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/jenkins",
+			Stopped: false,
+		}}
+		v2DoguRedmine := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/redmine",
+			Stopped: false,
+		}}
+
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, assert.AnError)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StopAll(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to stop dogu: failed to get dogu official/jenkins:")
+	})
+}
+
 func Test_doguClient_StopDogu(t *testing.T) {
 	t.Run("should stop the given dogu", func(t *testing.T) {
 		// given
@@ -49,7 +120,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		sut := &doguClient{doguCli: doguCli}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -75,7 +146,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		sut := &doguClient{doguCli}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -105,7 +176,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -123,7 +194,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		sut := &doguClient{nil}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu)
+		err := sut.StopDogu(testCtx, dogu.Name)
 
 		// then
 		require.Error(t, err)
@@ -154,7 +225,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		sut := &doguClient{doguCli}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -180,7 +251,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		sut := &doguClient{doguCli}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -211,7 +282,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu.Name)
 
 		// then
 		require.NoError(t, err)
@@ -229,10 +300,81 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		sut := &doguClient{nil}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu)
+		err := sut.StartDogu(testCtx, dogu.Name)
 
 		// then
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to start dogu: dogu name needs to be in the form 'namespace/dogu' but is 'missingnamespacedoguname'")
+	})
+}
+
+func Test_doguClient_StartAll(t *testing.T) {
+	t.Run("should start all dogus", func(t *testing.T) {
+		// given
+		v2DoguJenkins := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/jenkins",
+			Stopped: true,
+		}}
+		v2DoguRedmine := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/redmine",
+			Stopped: true,
+		}}
+
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, nil)
+		doguCli.EXPECT().Get(testCtx, "redmine", mock.Anything).Return(&v2DoguRedmine, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguJenkins, mock.Anything, mock.Anything).Return(&v2DoguJenkins, nil)
+		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguRedmine, mock.Anything, mock.Anything).Return(&v2DoguRedmine, nil)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StartAll(testCtx)
+
+		// then
+		require.NoError(t, err)
+	})
+
+	t.Run("should fail to start all dogus for error in list", func(t *testing.T) {
+		// given
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(nil, assert.AnError)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StartAll(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to list all dogus:")
+	})
+
+	t.Run("should fail to start all dogus for error in startStop", func(t *testing.T) {
+		// given
+		v2DoguJenkins := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/jenkins",
+			Stopped: true,
+		}}
+		v2DoguRedmine := v2.Dogu{Spec: v2.DoguSpec{
+			Name:    "official/redmine",
+			Stopped: true,
+		}}
+
+		doguCli := NewMockDoguInterface(t)
+		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
+		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, assert.AnError)
+
+		sut := &doguClient{doguCli: doguCli}
+
+		// when
+		err := sut.StartAll(testCtx)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to start dogu: failed to get dogu official/jenkins:")
 	})
 }
