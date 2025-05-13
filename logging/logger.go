@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	AppLogFile     = "/home/ces-importer/migration-log/log.log"
+	PathAppLogFile = "/home/ces-importer/migration-log/log.log"
 	appLogFileMode = os.O_CREATE | os.O_WRONLY | os.O_APPEND
 	appLogPerm     = 0666
 )
 
 var createWriter = func() (io.Writer, error) {
-	logFile, err := os.OpenFile(AppLogFile, appLogFileMode, appLogPerm)
+	logFile, err := os.OpenFile(PathAppLogFile, appLogFileMode, appLogPerm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create app log file: %w", err)
 	}

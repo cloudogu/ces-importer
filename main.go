@@ -243,7 +243,7 @@ func (mlc *mainLoopContext) createMainLoop() func(ctx context.Context) (int, err
 			return retVal, err
 		}
 
-		logFilesToAppend := []string{logging.AppLogFile}
+		logFilesToAppend := []string{logging.PathAppLogFile}
 
 		logFile, err := copyLogsToContainer(ctx, mlc)
 		if err != nil {

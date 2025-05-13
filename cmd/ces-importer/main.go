@@ -7,7 +7,9 @@ import (
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
 	"github.com/cloudogu/ces-importer/migration"
+	"io"
 	"log/slog"
+	"os"
 )
 
 func main() {
@@ -23,7 +25,16 @@ func main() {
 		panic(err)
 	}
 
-	deps := migration.MigratorDependencies{}
+	deps := migration.MigratorDependencies{
+		LogWriter: logging.NewWriter(
+			logging.PathJobLogFile,
+			os.Remove,
+			func(name string) (logging.File, error) {
+				return os.Create(name)
+			},
+			io.Copy,
+		),
+	}
 	migrator := migration.NewMigrator(deps)
 
 	cronLooper, err := cron.New(ctx, cfg.MigrationRegularCron, func(ctx context.Context) (int, error) {
