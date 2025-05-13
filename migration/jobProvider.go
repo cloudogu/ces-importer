@@ -127,10 +127,6 @@ func createSSHPrivateKeyMount(secretName, secretDataKey, privateSSHKeyPath strin
 	}
 }
 
-type pvcClient interface {
-	GetDoguVolumes(ctx context.Context) ([]doguPVC, error)
-}
-
 type jobSpec struct {
 	imageURL         string
 	imagePullPolicy  v1.PullPolicy
