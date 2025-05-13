@@ -93,7 +93,15 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
 
-	isFinalMigration := ctx.Value(finalMigrationKey).(bool)
+	var isFinalMigration bool
+	isFinalMigration, ok := ctx.Value(finalMigrationKey).(bool)
+	if !ok {
+		slog.Debug("Starting a non final migration...")
+		isFinalMigration = false
+	} else if isFinalMigration {
+		slog.Debug("Starting a final migration...")
+	}
+
 	startTime := time.Now()
 	defer m.cleanup(ctx, startTime, isFinalMigration, err)
 
@@ -134,15 +142,15 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 }
 
 func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigration bool, runError error) {
-	if runError != nil && isFinalMigration {
-		if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
-			slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
-		}
-	}
-
-	if err := m.doguStarter.StartAll(ctx); err != nil {
-		slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
-	}
+	//if runError != nil && isFinalMigration {
+	//	if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
+	//		slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
+	//	}
+	//}
+	//
+	//if err := m.doguStarter.StartAll(ctx); err != nil {
+	//	slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
+	//}
 
 	endTime := time.Now()
 	if err := m.mailSender.Send(isFinalMigration, runError, "", "", startTime, endTime); err != nil {

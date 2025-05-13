@@ -9,9 +9,11 @@
 !/cron/**/*
 !/systeminfo/**/*
 !/logging/**/*
+!/migration/**/*
 !/sync/**/*
 !/validate/**/*
 !/mail/**/*
+!/cmd/ces-importer/main.go
 
 # and other resources
 !build/**/*

@@ -3,6 +3,7 @@ package mail
 import (
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/smtp"
 	"os"
 	"strings"
@@ -125,6 +126,7 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 //
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time) error {
+	slog.Info("Sending migration result via mail...")
 	from := fmt.Sprintf("From: %s\r\n", s.config.From)
 	body := s.body(migrationResult == nil, sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
@@ -137,7 +139,8 @@ func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string
 	for _, file := range s.attachments {
 		attachment, err := s.buildAttachment(file, boundary)
 		if err != nil {
-			return fmt.Errorf("failed to add attachment: %w", err)
+			slog.Error(fmt.Sprintf("failed to add attachment to mail: %v", err))
+			continue
 		}
 		message += attachment
 	}
@@ -202,7 +205,7 @@ func (s *Sender) body(success bool, sourceInstance string, targetInstance string
 func (s *Sender) buildAttachment(filename, boundary string) (string, error) {
 	data, err := s.readFile(filename)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read file for attachment: %w", err)
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(data)

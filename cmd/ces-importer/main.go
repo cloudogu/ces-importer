@@ -34,12 +34,8 @@ func main() {
 		panic(err)
 	}
 
-	mailConfig, err := mail.SmtpConfigFromEnv()
-	if err != nil {
-		panic(err)
-	}
 	mailSender := mail.CreateSender(
-		mailConfig,
+		cfg.MailConfig,
 		smtp.SendMail,
 		os.ReadFile,
 		[]string{logging.PathAppLogFile, logging.PathJobLogFile},

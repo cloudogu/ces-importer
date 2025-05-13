@@ -13,10 +13,12 @@ RUN go mod download
 
 # Copy the go sources
 COPY *.go .
+COPY "cmd/ces-importer/main.go" main.go
 COPY api api
 COPY configuration configuration
 COPY cron cron
 COPY systeminfo systeminfo
+COPY migration migration
 COPY sync sync
 COPY mail mail
 COPY logging logging
