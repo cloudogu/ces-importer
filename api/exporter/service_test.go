@@ -11,5 +11,5 @@ func TestNewService(t *testing.T) {
 	sut := NewService("http://localhost:8080", apiClientMock)
 
 	assert.NotNil(t, sut)
-	assert.NotNil(t, sut.maintenanceService)
+	assert.NotNil(t, sut.MaintenanceModeService)
 }

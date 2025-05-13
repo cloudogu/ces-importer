@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/migration"
 )
 
 const (
 	// EndpointMaintenanceMode contains the endpoint which returns data which describe the current
 	EndpointMaintenanceMode = "/maintenance/mode"
 )
+
+var _ migration.MaintenanceModeHandler = MaintenanceModeService{}
 
 // MaintenanceMode contains data of the current maintenance state
 type MaintenanceMode struct {
@@ -29,52 +32,66 @@ type MaintenanceModeStatus struct {
 	IsActive bool `json:"isActive"`
 }
 
-type maintenanceService struct {
+type MaintenanceModeService struct {
 	apiClient
 	serviceURL string
 }
 
-// newMaintenanceService creates a new maintenance service for the given exporter API client.
-func newMaintenanceService(baseURL string, client apiClient) *maintenanceService {
-	return &maintenanceService{
+// NewMaintenanceModeService creates a new maintenance service for the given exporter API client.
+func NewMaintenanceModeService(baseURL string, client apiClient) *MaintenanceModeService {
+	return &MaintenanceModeService{
 		serviceURL: baseURL + EndpointMaintenanceMode,
 		apiClient:  client,
 	}
 }
 
 // GetMaintenanceModeStatus returns the current maintenance mode status of the exporter system.
-func (s maintenanceService) GetMaintenanceModeStatus(ctx context.Context) (MaintenanceModeStatus, error) {
+func (s MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (bool, error) {
 	result, err := s.DoGetRequest(ctx, s.serviceURL)
 	if err != nil {
-		return MaintenanceModeStatus{}, fmt.Errorf("failed to get maintenance mode status: %w", err)
+		return false, fmt.Errorf("failed to get maintenance mode status: %w", err)
 	}
 
-	return decodeMaintenanceModeStatus(result)
+	response, err := decodeMaintenanceModeStatus(result)
+	if err != nil {
+		return false, fmt.Errorf("failed to decode maintenance mode status: %w", err)
+	}
+
+	return response.IsActive, nil
 }
 
-// EnableMaintenanceMode enables the maintenance mode of the exporter system with the given title and message.
-func (s maintenanceService) EnableMaintenanceMode(ctx context.Context, title, message string) (MaintenanceModeStatus, error) {
+// Enable enables the maintenance mode of the exporter system with the given title and message.
+func (s MaintenanceModeService) Enable(ctx context.Context, title, message string) error {
 	return s.setMaintenanceMode(ctx, MaintenanceMode{Activate: true, Message: Message{Title: title, Text: message}})
 }
 
-// DisableMaintenanceMode disables the maintenance mode of the exporter system.
-func (s maintenanceService) DisableMaintenanceMode(ctx context.Context) (MaintenanceModeStatus, error) {
+// Disable disables the maintenance mode of the exporter system.
+func (s MaintenanceModeService) Disable(ctx context.Context) error {
 	return s.setMaintenanceMode(ctx, MaintenanceMode{Activate: false})
 }
 
-func (s maintenanceService) setMaintenanceMode(ctx context.Context, mode MaintenanceMode) (MaintenanceModeStatus, error) {
+func (s MaintenanceModeService) setMaintenanceMode(ctx context.Context, mode MaintenanceMode) error {
 	var buf bytes.Buffer
 
 	if err := json.NewEncoder(&buf).Encode(mode); err != nil {
-		return MaintenanceModeStatus{}, fmt.Errorf("failed to encode maintenance mode: %w", err)
+		return fmt.Errorf("failed to encode maintenance mode: %w", err)
 	}
 
 	result, err := s.DoPostRequest(ctx, s.serviceURL, &buf, nil)
 	if err != nil {
-		return MaintenanceModeStatus{}, fmt.Errorf("failed to set maintenance mode: %w", err)
+		return fmt.Errorf("failed to set maintenance mode: %w", err)
 	}
 
-	return decodeMaintenanceModeStatus(result)
+	response, err := decodeMaintenanceModeStatus(result)
+	if err != nil {
+		return fmt.Errorf("failed to decode maintenance mode status: %w", err)
+	}
+
+	if response.IsActive != mode.Activate {
+		return fmt.Errorf("received unexpected mode status in response: %t", response.IsActive)
+	}
+
+	return nil
 }
 
 func decodeMaintenanceModeStatus(result []byte) (MaintenanceModeStatus, error) {

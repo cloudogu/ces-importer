@@ -1,11 +1,11 @@
 package exporter
 
 type Service struct {
-	*maintenanceService
+	*MaintenanceModeService
 }
 
 func NewService(baseURL string, client apiClient) *Service {
 	return &Service{
-		maintenanceService: newMaintenanceService(baseURL, client),
+		MaintenanceModeService: NewMaintenanceModeService(baseURL, client),
 	}
 }
