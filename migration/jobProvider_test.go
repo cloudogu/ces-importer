@@ -13,7 +13,7 @@ func TestNewJobProvider(t *testing.T) {
 	t.Run("should create job provider successfully", func(t *testing.T) {
 		// given
 		pvcClient := newMockPvcClient(t)
-		deps := JobProviderDependencies{
+		deps := jobProviderDependencies{
 			JobContainerConfig: configuration.JobContainer{
 				JobConfigMap:      "test-config-map",
 				JobServiceAccount: "test-service-account",
@@ -48,7 +48,7 @@ func TestNewJobProvider(t *testing.T) {
 		}
 
 		// when
-		provider, err := NewJobProvider(deps)
+		provider, err := newJobProvider(deps)
 
 		// then
 		assert.NoError(t, err)
@@ -62,7 +62,7 @@ func TestNewJobProvider(t *testing.T) {
 	t.Run("should return error when createJobSpec fails", func(t *testing.T) {
 		// given
 		pvcClient := newMockPvcClient(t)
-		deps := JobProviderDependencies{
+		deps := jobProviderDependencies{
 			JobContainerConfig: configuration.JobContainer{
 				JobConfigMap:      "test-config-map",
 				JobServiceAccount: "test-service-account",
@@ -94,12 +94,12 @@ func TestNewJobProvider(t *testing.T) {
 		}
 
 		// when
-		provider, err := NewJobProvider(deps)
+		provider, err := newJobProvider(deps)
 
 		// then
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to create specification for job")
-		assert.Equal(t, JobProvider{}, provider)
+		assert.Nil(t, provider)
 	})
 }
 
@@ -113,7 +113,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 			{doguName: "cas", pvcName: "cas-data"},
 		}, nil)
 
-		provider := JobProvider{
+		provider := jobProvider{
 			jobSpec: jobSpec{
 				imageURL:         "registry.example.com/test-repo:latest",
 				imagePullPolicy:  "IfNotPresent",
@@ -134,7 +134,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		}
 
 		// when
-		job, err := provider.CreateImportJob(ctx)
+		job, err := provider.createImportJob(ctx)
 
 		// then
 		assert.NoError(t, err)
@@ -157,7 +157,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		pvcClient := newMockPvcClient(t)
 		pvcClient.EXPECT().GetDoguVolumes(ctx).Return([]doguPVC{}, assert.AnError)
 
-		provider := JobProvider{
+		provider := jobProvider{
 			jobSpec: jobSpec{
 				imageURL:         "registry.example.com/test-repo:latest",
 				imagePullPolicy:  "IfNotPresent",
@@ -178,7 +178,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		}
 
 		// when
-		job, err := provider.CreateImportJob(ctx)
+		job, err := provider.createImportJob(ctx)
 
 		// then
 		assert.Error(t, err)

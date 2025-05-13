@@ -142,7 +142,7 @@ type jobSpec struct {
 	jobConfigMap     string
 }
 
-type JobProviderDependencies struct {
+type jobProviderDependencies struct {
 	JobContainerConfig configuration.JobContainer
 	SSHConfig          configuration.SSH
 	APIKey             string
@@ -150,13 +150,13 @@ type JobProviderDependencies struct {
 	PVCClient          pvcClient
 }
 
-func NewJobProvider(deps JobProviderDependencies) (JobProvider, error) {
+func newJobProvider(deps jobProviderDependencies) (*jobProvider, error) {
 	jSpec, err := createJobSpec(deps.JobContainerConfig, deps.APIKey)
 	if err != nil {
-		return JobProvider{}, fmt.Errorf("failed to create specification for job: %w", err)
+		return nil, fmt.Errorf("failed to create specification for job: %w", err)
 	}
 
-	return JobProvider{
+	return &jobProvider{
 		jobSpec:            jSpec,
 		sshConfig:          deps.SSHConfig,
 		pvcClient:          deps.PVCClient,
@@ -282,14 +282,14 @@ func createContainerEnv(apiKey string) []v1.EnvVar {
 	}
 }
 
-type JobProvider struct {
+type jobProvider struct {
 	jobSpec
 	pvcClient
 	sshConfig          configuration.SSH
 	doguVolumeBasePath string
 }
 
-func (j JobProvider) CreateImportJob(ctx context.Context) (*batchv1.Job, error) {
+func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) {
 	backoffLimit := int32(0) // Allow no retries for the job before failing the job
 
 	pvcList, err := j.GetDoguVolumes(ctx)
