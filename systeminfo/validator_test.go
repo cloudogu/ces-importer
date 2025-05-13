@@ -624,4 +624,135 @@ func TestUpdatePVC(t *testing.T) {
 			require.ErrorContains(t, err, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
 		}
 	})
+
+	t.Run("should fail on maximum amount of retries reached", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		v := Validator{
+			conf:       configuration.Configuration{},
+			doguClient: doguClient,
+		}
+		exDogu := dogu{
+			Name:    "",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 3,
+			},
+		}
+		dogu := v2.Dogu{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
+			},
+			Status: v2.DoguStatus{},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+
+		waitSecondsBetweenRetries = 1
+		maxRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "maximum amount of retries reached for the resize of Dogu testDogu volume")
+		}
+	})
+
+	t.Run("should fail on getting dogus pvc", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		pvcClient := newMockPvcClient(t)
+		v := Validator{
+			conf:       configuration.Configuration{},
+			doguClient: doguClient,
+			pvcClient:  pvcClient,
+		}
+		exDogu := dogu{
+			Name:    "",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 3,
+			},
+		}
+		dogu := v2.Dogu{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
+			},
+			Status: v2.DoguStatus{},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "could not get dogu testDogu pvc")
+		}
+	})
+
+	t.Run("should catch panic", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		v := Validator{
+			conf:       configuration.Configuration{},
+			doguClient: doguClient,
+		}
+		exDogu := dogu{
+			Name:    "",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: volume{
+				SizeInBytes: 3,
+			},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Run(func(ctx context.Context, name string, opts metav1.GetOptions) { panic("panic!") }).Return(nil, nil)
+
+		waitSecondsBetweenRetries = 1
+		maxRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "panic while updating pvc:")
+		}
+	})
+
 }
