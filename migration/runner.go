@@ -29,7 +29,7 @@ type DoguStarter interface {
 }
 
 type JobRunner interface {
-	Run() (io.ReadCloser, error)
+	Run(ctx context.Context) (io.ReadCloser, error)
 }
 
 type LogWriter interface {
@@ -81,9 +81,15 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	isFinalMigration := ctx.Value(finalMigrationKey).(bool)
+	isFinalMigration, ok := ctx.Value(finalMigrationKey).(bool)
+	if !ok {
+		isFinalMigration = false
+	}
+
 	startTime := time.Now()
-	defer m.cleanup(ctx, startTime, isFinalMigration, err)
+	defer func() {
+		m.cleanup(ctx, startTime, isFinalMigration, err)
+	}()
 
 	err = m.exportModeValidator.Validate(ctx)
 	if err != nil {
@@ -108,7 +114,7 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		}
 	}
 
-	logs, err := m.jobRunner.Run()
+	logs, err := m.jobRunner.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to run migration job: %w", err)
 	}

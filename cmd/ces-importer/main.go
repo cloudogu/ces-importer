@@ -54,13 +54,13 @@ func main() {
 	}
 	doguClient := ecosystemDoguClient.Dogus(cfg.ImporterNamespace)
 
-	doguStartStopper := importer.NewDoguClient(doguClient)
-
 	ecosystemComponentClient, err := componentEcoClient.NewForConfig(k8sRestConfig)
 	if err != nil {
 		panic(fmt.Errorf("failed to create component client: %w", err))
 	}
 	componentClient := ecosystemComponentClient.Components(cfg.ImporterNamespace)
+
+	doguStartStopper := importer.NewDoguClient(doguClient)
 
 	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(componentClient, doguClient, systemInfoApiClient)
 	if err != nil {
