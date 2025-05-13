@@ -1,0 +1,20 @@
+# Deny all
+*/**
+
+# Allow-only go resources
+!*.go
+!go.*
+!/api/**/*
+!/cmd/**/*
+!/configuration/**/*
+!/cron/**/*
+!/logging/**/*
+!/migration/**/*
+!/sync/**/*
+!/systeminfo/**/*
+
+# and other resources
+!build/**/*
+!Makefile
+!.git/**/*
+

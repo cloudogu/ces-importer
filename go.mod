@@ -7,8 +7,8 @@ require (
 	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-backup-operator v0.0.0-20250512143304-03afdf1d899e
 	github.com/cloudogu/k8s-component-operator v1.8.0
-	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.1
 	github.com/cloudogu/k8s-registry-lib v0.5.1
+	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.0
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.33.0

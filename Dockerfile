@@ -1,103 +1,47 @@
-# syntax=docker/dockerfile:1
-
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
-
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
-################################################################################
-# Create a stage for building the application.
-
-# BINARY specifies the name of the binary to be build
-# Options:
-# - ces-importer (default)
-# - import-job
-ARG BINARY=ces-importer
-
-# BUILD_PATH specifies the path to application to be build. Default: ./
-ARG BUILD_PATH="./"
-
-ARG APP_VERSION=0.0.1
-ARG GO_VERSION=1.24
-ARG ALPINE_VERSION=3.21.3
-
-ARG UID=65532
-ARG GID=$UID
-
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
-WORKDIR /workspace
+FROM golang:1.24-alpine AS builder
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /go/pkg/mod/ to speed up subsequent builds.
-# Leverage bind mounts to go.sum and go.mod to avoid having to copy them into
-# the container.
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+WORKDIR /app
 
-# This is the architecture you’re building for, which is passed in by the builder.
-# Placing it here allows the previous steps to be cached across architectures.
-ARG TARGETARCH
-ARG BINARY
-ARG BUILD_PATH
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
 
-# Build the application.
-# Leverage a cache mount to /go/pkg/mod/ to speed up subsequent builds.
-# Leverage a bind mount to the current directory to avoid having to copy the
-# source code into the container.
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,target=. \
-    CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /target/$BINARY $BUILD_PATH
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN go mod download
 
-FROM alpine:${ALPINE_VERSION} AS base-import-job
+# Copy the go sources
+COPY *.go .
+COPY api api
+COPY cmd cmd
+COPY configuration configuration
+COPY cron cron
+COPY logging logging
+COPY migration migration
+COPY sync sync
+COPY systeminfo systeminfo
 
-# Install any runtime dependencies that are needed to run your application.
-# Leverage a cache mount to /var/cache/apk/ to speed up subsequent builds.
-RUN --mount=type=cache,target=/var/cache/apk \
-    apk update && \
-    apk upgrade && \
-    apk add \
-        ca-certificates \
-        tzdata \
-        bash \
-        openssh \
-        rsync \
-        && \
-        update-ca-certificates
+# Build
+RUN go mod vendor
+RUN go build -mod=vendor -o target/ces-importer ./cmd/ces-importer
 
-ARG BINARY
-ARG UID
-ARG GID
 
-RUN \
-  addgroup -S -g ${GID} ${BINARY} && \
-  adduser -S -h /home/${BINARY} -s /bin/bash -G ${BINARY} -u ${UID} ${BINARY}
+FROM alpine:3.21.3
+LABEL maintainer="hello@cloudogu.com" \
+      NAME="ces-importer" \
+      VERSION="0.0.1"
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot AS base-ces-importer
+RUN apk update && apk upgrade && apk --no-cache add bash openssh rsync && \
+    addgroup -S -g 65532 ces-importer && \
+    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer
 
-FROM base-${BINARY} AS final
-
-ARG BINARY
-ARG APP_VERSION
-ARG UID
-ARG GID
-
-LABEL \
-    maintainer="hello@cloudogu.com" \
-    NAME="${BINARY}" \
-    VERSION="${APP_VERSION}"
+# note that this app will start deployments that must run as root
+# use numeric IDs to avoid clash with runAsNonRoot so that k8s can validate it as non-root user
+USER 65532:65532
 
 WORKDIR /
+COPY --from=builder /app/target/ces-importer .
 
-COPY --from=build /target/${BINARY} app
 
-# the linter has a problem with the valid colon-syntax
-# dockerfile_lint - ignore
-USER ${UID}:${GID}
-
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/ces-importer"]

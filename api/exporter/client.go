@@ -14,21 +14,29 @@ type requestExecuter interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type Client struct {
+type apiClient interface {
+	// DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
+	// errors will be returned as an error. For authentication, request headers will automatically be enriched with the
+	// provided API key.
+	DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error)
+	DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error)
+}
+
+type client struct {
 	apiKey     string
 	httpClient requestExecuter
 }
 
-// NewClient creates a Client for easy API access with the given HTTP Client. This allows for generically modifying the
-// HTTP Client f. i. adding proxy settings.
-func NewClient(apiKey string, httpClient requestExecuter) *Client {
-	return &Client{apiKey: apiKey, httpClient: httpClient}
+// NewClient creates a client for easy API access with the given HTTP client. This allows for generically modifying the
+// HTTP client f. i. adding proxy settings.
+func NewClient(apiKey string, httpClient requestExecuter) *client {
+	return &client{apiKey: apiKey, httpClient: httpClient}
 }
 
 // DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
 // errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 // provided API key.
-func (c *Client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
+func (c *client) DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, exporterUrl, nil)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
@@ -59,7 +67,7 @@ func (c *Client) DoGetRequest(ctx context.Context, exporterUrl string) (result [
 // DoPostRequest creates an HTTP POST request towards the exporter API. Path params will be appended to the given url.
 // Any unexpected HTTP codes (other than 200 OK) or errors will be returned as an error. For authentication, request
 // headers will automatically be enriched with the provided API key.
-func (c *Client) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error) {
+func (c *client) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error) {
 	if len(pathParams) > 0 {
 		exporterUrl = exporterUrl + "/" + strings.Join(pathParams, "/")
 	}
