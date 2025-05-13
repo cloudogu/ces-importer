@@ -3,7 +3,6 @@ package sync
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
@@ -12,28 +11,34 @@ import (
 	"log/slog"
 )
 
-var hostProtocolScheme = "https://"
+type exportDoguApiClient interface {
+	GetExportDogu(ctx context.Context) (*exporter.DoguExport, error)
+	SetExportDogu(ctx context.Context, doguName string) (*exporter.DoguExport, error)
+}
 
-type ApiCli interface {
-	DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error)
-	DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error)
+type systemInfoProvider interface {
+	GetSystemInfo(ctx context.Context) (systemInfo *exporter.SystemInfo, err error)
 }
 
 // RsyncSyncer allows copying data from a remote host.
 type RsyncSyncer struct {
-	host           string
-	user           string
-	privateKeyPath string
-	makeCommand    commandMaker
+	host                string
+	user                string
+	privateKeyPath      string
+	makeCommand         commandMaker
+	exportModeApiClient exportDoguApiClient
+	systemInfoProvider  systemInfoProvider
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string, makeCommand commandMaker) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, makeCommand commandMaker, client exportDoguApiClient, provider systemInfoProvider) *RsyncSyncer {
 	return &RsyncSyncer{
-		host:           host,
-		user:           user,
-		privateKeyPath: privateKeyPath,
-		makeCommand:    makeCommand,
+		host:                host,
+		user:                user,
+		privateKeyPath:      privateKeyPath,
+		makeCommand:         makeCommand,
+		exportModeApiClient: client,
+		systemInfoProvider:  provider,
 	}
 }
 
@@ -49,12 +54,12 @@ type Command interface {
 
 // SyncData gets the exporting systems system info and synchronizes the volume data of every dogu
 // errors are collected and returned
-func (rs *RsyncSyncer) SyncData(ctx context.Context, apiCli ApiCli, config configuration.Job) error {
+func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) error {
 	var result error
 
-	systemInfo, err := fetchExporterSystemInfo(ctx, config.ExporterHost, apiCli)
+	systemInfo, err := rs.systemInfoProvider.GetSystemInfo(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to fetch exporter system info: %w", err)
 	}
 
 	// map exclude patterns to dogu name for easy retrieval
@@ -68,20 +73,9 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, apiCli ApiCli, config confi
 		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
 
 		// set the current dogu as export dogu in exporter
-		pathParams := []string{
-			dogu.Name,
-		}
-		exporterUrl := hostProtocolScheme + config.ExporterHost + exporter.EndpointExportDogu
-		doguExportResult, err := apiCli.DoPostRequest(ctx, exporterUrl, nil, pathParams)
+		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, dogu.Name)
 		if err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
-			continue
-		}
-
-		var doguExport exporter.DoguExport
-		err = json.Unmarshal(doguExportResult, &doguExport)
-		if err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to parse dogu export response: %q: %w", doguExportResult, err))
 			continue
 		}
 
@@ -158,24 +152,6 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	}
 
 	return nil
-}
-
-// fetchExporterSystemInfo gets the exporting systems system info
-func fetchExporterSystemInfo(ctx context.Context, hostname string, apiCli ApiCli) (*exporter.SystemInfo, error) {
-	exporterUrl := hostProtocolScheme + hostname + exporter.EndpointSystemInfo
-
-	result, err := apiCli.DoGetRequest(ctx, exporterUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch exporter system info: %w", err)
-	}
-
-	var systemInfo exporter.SystemInfo
-	err = json.Unmarshal(result, &systemInfo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse system info response: %q: %w", result, err)
-	}
-
-	return &systemInfo, nil
 }
 
 // buildRSyncArgs builds the arguments for the rsync command based on the given parameters

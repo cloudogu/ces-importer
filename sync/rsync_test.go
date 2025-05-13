@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/systeminfo"
 	"github.com/stretchr/testify/require"
 	"io"
 	"strings"
@@ -63,7 +64,7 @@ func TestSyncData(t *testing.T) {
 				},
 			},
 		}
-		err = syncer.SyncData(context.Background(), client, config)
+		err = syncer.SyncData(context.Background(), config)
 		require.NoError(t, err)
 	})
 
@@ -72,6 +73,7 @@ func TestSyncData(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
+
 		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
 
 		client := NewMockApiCli(t)
@@ -79,7 +81,7 @@ func TestSyncData(t *testing.T) {
 		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(nil, fmt.Errorf("testerror"))
 
 		config := configuration.Job{}
-		err := syncer.SyncData(context.Background(), client, config)
+		err := syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to fetch exporter system info: testerror")
 	})
 
@@ -111,7 +113,7 @@ func TestSyncData(t *testing.T) {
 		client.EXPECT().DoPostRequest(context.Background(), "https:///export/dogu", nil, []string{"test"}).Return(nil, fmt.Errorf("testerror"))
 
 		config := configuration.Job{}
-		err = syncer.SyncData(context.Background(), client, config)
+		err = syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to set dogu test as export dogu: testerror")
 	})
 
@@ -165,7 +167,7 @@ func TestSyncData(t *testing.T) {
 				},
 			},
 		}
-		err = syncer.SyncData(context.Background(), client, config)
+		err = syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to sync source /a/b to destination test: rsync exited with error: testerror")
 	})
 
@@ -204,7 +206,7 @@ func TestSyncData(t *testing.T) {
 				},
 			},
 		}
-		err = syncer.SyncData(context.Background(), client, config)
+		err = syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to parse dogu export response: \"bad response\": invalid character 'b' looking for beginning of value")
 	})
 }
@@ -304,38 +306,5 @@ func TestSyncDogu(t *testing.T) {
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "rsync exited with error: testerror")
-	})
-}
-
-func TestFetchSystemInfo(t *testing.T) {
-	t.Run("should return with no error", func(t *testing.T) {
-		client := NewMockApiCli(t)
-		// system info request
-		systemInfo := exporter.SystemInfo{
-			FQDN:        "",
-			IsMultinode: false,
-			Dogus: []exporter.Dogu{
-				{
-					Name:    "test",
-					Version: "",
-					Volume:  exporter.DoguVolume{},
-				},
-			},
-			Components: nil,
-		}
-		sIbytes, err := json.Marshal(systemInfo)
-		require.NoError(t, err)
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIbytes, nil)
-		exporterSysInfo, err := fetchExporterSystemInfo(context.Background(), "", client)
-		require.NoError(t, err)
-		require.Equal(t, systemInfo, *exporterSysInfo)
-	})
-
-	t.Run("should fail to marshal return value", func(t *testing.T) {
-		client := NewMockApiCli(t)
-		sIBytes := []byte("no json")
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIBytes, nil)
-		_, err := fetchExporterSystemInfo(context.Background(), "", client)
-		require.EqualError(t, err, "failed to parse system info response: \"no json\": invalid character 'o' in literal null (expecting 'u')")
 	})
 }

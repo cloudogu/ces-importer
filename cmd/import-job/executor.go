@@ -64,12 +64,16 @@ func NewImportExecutor() (*ImportExecutor, error) {
 		return exec.Command(name, arg...)
 	}
 
-	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker)
+	exportDoguApiClient := exporter.NewExportDoguClient(exporterApiClient, jobConfig.API.ExporterHost)
+	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient, jobConfig.API.ExporterHost)
+
+	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker, exportDoguApiClient, systemInfoApiClient)
 
 	cs := migrationConfig.NewConfigImporter(jobConfig.ExporterHost, exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
 	return &ImportExecutor{
 		configSyncer: cs,
+		dataSyncer:   ds,
 	}, nil
 }
 
