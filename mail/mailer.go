@@ -127,6 +127,15 @@ func SmtpConfigFromEnv() (SmtpConfig, error) {
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time) error {
 	slog.Info("Sending migration result via mail...")
+	slog.Info(fmt.Sprintf("Mail is sent from: %s", s.config.From))
+	slog.Info(fmt.Sprintf("Mail is sent to: %v", s.config.To))
+	slog.Info(fmt.Sprintf("Mail is sent to server: %s", s.server()))
+	if s.auth() != nil {
+		slog.Info("Using authentication for mail server")
+	} else {
+		slog.Info("Mail server is unauthenticated")
+	}
+
 	from := fmt.Sprintf("From: %s\r\n", s.config.From)
 	body := s.body(migrationResult == nil, sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
@@ -142,6 +151,7 @@ func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string
 			slog.Error(fmt.Sprintf("failed to add attachment to mail: %v", err))
 			continue
 		}
+		slog.Info(fmt.Sprintf("Added attachment to mail: %s", attachment))
 		message += attachment
 	}
 
