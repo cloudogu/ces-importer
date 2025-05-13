@@ -29,7 +29,7 @@ type DoguStarter interface {
 }
 
 type JobRunner interface {
-	Run() (io.ReadCloser, error)
+	Run(ctx context.Context) (io.ReadCloser, error)
 }
 
 type LogWriter interface {
@@ -108,7 +108,7 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		}
 	}
 
-	logs, err := m.jobRunner.Run()
+	logs, err := m.jobRunner.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to run migration job: %w", err)
 	}
