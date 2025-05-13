@@ -253,41 +253,41 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 				{
 					Name:    "onlyPresentHere",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := systemInfo{
-			Dogus: []dogu{
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -295,53 +295,52 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
 	})
 
 	t.Run("should validate special nginx case", func(t *testing.T) {
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "nginx-static",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 				{
 					Name:    "nginx-ingress",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := systemInfo{
-			Dogus: []dogu{
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "nginx",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -349,46 +348,45 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.NoError(t, err)
 	})
 
 	t.Run("should throw error on nginx-static missing when validating nginx dogu", func(t *testing.T) {
-		imSysInfo := systemInfo{
-			Dogus: []dogu{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "nginx-ingress",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := systemInfo{
-			Dogus: []dogu{
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "nginx",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -396,38 +394,37 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu nginx-static is not installed")
 	})
 
 	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
-		imSysInfo := systemInfo{
-			Dogus: []dogu{},
-			Components: []component{
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{},
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := systemInfo{
-			Dogus: []dogu{
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
 				{
 					Name:    "registrator",
 					Version: "1.2.3",
-					Volume: volume{
+					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []component{
+			Components: []exporter.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -435,14 +432,13 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything, mock.Anything).Return(&exSysInfo, nil)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
 		v := Validator{
-			conf:               configuration.Configuration{},
 			systemInfoProvider: s,
 		}
-		err := v.ValidateSystemInfo(context.Background())
+		err := v.Validate(context.Background())
 		require.NoError(t, err)
 	})
 
@@ -615,20 +611,19 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("should fail on maximum amount of retries reached", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "testDogu",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
 			},
 		}
@@ -662,21 +657,20 @@ func TestUpdatePVC(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		pvcClient := newMockPvcClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 			pvcClient:  pvcClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "testDogu",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
 			},
 		}
@@ -708,20 +702,19 @@ func TestUpdatePVC(t *testing.T) {
 	t.Run("should catch panic", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		v := Validator{
-			conf:       configuration.Configuration{},
 			doguClient: doguClient,
 		}
-		exDogu := dogu{
+		exDogu := exporter.Dogu{
 			Name:    "",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
-		imDogu := dogu{
+		imDogu := exporter.Dogu{
 			Name:    "testDogu",
 			Version: "",
-			Volume: volume{
+			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
 			},
 		}
