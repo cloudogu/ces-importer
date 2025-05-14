@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-const (
-	finalMigrationKey = "TBD"
-)
-
 type ExportModeValidator interface {
 	Validate(ctx context.Context) error
 }
@@ -81,7 +77,7 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	isFinalMigration := ctx.Value(finalMigrationKey).(bool)
+	isFinalMigration := IsFinalMigration(ctx)
 	startTime := time.Now()
 	defer m.cleanup(ctx, startTime, isFinalMigration, err)
 
