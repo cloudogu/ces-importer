@@ -157,7 +157,7 @@ func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo expo
 	delete(imDoguMap, doguNginxStatic)
 	delete(imDoguMap, doguNginxIngress)
 	for key := range imDoguMap {
-		result = errors.Join(fmt.Errorf("dogu %s is installed in the importing system but not present in the exporting system  \n", key))
+		result = errors.Join(result, fmt.Errorf("dogu %s is installed in the importing system but not present in the exporting system  \n", key))
 	}
 
 	// check every started resize for errors
@@ -168,6 +168,13 @@ func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo expo
 		}
 	}
 
+	// validate components
+	result = errors.Join(result, validateComponents(imInfo, exInfo))
+
+	return result
+}
+
+func validateComponents(imInfo exporter.SystemInfo, exInfo exporter.SystemInfo) (result error) {
 	// validate components
 	imComponentsMap := make(map[string]exporter.Component)
 	for _, c := range imInfo.Components {
@@ -185,7 +192,6 @@ func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo expo
 			}
 		}
 	}
-
 	return result
 }
 
