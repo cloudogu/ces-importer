@@ -12,6 +12,8 @@
 !/migration/**/*
 !/sync/**/*
 !/systeminfo/**/*
+!/mail/**/*
+!/cmd/ces-importer/main.go
 
 # and other resources
 !build/**/*

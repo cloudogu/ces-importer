@@ -8,10 +8,12 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
@@ -26,10 +28,13 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = logging.Initialize(cfg)
+	logInitializer := logging.NewLogInitializer(cfg)
+	err = logInitializer.Initialize()
 	if err != nil {
 		panic(err)
 	}
+
+	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
@@ -47,6 +52,15 @@ func main() {
 		panic(fmt.Errorf("failed to create kube-client: %w", err))
 	}
 	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.ImporterNamespace)
+
+	globalConfig := repository.NewGlobalConfigRepository(kubernetesClient.CoreV1().ConfigMaps(cfg.ImporterNamespace))
+
+	mailSender := mail.CreateSender(
+		cfg.MailConfig,
+		cfg.ExporterHost,
+		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+		globalConfig,
+	)
 
 	ecosystemDoguClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
@@ -76,11 +90,12 @@ func main() {
 		ExportModeValidator:    exportModeValidator,
 		SystemInfoValidator:    systemInfoValidator,
 		MaintenanceModeHandler: nil,
-		MailSender:             nil,
-		LogWriter:              nil,
 		JobRunner:              nil,
 		DoguStopper:            doguStartStopper,
 		DoguStarter:            doguStartStopper,
+		LogWriter:              logWriter,
+		LogInitializer:         logInitializer,
+		MailSender:             mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 

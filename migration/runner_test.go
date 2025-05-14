@@ -26,7 +26,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, nil, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, nil, mock.Anything, mock.Anything).Return(nil)
 
 		jobLogs := io.NopCloser(strings.NewReader("test"))
 
@@ -76,7 +76,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler.EXPECT().Enable(testCtx, "", "").Return(nil)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(true, nil, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, true, nil, mock.Anything, mock.Anything).Return(nil)
 
 		jobLogs := io.NopCloser(strings.NewReader("test"))
 
@@ -164,7 +164,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
 
@@ -209,7 +209,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
 
@@ -254,7 +254,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
 
@@ -300,7 +300,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
 
@@ -347,7 +347,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		jobLogs := io.NopCloser(strings.NewReader("test"))
 
@@ -400,7 +400,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMaintenanceModeHandler.EXPECT().Disable(testCtx).Return(nil)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(true, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, true, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
 
@@ -454,7 +454,7 @@ func TestMigrator_cleanup(t *testing.T) {
 		mMaintenanceModeHandler.EXPECT().Disable(testCtx).Return(assert.AnError)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(true, runErr, "", "", startTime, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, true, runErr, startTime, mock.Anything).Return(nil)
 
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
@@ -487,7 +487,7 @@ func TestMigrator_cleanup(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, runErr, "", "", startTime, mock.Anything).Return(nil)
+		mMailSender.EXPECT().Send(testCtx, false, runErr, startTime, mock.Anything).Return(nil)
 
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(assert.AnError)
@@ -520,7 +520,7 @@ func TestMigrator_cleanup(t *testing.T) {
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
 		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(false, runErr, "", "", startTime, mock.Anything).Return(assert.AnError)
+		mMailSender.EXPECT().Send(testCtx, false, runErr, startTime, mock.Anything).Return(assert.AnError)
 
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)

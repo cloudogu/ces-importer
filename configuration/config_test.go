@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,9 @@ func TestReadConfigFromEnv(t *testing.T) {
 		t.Setenv(migrationRegularScheduleEnv, "0 4 * * *")
 		t.Setenv(migrationFinalScheduleEnv, "2025-04-03 12:34:56Z")
 		t.Setenv(importerNamespaceKeyEnv, "ecosystem")
+		t.Setenv("SMTP_SERVER", "server")
+		t.Setenv("SMTP_PORT", "1")
+		t.Setenv("SMTP_FROM", "from")
 
 		// when
 		actualCfg, err := ReadConfigFromEnv()
@@ -34,6 +38,12 @@ func TestReadConfigFromEnv(t *testing.T) {
 			MigrationRegularCron:      "0 4 * * *",
 			MigrationFinalTimestamp:   "2025-04-03 12:34:56Z",
 			ImporterNamespace:         "ecosystem",
+			MailConfig: SmtpConfig{
+				Server: "server",
+				Port:   "1",
+				From:   "from",
+				To:     []string{""},
+			},
 		}, actualCfg)
 	})
 }
@@ -51,7 +61,7 @@ func TestReadConfigFromEnv_Errors(t *testing.T) {
 		{"regular sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv}, assert.Error},
 		{"final sched unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv}, assert.Error},
 		{"namespace unset", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv}, assert.Error},
-		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv}, assert.NoError},
+		{"no errors", []string{exporterHostEnv, exporterSSHUserEnv, exporterApiKeyEnv, logLevelEnv, migrationRegularScheduleEnv, migrationFinalScheduleEnv, importerNamespaceKeyEnv, "SMTP_SERVER", "SMTP_PORT", "SMTP_FROM"}, assert.NoError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -65,4 +75,63 @@ func TestReadConfigFromEnv_Errors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSmtpConfigFromEnv(t *testing.T) {
+	t.Run("can get config from env", func(t *testing.T) {
+		_ = os.Setenv(envSmtpServer, "server")
+		_ = os.Setenv(envSmtpPort, "port")
+		_ = os.Setenv(envSmtpUsername, "username")
+		_ = os.Setenv(envSmtpPassword, "password")
+		_ = os.Setenv(envSmtpFrom, "from")
+		_ = os.Setenv(envSmtpTo, "to")
+
+		config, err := SmtpConfigFromEnv()
+		require.NoError(t, err)
+		assert.Equal(t, "server", config.Server)
+		assert.Equal(t, "port", config.Port)
+		assert.Equal(t, "username", config.Username)
+		assert.Equal(t, "password", config.Password)
+		assert.Equal(t, "from", config.From)
+		assert.Equal(t, []string{"to"}, config.To)
+	})
+
+	t.Run("fail on unset server", func(t *testing.T) {
+		_ = os.Unsetenv(envSmtpServer)
+		_ = os.Setenv(envSmtpPort, "port")
+		_ = os.Setenv(envSmtpUsername, "username")
+		_ = os.Setenv(envSmtpPassword, "password")
+		_ = os.Setenv(envSmtpFrom, "from")
+		_ = os.Setenv(envSmtpTo, "to")
+
+		_, err := SmtpConfigFromEnv()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "smtp Server address is not configured")
+	})
+
+	t.Run("fallback to 25 on unset port", func(t *testing.T) {
+		_ = os.Setenv(envSmtpServer, "server")
+		_ = os.Unsetenv(envSmtpPort)
+		_ = os.Setenv(envSmtpUsername, "username")
+		_ = os.Setenv(envSmtpPassword, "password")
+		_ = os.Setenv(envSmtpFrom, "from")
+		_ = os.Setenv(envSmtpTo, "to")
+
+		config, err := SmtpConfigFromEnv()
+		require.NoError(t, err)
+		assert.Equal(t, "25", config.Port)
+	})
+
+	t.Run("fail on unset from", func(t *testing.T) {
+		_ = os.Setenv(envSmtpServer, "server")
+		_ = os.Setenv(envSmtpPort, "port")
+		_ = os.Setenv(envSmtpUsername, "username")
+		_ = os.Setenv(envSmtpPassword, "password")
+		_ = os.Unsetenv(envSmtpFrom)
+		_ = os.Setenv(envSmtpTo, "to")
+
+		_, err := SmtpConfigFromEnv()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "smtp from is not configured")
+	})
 }

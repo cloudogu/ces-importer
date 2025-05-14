@@ -7,6 +7,25 @@ metadata:
 rules:
   # allow starting + stopping of dogus
 - apiGroups:
+    - ""
+  resources:
+    - configmaps
+  verbs:
+    - list
+    - get
+- apiGroups:
+    - ""
+  resources:
+    - pods
+  verbs:
+    - list
+- apiGroups:
+    - ""
+  resources:
+    - pods/log
+  verbs:
+    - get
+- apiGroups:
     - k8s.cloudogu.com
   resources:
     - dogus

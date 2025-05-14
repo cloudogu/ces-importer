@@ -3,6 +3,7 @@ package configuration
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
@@ -13,6 +14,15 @@ const (
 	importerNamespaceKeyEnv     = "IMPORTER_NAMESPACE"
 	migrationRegularScheduleEnv = "MIGRATION_REGULAR_SCHEDULE"
 	migrationFinalScheduleEnv   = "MIGRATION_FINAL_SCHEDULE"
+)
+
+const (
+	envSmtpServer   = "SMTP_SERVER"
+	envSmtpPort     = "SMTP_PORT"
+	envSmtpUsername = "SMTP_USERNAME"
+	envSmtpPassword = "SMTP_PASSWORD"
+	envSmtpFrom     = "SMTP_FROM"
+	envSmtpTo       = "SMTP_TO"
 )
 
 const errorFormat = "environment variable %s is not set"
@@ -49,9 +59,22 @@ type Configuration struct {
 	// Uses RFC 3339 notation f. e. "2025-04-03 12:34:56Z"
 	// This value is optional, but a final migration without this value will then be impossible.
 	MigrationFinalTimestamp string
+	// MailConfig contains the smtp configuration for the mail server to which the migration log is sent
+	MailConfig SmtpConfig
+}
+
+// SmtpConfig holds SMTP server configuration details required for sending emails.
+type SmtpConfig struct {
+	Server   string   // SMTP server address (e.g., smtp.example.com)
+	Port     string   // SMTP server port (default is "25" if not specified)
+	Username string   // Username for SMTP authentication
+	Password string   // Password for SMTP authentication
+	From     string   // Sender's email address
+	To       []string // List of recipient email addresses
 }
 
 func ReadConfigFromEnv() (Configuration, error) {
+	var err error
 	conf := Configuration{}
 
 	conf.LogLevel = os.Getenv(logLevelEnv)
@@ -91,5 +114,50 @@ func ReadConfigFromEnv() (Configuration, error) {
 		return conf, fmt.Errorf(errorFormat, importerNamespaceKeyEnv)
 	}
 
+	conf.MailConfig, err = SmtpConfigFromEnv()
+	if err != nil {
+		return conf, fmt.Errorf("failed to get smtp config: %w", err)
+	}
+
 	return conf, nil
+}
+
+// SmtpConfigFromEnv reads SMTP configuration from environment variables and returns
+// a SmtpConfig struct. Returns an error if required fields like server or from address are missing.
+//
+// Expected environment variables:
+//   - SMTP_SERVER
+//   - SMTP_PORT (optional, defaults to "25")
+//   - SMTP_USERNAME
+//   - SMTP_PASSWORD
+//   - SMTP_FROM
+//   - SMTP_TO (comma-separated list of recipient emails)
+func SmtpConfigFromEnv() (SmtpConfig, error) {
+	server := os.Getenv(envSmtpServer)
+	if server == "" {
+		return SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
+	}
+	port := os.Getenv(envSmtpPort)
+	if port == "" {
+		port = "25"
+	}
+
+	username := os.Getenv(envSmtpUsername)
+	password := os.Getenv(envSmtpPassword)
+
+	from := os.Getenv(envSmtpFrom)
+	if from == "" {
+		return SmtpConfig{}, fmt.Errorf("smtp from is not configured")
+	}
+	toAsStr := os.Getenv(envSmtpTo)
+	to := strings.Split(toAsStr, ",")
+
+	return SmtpConfig{
+		Server:   server,
+		Port:     port,
+		Username: username,
+		Password: password,
+		From:     from,
+		To:       to,
+	}, nil
 }

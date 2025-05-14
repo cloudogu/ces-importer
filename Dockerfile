@@ -17,10 +17,11 @@ COPY api api
 COPY cmd cmd
 COPY configuration configuration
 COPY cron cron
-COPY logging logging
+COPY systeminfo systeminfo
 COPY migration migration
 COPY sync sync
-COPY systeminfo systeminfo
+COPY mail mail
+COPY logging logging
 
 # Build
 RUN go mod vendor
@@ -32,13 +33,15 @@ LABEL maintainer="hello@cloudogu.com" \
       NAME="ces-importer" \
       VERSION="0.0.1"
 
+ARG USER_ID=65532
+
 RUN apk update && apk upgrade && apk --no-cache add bash openssh rsync && \
-    addgroup -S -g 65532 ces-importer && \
-    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u 65532 ces-importer
+    addgroup -S -g ${USER_ID} ces-importer && \
+    adduser -S -h /home/ces-importer -s /bin/bash -G ces-importer -u ${USER_ID} ces-importer
 
 # note that this app will start deployments that must run as root
 # use numeric IDs to avoid clash with runAsNonRoot so that k8s can validate it as non-root user
-USER 65532:65532
+USER ${USER_ID}:${USER_ID}
 
 WORKDIR /
 COPY --from=builder /app/target/ces-importer .
