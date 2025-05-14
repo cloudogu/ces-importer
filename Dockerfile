@@ -13,8 +13,8 @@ RUN go mod download
 
 # Copy the go sources
 COPY *.go .
-COPY "cmd/ces-importer/main.go" main.go
 COPY api api
+COPY cmd cmd
 COPY configuration configuration
 COPY cron cron
 COPY systeminfo systeminfo
@@ -25,7 +25,7 @@ COPY logging logging
 
 # Build
 RUN go mod vendor
-RUN go build -mod=vendor -o target/ces-importer
+RUN go build -mod=vendor -o target/ces-importer ./cmd/ces-importer
 
 
 FROM alpine:3.21.3

@@ -5,13 +5,13 @@
 !*.go
 !go.*
 !/api/**/*
+!/cmd/**/*
 !/configuration/**/*
 !/cron/**/*
-!/systeminfo/**/*
 !/logging/**/*
 !/migration/**/*
 !/sync/**/*
-!/validate/**/*
+!/systeminfo/**/*
 !/mail/**/*
 !/cmd/ces-importer/main.go
 

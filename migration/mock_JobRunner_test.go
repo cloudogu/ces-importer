@@ -3,6 +3,7 @@
 package migration
 
 import (
+	context "context"
 	io "io"
 
 	mock "github.com/stretchr/testify/mock"
@@ -21,9 +22,9 @@ func (_m *MockJobRunner) EXPECT() *MockJobRunner_Expecter {
 	return &MockJobRunner_Expecter{mock: &_m.Mock}
 }
 
-// Run provides a mock function with no fields
-func (_m *MockJobRunner) Run() (io.ReadCloser, error) {
-	ret := _m.Called()
+// Run provides a mock function with given fields: ctx
+func (_m *MockJobRunner) Run(ctx context.Context) (io.ReadCloser, error) {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Run")
@@ -31,19 +32,19 @@ func (_m *MockJobRunner) Run() (io.ReadCloser, error) {
 
 	var r0 io.ReadCloser
 	var r1 error
-	if rf, ok := ret.Get(0).(func() (io.ReadCloser, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(context.Context) (io.ReadCloser, error)); ok {
+		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func() io.ReadCloser); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) io.ReadCloser); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(io.ReadCloser)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,13 +58,14 @@ type MockJobRunner_Run_Call struct {
 }
 
 // Run is a helper method to define mock.On call
-func (_e *MockJobRunner_Expecter) Run() *MockJobRunner_Run_Call {
-	return &MockJobRunner_Run_Call{Call: _e.mock.On("Run")}
+//   - ctx context.Context
+func (_e *MockJobRunner_Expecter) Run(ctx interface{}) *MockJobRunner_Run_Call {
+	return &MockJobRunner_Run_Call{Call: _e.mock.On("Run", ctx)}
 }
 
-func (_c *MockJobRunner_Run_Call) Run(run func()) *MockJobRunner_Run_Call {
+func (_c *MockJobRunner_Run_Call) Run(run func(ctx context.Context)) *MockJobRunner_Run_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		run(args[0].(context.Context))
 	})
 	return _c
 }
@@ -73,7 +75,7 @@ func (_c *MockJobRunner_Run_Call) Return(_a0 io.ReadCloser, _a1 error) *MockJobR
 	return _c
 }
 
-func (_c *MockJobRunner_Run_Call) RunAndReturn(run func() (io.ReadCloser, error)) *MockJobRunner_Run_Call {
+func (_c *MockJobRunner_Run_Call) RunAndReturn(run func(context.Context) (io.ReadCloser, error)) *MockJobRunner_Run_Call {
 	_c.Call.Return(run)
 	return _c
 }
