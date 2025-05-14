@@ -4,24 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
 	kubv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"math"
+	"slices"
 	"time"
 )
 
 const (
 	defaultWaitSecondsBetweenRetries = 10
 	defaultMaxWaitMinutes            = 10
+	doguNginx                        = "nginx"
+	doguNginxStatic                  = "nginx-static"
+	doguNginxIngress                 = "nginx-ingress"
 )
 
 var (
 	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 	maxWaitMinutes            = defaultMaxWaitMinutes
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+	excludedDogus             = []string{
+		"monitoring",
+		"backup",
+		"registrator",
+	}
 )
 
 // client used for interacting with persistent volume claims
@@ -35,28 +44,26 @@ type pvcClient interface {
 }
 
 type systemInfoProvider interface {
-	getSystemInfo(ctx context.Context) (*systemInfo, error)
-	getExporterSystemInfo(conf configuration.Configuration, ctx context.Context) (*systemInfo, error)
+	getImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+	getExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
 }
 
 type Validator struct {
-	conf               configuration.Configuration
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
 }
 
-func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
+func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
 	return &Validator{
-		conf:               conf,
 		systemInfoProvider: p,
 		doguClient:         doguClient,
 		pvcClient:          pvcClient,
 	}, nil
 }
 
-// ValidateSystemInfo
-// validate that the importing system has the same configuration as the exporting system
+// Validate
+// validates that the importing system has the same configuration as the exporting system
 //
 // validates:
 //
@@ -65,13 +72,13 @@ func NewValidator(conf configuration.Configuration, p systemInfoProvider, doguCl
 // - components exist in correct version
 //
 // - pvcs are large enough (a resize is attempted)
-func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
+func (v *Validator) Validate(ctx context.Context) error {
 	slog.Info("Starting validation of system configuration")
-	imSystemInfo, err := v.systemInfoProvider.getSystemInfo(ctx)
+	imSystemInfo, err := v.systemInfoProvider.getImporterSystemInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get importer system info: %s", err)
 	}
-	exSystemInfo, err := v.systemInfoProvider.getExporterSystemInfo(v.conf, ctx)
+	exSystemInfo, err := v.systemInfoProvider.getExporterSystemInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get exporter system info: %s", err)
 	}
@@ -95,32 +102,62 @@ func (v *Validator) ValidateSystemInfo(ctx context.Context) error {
 // - pvcs are large enough (a resize is attempted)
 //
 // returns a formatted multierror if any error occurred
-func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, ctx context.Context) error {
+func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo exporter.SystemInfo, ctx context.Context) error {
 	//validate dogus
 	var result error
 	doguResizesStartedCounter := 0
 	c := make(chan error)
 
-	imDoguMap := make(map[string]dogu)
+	imDoguMap := make(map[string]exporter.Dogu)
 	for _, d := range imInfo.Dogus {
 		imDoguMap[d.Name] = d
 	}
 	for _, exDogu := range exInfo.Dogus {
+		// special case for excluded dogus
+		isExcluded := slices.Contains(excludedDogus, exDogu.Name)
+		if isExcluded {
+			continue
+		}
+
 		// validate that the dogu exists
-		imDogu := imDoguMap[exDogu.Name]
-		if imDogu.Name == "" {
-			result = errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
-		} else {
-			// validate that the version is correct
-			if !(imDogu.Version == exDogu.Version) {
-				result = errors.Join(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
+		imDogu, imDoguExists := imDoguMap[exDogu.Name]
+
+		isNginx := exDogu.Name == doguNginx
+		if !isNginx {
+			if !imDoguExists {
+				result = errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
 			} else {
-				// validate and update the size of the dogus pvc
-				//result = errors.Join(result, v.updatePVC(exDogu, imDogu, ctx))
-				doguResizesStartedCounter++
-				go v.updatePVC(exDogu, imDogu, ctx, c)
+				// validate that the version is correct
+				if !(imDogu.Version == exDogu.Version) {
+					result = errors.Join(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s) \n", exDogu.Name, imDogu.Version, exDogu.Version))
+				} else {
+					// validate and update the size of the dogus pvc
+					//result = errors.Join(result, v.updatePVC(exDogu, imDogu, ctx))
+					doguResizesStartedCounter++
+					go v.updatePVC(exDogu, imDogu, ctx, c)
+				}
+			}
+		} else {
+			// nginx is a special case because it has two corresponding mn dogus
+			nginxMnDogus := []string{doguNginxStatic, doguNginxIngress}
+			for _, d := range nginxMnDogus {
+				imDogu := imDoguMap[d]
+				if imDogu.Name == "" {
+					result = errors.Join(result, fmt.Errorf("dogu %s is not installed \n", d))
+				}
 			}
 		}
+
+		// delete the validated dogu from the map to later have a map of all dogus installed in the importing system not
+		// present in the exporting system
+		delete(imDoguMap, exDogu.Name)
+	}
+
+	// validate that the importing system does not have dogus installed that are not present in the exporting system
+	delete(imDoguMap, doguNginxStatic)
+	delete(imDoguMap, doguNginxIngress)
+	for key := range imDoguMap {
+		result = errors.Join(result, fmt.Errorf("dogu %s is installed in the importing system but not present in the exporting system  \n", key))
 	}
 
 	// check every started resize for errors
@@ -132,7 +169,14 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 	}
 
 	// validate components
-	imComponentsMap := make(map[string]component)
+	result = errors.Join(result, validateComponents(imInfo, exInfo))
+
+	return result
+}
+
+func validateComponents(imInfo exporter.SystemInfo, exInfo exporter.SystemInfo) (result error) {
+	// validate components
+	imComponentsMap := make(map[string]exporter.Component)
 	for _, c := range imInfo.Components {
 		imComponentsMap[c.Name] = c
 	}
@@ -148,12 +192,11 @@ func (v *Validator) doValidateSystemInfo(exInfo systemInfo, imInfo systemInfo, c
 			}
 		}
 	}
-
 	return result
 }
 
 // resize the dogus pvc if it is not large enough
-func (v *Validator) updatePVC(exDogu dogu, imDogu dogu, ctx context.Context, c chan error) {
+func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx context.Context, c chan error) {
 	// prevent endless running function when a panic occurs as the result will be awaited
 	defer func() {
 		if err := recover(); err != nil {

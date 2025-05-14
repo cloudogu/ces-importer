@@ -10,11 +10,11 @@ import (
 
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 	doguV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
-
-	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 type DoguInterface interface {
+	// List takes label and field selectors and returns the list of Dogus that match those selectors.
+	List(ctx context.Context, opts metav1.ListOptions) (result *doguV2.DoguList, err error)
 	// Get returns a single dogu CR if it exists in the k8s cluster.
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguV2.Dogu, error)
 	// UpdateSpecWithRetry tries to update the provided dogu with the given update function and returns the updated
@@ -26,16 +26,33 @@ type doguClient struct {
 	doguCli DoguInterface
 }
 
-// NewDoguDeploymentClient creates a new client that operates on dogu deployments on the importer system.
-func NewDoguDeploymentClient(doguCli DoguInterface) *doguClient {
+// NewDoguClient creates a new client that operates on dogu deployments on the importer system.
+func NewDoguClient(doguCli DoguInterface) *doguClient {
 	return &doguClient{
 		doguCli: doguCli,
 	}
 }
 
-// StopDogu stopps the given dogu in the importer system by scaling down the deployment.
-func (dc *doguClient) StopDogu(ctx context.Context, dogu exporter.Dogu) error {
-	err := dc.scaleDogu(ctx, dogu, true)
+// StopAll stopps all dogus in the importer system.
+func (dc *doguClient) StopAll(ctx context.Context) error {
+	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list all dogus: %w", err)
+	}
+
+	for _, dogu := range list.Items {
+		err := dc.startStop(ctx, dogu.Spec.Name, true)
+		if err != nil {
+			return fmt.Errorf("failed to stop dogu: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// StopDogu stopps the given dogu in the importer system.
+func (dc *doguClient) StopDogu(ctx context.Context, doguName string) error {
+	err := dc.startStop(ctx, doguName, true)
 	if err != nil {
 		return fmt.Errorf("failed to stop dogu: %w", err)
 	}
@@ -43,9 +60,26 @@ func (dc *doguClient) StopDogu(ctx context.Context, dogu exporter.Dogu) error {
 	return nil
 }
 
-// StartDogu starts the given dogu in the importer system by scaling up the deployment.
-func (dc *doguClient) StartDogu(ctx context.Context, dogu exporter.Dogu) error {
-	err := dc.scaleDogu(ctx, dogu, false)
+// StartAll starts all dogus in the importer system.
+func (dc *doguClient) StartAll(ctx context.Context) error {
+	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list all dogus: %w", err)
+	}
+
+	for _, dogu := range list.Items {
+		err := dc.startStop(ctx, dogu.Spec.Name, false)
+		if err != nil {
+			return fmt.Errorf("failed to start dogu: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// StartDogu starts the given dogu in the importer system.
+func (dc *doguClient) StartDogu(ctx context.Context, doguName string) error {
+	err := dc.startStop(ctx, doguName, false)
 	if err != nil {
 		return fmt.Errorf("failed to start dogu: %w", err)
 	}
@@ -53,8 +87,8 @@ func (dc *doguClient) StartDogu(ctx context.Context, dogu exporter.Dogu) error {
 	return nil
 }
 
-func (dc *doguClient) scaleDogu(ctx context.Context, exporterDogu exporter.Dogu, shouldStop bool) error {
-	fullyQualifiedDoguName, err := cescommons.QualifiedNameFromString(exporterDogu.Name)
+func (dc *doguClient) startStop(ctx context.Context, exporterDoguName string, shouldStop bool) error {
+	fullyQualifiedDoguName, err := cescommons.QualifiedNameFromString(exporterDoguName)
 	if err != nil {
 		return err
 	}

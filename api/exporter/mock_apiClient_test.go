@@ -4,7 +4,6 @@ package exporter
 
 import (
 	context "context"
-	io "io"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -77,67 +76,6 @@ func (_c *mockApiClient_DoGetRequest_Call) Return(result []byte, err error) *moc
 }
 
 func (_c *mockApiClient_DoGetRequest_Call) RunAndReturn(run func(context.Context, string) ([]byte, error)) *mockApiClient_DoGetRequest_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DoPostRequest provides a mock function with given fields: ctx, exporterUrl, body, pathParams
-func (_m *mockApiClient) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) ([]byte, error) {
-	ret := _m.Called(ctx, exporterUrl, body, pathParams)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DoPostRequest")
-	}
-
-	var r0 []byte
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, []string) ([]byte, error)); ok {
-		return rf(ctx, exporterUrl, body, pathParams)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, []string) []byte); ok {
-		r0 = rf(ctx, exporterUrl, body, pathParams)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, io.Reader, []string) error); ok {
-		r1 = rf(ctx, exporterUrl, body, pathParams)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// mockApiClient_DoPostRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DoPostRequest'
-type mockApiClient_DoPostRequest_Call struct {
-	*mock.Call
-}
-
-// DoPostRequest is a helper method to define mock.On call
-//   - ctx context.Context
-//   - exporterUrl string
-//   - body io.Reader
-//   - pathParams []string
-func (_e *mockApiClient_Expecter) DoPostRequest(ctx interface{}, exporterUrl interface{}, body interface{}, pathParams interface{}) *mockApiClient_DoPostRequest_Call {
-	return &mockApiClient_DoPostRequest_Call{Call: _e.mock.On("DoPostRequest", ctx, exporterUrl, body, pathParams)}
-}
-
-func (_c *mockApiClient_DoPostRequest_Call) Run(run func(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string)) *mockApiClient_DoPostRequest_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(io.Reader), args[3].([]string))
-	})
-	return _c
-}
-
-func (_c *mockApiClient_DoPostRequest_Call) Return(result []byte, err error) *mockApiClient_DoPostRequest_Call {
-	_c.Call.Return(result, err)
-	return _c
-}
-
-func (_c *mockApiClient_DoPostRequest_Call) RunAndReturn(run func(context.Context, string, io.Reader, []string) ([]byte, error)) *mockApiClient_DoPostRequest_Call {
 	_c.Call.Return(run)
 	return _c
 }
