@@ -23,9 +23,9 @@ var createWriter = func() (io.Writer, error) {
 	return io.MultiWriter(os.Stderr, logFile), nil
 }
 
-func Initialize(conf configuration.Configuration) error {
+func Initialize(conf configuration.Coordinator) error {
 	var level slog.Level
-	if err := level.UnmarshalText([]byte(conf.LogLevel)); err != nil {
+	if err := level.UnmarshalText([]byte(conf.Logging.Level)); err != nil {
 		slog.New(slog.NewTextHandler(os.Stderr, nil)).
 			Error("Error parsing log level. Setting to INFO.", "err", err)
 		level = slog.LevelInfo

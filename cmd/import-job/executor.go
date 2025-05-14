@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/sync"
-	"net/http"
 )
 
 type dataSyncer interface {
@@ -28,7 +26,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 		return nil, fmt.Errorf("failed to read job configuration: %w", err)
 	}
 
-	_ = exporter.NewClient(jobConfig.API.ExporterApiKey, http.DefaultClient)
+	//_ = exporter.NewClient(jobConfig.API.ExporterApiKey, http.DefaultClient)
 
 	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
 

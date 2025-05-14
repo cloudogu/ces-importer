@@ -23,7 +23,7 @@ func Test_configureLogger(t *testing.T) {
 		defer func() { createWriter = originalWriter }()
 
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "banana"}
+		brokenConfig := configuration.Coordinator{Logging: configuration.Logging{Level: "banana"}}
 
 		// when
 		err := Initialize(brokenConfig)
@@ -43,7 +43,7 @@ func Test_configureLogger(t *testing.T) {
 
 		defer func() { createWriter = originalWriter }()
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "ERROR"}
+		brokenConfig := configuration.Coordinator{Logging: configuration.Logging{Level: "ERROR"}}
 
 		// when
 		err := Initialize(brokenConfig)
@@ -64,7 +64,7 @@ func Test_configureLogger(t *testing.T) {
 		defer func() { createWriter = originalWriter }()
 
 		// given
-		config := configuration.Configuration{LogLevel: "WARN"}
+		config := configuration.Coordinator{Logging: configuration.Logging{Level: "WARN"}}
 
 		// when
 		err := Initialize(config)
