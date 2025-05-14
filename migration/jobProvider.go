@@ -138,7 +138,7 @@ type jobSpec struct {
 	jobConfigMap     string
 }
 
-type jobProviderDependencies struct {
+type JobProviderDependencies struct {
 	JobContainerConfig configuration.JobContainer
 	SSHConfig          configuration.SSH
 	APIKey             string
@@ -146,7 +146,7 @@ type jobProviderDependencies struct {
 	PVCClient          pvcClient
 }
 
-func newJobProvider(deps jobProviderDependencies) (*jobProvider, error) {
+func newJobProvider(deps JobProviderDependencies) (*jobProvider, error) {
 	jSpec, err := createJobSpec(deps.JobContainerConfig, deps.APIKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create specification for job: %w", err)

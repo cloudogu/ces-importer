@@ -13,7 +13,7 @@ func TestNewJobProvider(t *testing.T) {
 	t.Run("should create job provider successfully", func(t *testing.T) {
 		// given
 		pvcClient := newMockPvcClient(t)
-		deps := jobProviderDependencies{
+		deps := JobProviderDependencies{
 			JobContainerConfig: configuration.JobContainer{
 				JobConfigMap:      "test-config-map",
 				JobServiceAccount: "test-service-account",
@@ -62,7 +62,7 @@ func TestNewJobProvider(t *testing.T) {
 	t.Run("should return error when createJobSpec fails", func(t *testing.T) {
 		// given
 		pvcClient := newMockPvcClient(t)
-		deps := jobProviderDependencies{
+		deps := JobProviderDependencies{
 			JobContainerConfig: configuration.JobContainer{
 				JobConfigMap:      "test-config-map",
 				JobServiceAccount: "test-service-account",

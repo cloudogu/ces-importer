@@ -16,10 +16,10 @@ var _ JobRunner = JobService{}
 
 type getStreamerFunc func(jobName string, options *corev1.PodLogOptions) (streamer, error)
 
-type getWatcherFunc func(resourceVersion string) (watchAPI.Interface, error)
+type getWatcherFunc func(ctx context.Context, resourceVersion string) (watchAPI.Interface, error)
 
 type JobServiceDependencies struct {
-	jobProviderDependencies
+	JobProviderDependencies
 	JobClient jobClient
 	PodClient podClient
 }
@@ -31,8 +31,16 @@ type JobService struct {
 	getStreamer getStreamerFunc
 }
 
+type watchAdapter struct {
+	watchFunc func(ctx context.Context, opts metav1.ListOptions) (watchAPI.Interface, error)
+}
+
+func (w watchAdapter) WatchWithContext(ctx context.Context, options metav1.ListOptions) (watchAPI.Interface, error) {
+	return w.watchFunc(ctx, options)
+}
+
 func NewJobService(deps JobServiceDependencies) (*JobService, error) {
-	provider, err := newJobProvider(deps.jobProviderDependencies)
+	provider, err := newJobProvider(deps.JobProviderDependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create job provider: %w", err)
 	}
@@ -69,8 +77,13 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 }
 
 func createGetWatcherFunc(jobClient jobClient) getWatcherFunc {
-	return func(resourceVersion string) (watchAPI.Interface, error) {
-		return watch.NewRetryWatcher(resourceVersion, jobClient)
+	return func(ctx context.Context, resourceVersion string) (watchAPI.Interface, error) {
+
+		wrapper := watchAdapter{
+			watchFunc: jobClient.Watch,
+		}
+
+		return watch.NewRetryWatcherWithContext(ctx, resourceVersion, wrapper)
 	}
 }
 
@@ -95,7 +108,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 		jobLogs = logs
 	}()
 
-	watcher, err := j.getWatcher(jobResource.GetResourceVersion())
+	watcher, err := j.getWatcher(ctx, jobResource.GetResourceVersion())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher for job %s: %w", jobResource.GetName(), err)
 	}
