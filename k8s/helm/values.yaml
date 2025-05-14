@@ -60,6 +60,11 @@ config:
     # users.
     # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
     finalSchedule: "2025-04-03 12:34:56Z"
+    # ChangeFQDN triggers a fqdn change
+    # the certificates and the fqdn get migrateted from exporter to import site
+    # this is only taken into account when the job runs as final migration
+    # Default: False
+    changeFQDN: false
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"

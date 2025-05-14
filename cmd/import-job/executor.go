@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	migration "github.com/cloudogu/ces-importer/migration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
 
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
@@ -22,11 +23,14 @@ type dataSyncer interface {
 
 type configSyncer interface {
 	SyncConfig(ctx context.Context) error
+	SyncCertificates(ctx context.Context) error
+	ChangeFQDN(ctx context.Context) error
 }
 
 type ImportExecutor struct {
 	configSyncer
 	dataSyncer
+	coordinator configuration.Coordinator
 }
 
 func NewImportExecutor() (*ImportExecutor, error) {
@@ -63,8 +67,14 @@ func NewImportExecutor() (*ImportExecutor, error) {
 
 	cs := migrationConfig.NewConfigImporter(jobConfig.ExporterHost, exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
+	co, err := configuration.ReadCoordinatorConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get coordinator configuration: %w", err)
+	}
+
 	return &ImportExecutor{
 		configSyncer: cs,
+		coordinator:  co,
 	}, nil
 }
 
@@ -77,6 +87,17 @@ func (j ImportExecutor) Start(ctx context.Context) error {
 	err = j.dataSyncer.SyncData(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync data: %w", err)
+	}
+
+	if j.coordinator.Migration.ChangeFQDN && migration.IsFinalMigration(ctx) {
+		err = j.configSyncer.SyncCertificates(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to sync certificates in final migration: %w", err)
+		}
+		err = j.configSyncer.ChangeFQDN(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to change fqdn in final migration: %w", err)
+		}
 	}
 
 	return nil

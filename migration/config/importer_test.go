@@ -295,3 +295,83 @@ func TestMatchesAnyKeyByPattern(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigImporter_SyncCertificates(t *testing.T) {
+	testCtx := context.Background()
+
+	t.Run("should import the certificates", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "ignoredkey", Value: "ignoredvalue"},
+				{Key: "fqdn", Value: "https://test.ces.importer.de"},
+				{Key: "certificate/server.crt", Value: "https://test.ces.importer.de"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalCertificates(testCtx, cfg.GlobalConfig).Return(nil)
+
+		ci := &ConfigImporter{
+			getter:               mGetter,
+			globalConfigImporter: mockGci,
+		}
+
+		err := ci.SyncCertificates(testCtx)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("should fail to import the certificates on error in getter", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, assert.AnError)
+
+		mockGci := newMockGlobalConfigImporter(t)
+
+		ci := &ConfigImporter{
+			getter:               mGetter,
+			globalConfigImporter: mockGci,
+		}
+
+		err := ci.SyncCertificates(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to get configuration from exporter:")
+	})
+
+	t.Run("should fail to import the certificates on error in global config", func(t *testing.T) {
+		cfg := &configuration{
+			GlobalConfig: []keyValue{
+				{Key: "key1", Value: "value1"},
+				{Key: "key2", Value: "value2"},
+			},
+		}
+
+		mGetter := newMockConfigGetter(t)
+		mGetter.EXPECT().GetConfig(testCtx).Return(cfg, nil)
+
+		mockGci := newMockGlobalConfigImporter(t)
+		mockGci.EXPECT().importGlobalCertificates(testCtx, cfg.GlobalConfig).Return(assert.AnError)
+
+		ci := &ConfigImporter{
+			getter:               mGetter,
+			globalConfigImporter: mockGci,
+		}
+
+		err := ci.SyncCertificates(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to import global certificates:")
+	})
+}

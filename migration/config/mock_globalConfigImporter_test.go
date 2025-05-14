@@ -21,6 +21,53 @@ func (_m *mockGlobalConfigImporter) EXPECT() *mockGlobalConfigImporter_Expecter 
 	return &mockGlobalConfigImporter_Expecter{mock: &_m.Mock}
 }
 
+// importGlobalCertificates provides a mock function with given fields: ctx, config
+func (_m *mockGlobalConfigImporter) importGlobalCertificates(ctx context.Context, config globalConfig) error {
+	ret := _m.Called(ctx, config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for importGlobalCertificates")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, globalConfig) error); ok {
+		r0 = rf(ctx, config)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// mockGlobalConfigImporter_importGlobalCertificates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'importGlobalCertificates'
+type mockGlobalConfigImporter_importGlobalCertificates_Call struct {
+	*mock.Call
+}
+
+// importGlobalCertificates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - config globalConfig
+func (_e *mockGlobalConfigImporter_Expecter) importGlobalCertificates(ctx interface{}, config interface{}) *mockGlobalConfigImporter_importGlobalCertificates_Call {
+	return &mockGlobalConfigImporter_importGlobalCertificates_Call{Call: _e.mock.On("importGlobalCertificates", ctx, config)}
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalCertificates_Call) Run(run func(ctx context.Context, config globalConfig)) *mockGlobalConfigImporter_importGlobalCertificates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(globalConfig))
+	})
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalCertificates_Call) Return(_a0 error) *mockGlobalConfigImporter_importGlobalCertificates_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalCertificates_Call) RunAndReturn(run func(context.Context, globalConfig) error) *mockGlobalConfigImporter_importGlobalCertificates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // importGlobalConfig provides a mock function with given fields: ctx, config
 func (_m *mockGlobalConfigImporter) importGlobalConfig(ctx context.Context, config globalConfig) error {
 	ret := _m.Called(ctx, config)
@@ -64,6 +111,53 @@ func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) Return(_a0 error) *m
 }
 
 func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) RunAndReturn(run func(context.Context, globalConfig) error) *mockGlobalConfigImporter_importGlobalConfig_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// importGlobalFQDN provides a mock function with given fields: ctx, config
+func (_m *mockGlobalConfigImporter) importGlobalFQDN(ctx context.Context, config globalConfig) error {
+	ret := _m.Called(ctx, config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for importGlobalFQDN")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, globalConfig) error); ok {
+		r0 = rf(ctx, config)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// mockGlobalConfigImporter_importGlobalFQDN_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'importGlobalFQDN'
+type mockGlobalConfigImporter_importGlobalFQDN_Call struct {
+	*mock.Call
+}
+
+// importGlobalFQDN is a helper method to define mock.On call
+//   - ctx context.Context
+//   - config globalConfig
+func (_e *mockGlobalConfigImporter_Expecter) importGlobalFQDN(ctx interface{}, config interface{}) *mockGlobalConfigImporter_importGlobalFQDN_Call {
+	return &mockGlobalConfigImporter_importGlobalFQDN_Call{Call: _e.mock.On("importGlobalFQDN", ctx, config)}
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalFQDN_Call) Run(run func(ctx context.Context, config globalConfig)) *mockGlobalConfigImporter_importGlobalFQDN_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(globalConfig))
+	})
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalFQDN_Call) Return(_a0 error) *mockGlobalConfigImporter_importGlobalFQDN_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_importGlobalFQDN_Call) RunAndReturn(run func(context.Context, globalConfig) error) *mockGlobalConfigImporter_importGlobalFQDN_Call {
 	_c.Call.Return(run)
 	return _c
 }

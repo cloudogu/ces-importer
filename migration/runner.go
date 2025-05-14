@@ -2,6 +2,7 @@ package migration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -94,7 +95,7 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 
 	startTime := time.Now()
 	defer func() {
-		m.cleanup(ctx, startTime, isFinalMigration, err)
+		err = m.cleanup(ctx, startTime, isFinalMigration, err, recover())
 	}()
 
 	err = m.exportModeValidator.Validate(ctx)
@@ -133,19 +134,30 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 	return
 }
 
-func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigration bool, runError error) {
-	if runError != nil && isFinalMigration {
+func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigration bool, runError error, runPanic any) error {
+	retError := runError
+	if (runError != nil || runPanic != nil) && isFinalMigration {
 		if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
+			retError = errors.Join(runError, err)
 			slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
 		}
 	}
 
 	if err := m.doguStarter.StartAll(ctx); err != nil {
+		retError = errors.Join(runError, err)
 		slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
 	}
 
 	endTime := time.Now()
 	if err := m.mailSender.Send(isFinalMigration, runError, "", "", startTime, endTime); err != nil {
+		retError = errors.Join(runError, err)
 		slog.Error(fmt.Sprintf("failed to send mail: %s", err.Error()))
 	}
+
+	// because recover() catches the panic it needs to be rethrown
+	if runPanic != nil {
+		panic(runPanic)
+	}
+
+	return retError
 }
