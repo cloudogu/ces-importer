@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// endpointMaintenanceMode contains the endpoint which returns data which describe the current
+	// endpointMaintenanceMode contains the endpoint to set and get the maintenance mode of the exporter system.
 	endpointMaintenanceMode = "/maintenance/mode"
 )
 
