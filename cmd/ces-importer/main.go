@@ -13,12 +13,9 @@ import (
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
-	"io"
 	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
-	"net/smtp"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -30,13 +27,7 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	logInitializer := logging.NewLogInitializer(
-		func(name string, flag int, perm os.FileMode) (logging.File, error) {
-			return os.OpenFile(name, flag, perm)
-		},
-		io.MultiWriter,
-		cfg,
-	)
+	logInitializer := logging.NewLogInitializer(cfg)
 	err = logInitializer.Initialize()
 	if err != nil {
 		panic(err)
@@ -44,18 +35,10 @@ func main() {
 
 	mailSender := mail.CreateSender(
 		cfg.MailConfig,
-		smtp.SendMail,
-		os.ReadFile,
 		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
 	)
 
-	logWriter := logging.NewWriter(
-		logging.PathJobLogFile,
-		io.Copy,
-		func(name string, flag int, perm os.FileMode) (logging.File, error) {
-			return os.OpenFile(name, flag, perm)
-		},
-	)
+	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)

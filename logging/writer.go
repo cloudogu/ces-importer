@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	"os"
 )
 
 const (
@@ -15,11 +16,13 @@ type Writer struct {
 	openFile osOpenFile
 }
 
-func NewWriter(path string, copy ioCopy, openFile osOpenFile) *Writer {
+func NewWriter(path string) *Writer {
 	return &Writer{
-		path:     path,
-		copy:     copy,
-		openFile: openFile,
+		path: path,
+		copy: io.Copy,
+		openFile: func(name string, flag int, perm os.FileMode) (File, error) {
+			return os.OpenFile(name, flag, perm)
+		},
 	}
 }
 
@@ -30,7 +33,7 @@ func (w Writer) Write(readCloser io.ReadCloser) error {
 
 	logFile, err := w.openFile(w.path, logFilesMode, logFilesPerm)
 	if err != nil {
-		return fmt.Errorf("failed to create log file: %w", err)
+		return fmt.Errorf("failed to open log file: %w", err)
 	}
 	defer func() {
 		_ = logFile.Close()

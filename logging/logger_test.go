@@ -28,15 +28,13 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer(
-			func(name string, flag int, perm os.FileMode) (File, error) {
-				return mockOpen.Execute(name, flag, perm)
-			},
-			func(writers ...io.Writer) io.Writer {
-				return mockWrite.Execute(writers...)
-			},
-			brokenConfig,
-		)
+		initializer := NewLogInitializer(brokenConfig)
+		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+			return mockOpen.Execute(name, flag, perm)
+		}
+		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
+			return mockWrite.Execute(writers...)
+		}
 		err := initializer.Initialize()
 		require.NoError(t, err)
 
@@ -55,18 +53,16 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite := newMockCreateMultiWriter(t)
 
 		// when
-		initializer := NewLogInitializer(
-			func(name string, flag int, perm os.FileMode) (File, error) {
-				return mockOpen.Execute(name, flag, perm)
-			},
-			func(writers ...io.Writer) io.Writer {
-				return mockWrite.Execute(writers...)
-			},
-			brokenConfig,
-		)
+		initializer := NewLogInitializer(brokenConfig)
+		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+			return mockOpen.Execute(name, flag, perm)
+		}
+		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
+			return mockWrite.Execute(writers...)
+		}
 		err := initializer.Initialize()
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to create app log file: testerror")
+		assert.Contains(t, err.Error(), "failed to open app log file: testerror")
 
 		// then
 		assert.True(t, slog.Default().Enabled(testCtx, slog.LevelError))
@@ -85,15 +81,13 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer(
-			func(name string, flag int, perm os.FileMode) (File, error) {
-				return mockOpen.Execute(name, flag, perm)
-			},
-			func(writers ...io.Writer) io.Writer {
-				return mockWrite.Execute(writers...)
-			},
-			brokenConfig,
-		)
+		initializer := NewLogInitializer(brokenConfig)
+		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+			return mockOpen.Execute(name, flag, perm)
+		}
+		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
+			return mockWrite.Execute(writers...)
+		}
 		err := initializer.Initialize()
 		require.NoError(t, err)
 
@@ -114,15 +108,13 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer(
-			func(name string, flag int, perm os.FileMode) (File, error) {
-				return mockOpen.Execute(name, flag, perm)
-			},
-			func(writers ...io.Writer) io.Writer {
-				return mockWrite.Execute(writers...)
-			},
-			config,
-		)
+		initializer := NewLogInitializer(config)
+		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+			return mockOpen.Execute(name, flag, perm)
+		}
+		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
+			return mockWrite.Execute(writers...)
+		}
 		err := initializer.Initialize()
 		require.NoError(t, err)
 

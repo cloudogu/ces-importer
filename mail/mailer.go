@@ -61,11 +61,11 @@ type Sender struct {
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config SmtpConfig, senderService SenderService, readFile OsReadFile, attachments []string) *Sender {
+func CreateSender(config SmtpConfig, attachments []string) *Sender {
 	return &Sender{
 		config,
-		senderService,
-		readFile,
+		smtp.SendMail,
+		os.ReadFile,
 		attachments,
 	}
 }

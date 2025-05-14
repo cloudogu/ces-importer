@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
+	"io"
 	"log/slog"
 	"os"
 )
@@ -19,10 +20,12 @@ type LogInitializer struct {
 	config         configuration.Configuration
 }
 
-func NewLogInitializer(open osOpenFile, multiWriter createMultiWriter, cfg configuration.Configuration) *LogInitializer {
+func NewLogInitializer(cfg configuration.Configuration) *LogInitializer {
 	return &LogInitializer{
-		open:           open,
-		newMultiWriter: multiWriter,
+		open: func(name string, flag int, perm os.FileMode) (File, error) {
+			return os.OpenFile(name, flag, perm)
+		},
+		newMultiWriter: io.MultiWriter,
 		config:         cfg,
 	}
 }
@@ -37,7 +40,7 @@ func (li LogInitializer) Initialize() error {
 
 	logFile, err := li.open(PathAppLogFile, logFilesMode, logFilesPerm)
 	if err != nil {
-		return fmt.Errorf("failed to create app log file: %w", err)
+		return fmt.Errorf("failed to open app log file: %w", err)
 	}
 
 	multiWriter := li.newMultiWriter(os.Stderr, logFile)
