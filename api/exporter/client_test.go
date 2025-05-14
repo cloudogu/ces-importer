@@ -31,10 +31,14 @@ func Test_client_DoGetRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := &client{
+			baseUrl:    server.URL,
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
-		actualBytes, err := sut.DoGetRequest(testCtx, server.URL)
+		actualBytes, err := sut.DoGetRequest(testCtx, "")
 
 		// then
 		require.NoError(t, err)
@@ -43,14 +47,18 @@ func Test_client_DoGetRequest(t *testing.T) {
 	t.Run("should error on invalid URL", func(t *testing.T) {
 		// given
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := &client{
+			baseUrl:    "pc:/h\u0012",
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
-		_, err := sut.DoGetRequest(testCtx, "pc:/h\x12")
+		_, err := sut.DoGetRequest(testCtx, "")
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to create request to pc:/h\x12: parse")
+		assert.ErrorContains(t, err, "failed to create request url:")
 	})
 	t.Run("should error non-OK status code", func(t *testing.T) {
 		// given
@@ -65,7 +73,11 @@ func Test_client_DoGetRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := &client{
+			baseUrl:    server.URL,
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
 		_, err := sut.DoGetRequest(testCtx, server.URL)
@@ -75,4 +87,71 @@ func Test_client_DoGetRequest(t *testing.T) {
 		assert.ErrorContains(t, err, "received unexpected response to")
 		assert.ErrorContains(t, err, "oh noez, something bad happened")
 	})
+}
+
+func Test_NewClient(t *testing.T) {
+	tests := []struct {
+		name       string
+		hostName   string
+		apiKey     string
+		httpClient requestExecuter
+		expected   *client
+	}{
+		{
+			name:       "valid inputs",
+			hostName:   "example.com",
+			apiKey:     "validApiKey",
+			httpClient: &http.Client{},
+			expected: &client{
+				baseUrl:    "https://example.com",
+				apiKey:     "validApiKey",
+				httpClient: &http.Client{},
+			},
+		},
+		{
+			name:       "empty hostName",
+			hostName:   "",
+			apiKey:     "someApiKey",
+			httpClient: &http.Client{},
+			expected: &client{
+				baseUrl:    "https://",
+				apiKey:     "someApiKey",
+				httpClient: &http.Client{},
+			},
+		},
+		{
+			name:       "empty API key",
+			hostName:   "example.com",
+			apiKey:     "",
+			httpClient: &http.Client{},
+			expected: &client{
+				baseUrl:    "https://example.com",
+				apiKey:     "",
+				httpClient: &http.Client{},
+			},
+		},
+		{
+			name:       "nil httpClient",
+			hostName:   "example.com",
+			apiKey:     "validApiKey",
+			httpClient: nil,
+			expected: &client{
+				baseUrl:    "https://example.com",
+				apiKey:     "validApiKey",
+				httpClient: nil,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// when
+			actual := NewClient(tc.hostName, tc.apiKey, tc.httpClient)
+
+			// then
+			assert.Equal(t, tc.expected.baseUrl, actual.baseUrl)
+			assert.Equal(t, tc.expected.apiKey, actual.apiKey)
+			assert.Equal(t, tc.expected.httpClient, actual.httpClient)
+		})
+	}
 }

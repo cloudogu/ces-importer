@@ -84,6 +84,65 @@ func (_c *MockDoguInterface_Get_Call) RunAndReturn(run func(context.Context, str
 	return _c
 }
 
+// List provides a mock function with given fields: ctx, opts
+func (_m *MockDoguInterface) List(ctx context.Context, opts v1.ListOptions) (*v2.DoguList, error) {
+	ret := _m.Called(ctx, opts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 *v2.DoguList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) (*v2.DoguList, error)); ok {
+		return rf(ctx, opts)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, v1.ListOptions) *v2.DoguList); ok {
+		r0 = rf(ctx, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v2.DoguList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, v1.ListOptions) error); ok {
+		r1 = rf(ctx, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDoguInterface_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type MockDoguInterface_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - opts v1.ListOptions
+func (_e *MockDoguInterface_Expecter) List(ctx interface{}, opts interface{}) *MockDoguInterface_List_Call {
+	return &MockDoguInterface_List_Call{Call: _e.mock.On("List", ctx, opts)}
+}
+
+func (_c *MockDoguInterface_List_Call) Run(run func(ctx context.Context, opts v1.ListOptions)) *MockDoguInterface_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(v1.ListOptions))
+	})
+	return _c
+}
+
+func (_c *MockDoguInterface_List_Call) Return(result *v2.DoguList, err error) *MockDoguInterface_List_Call {
+	_c.Call.Return(result, err)
+	return _c
+}
+
+func (_c *MockDoguInterface_List_Call) RunAndReturn(run func(context.Context, v1.ListOptions) (*v2.DoguList, error)) *MockDoguInterface_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateSpecWithRetry provides a mock function with given fields: ctx, dogu, updateFunc, opts
 func (_m *MockDoguInterface) UpdateSpecWithRetry(ctx context.Context, dogu *v2.Dogu, updateFunc func(v2.DoguSpec) v2.DoguSpec, opts v1.UpdateOptions) (*v2.Dogu, error) {
 	ret := _m.Called(ctx, dogu, updateFunc, opts)
