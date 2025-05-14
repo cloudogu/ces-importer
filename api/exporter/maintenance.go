@@ -34,7 +34,6 @@ type MaintenanceModeStatus struct {
 
 type MaintenanceModeService struct {
 	apiClient
-	serviceURL string
 }
 
 // NewMaintenanceModeService creates a new maintenance service for the given exporter API client.
