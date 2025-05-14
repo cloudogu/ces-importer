@@ -61,37 +61,14 @@ func main() {
 
 	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
-	k8sRestConfig, err := ctrl.GetConfig()
-	if err != nil {
-		panic(fmt.Errorf("failed to read kube config: %w", err))
-	}
+	doguStartStopper := importer.NewDoguClient(k8sClientSet.doguClient)
 
-	kubernetesClient, err := kubernetes.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create kube-client: %w", err))
-	}
-	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.Namespace)
-
-	ecosystemDoguClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create dogu client: %w", err))
-	}
-	doguClient := ecosystemDoguClient.Dogus(cfg.Namespace)
-
-	ecosystemComponentClient, err := componentEcoClient.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create component client: %w", err))
-	}
-	componentClient := ecosystemComponentClient.Components(cfg.Namespace)
-
-	doguStartStopper := importer.NewDoguClient(doguClient)
-
-	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(componentClient, doguClient, systemInfoApiClient)
+	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.componentClient, k8sClientSet.doguClient, systemInfoApiClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
 	}
 
-	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, doguClient, pvcClient)
+	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create systeminfo validator: %w", err))
 	}
@@ -133,9 +110,11 @@ func createAPIService(apiCfg configuration.API) *exporter.Service {
 }
 
 type k8sClients struct {
-	pvcClient corev1.PersistentVolumeClaimInterface
-	podClient corev1.PodInterface
-	jobClient batchv1.JobInterface
+	pvcClient       corev1.PersistentVolumeClaimInterface
+	podClient       corev1.PodInterface
+	jobClient       batchv1.JobInterface
+	doguClient      ecoSystemV2.DoguInterface
+	componentClient componentEcoClient.ComponentInterface
 }
 
 func createK8Sclientset(namespace string) (k8sClients, error) {
@@ -155,9 +134,25 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
+	ecoSystemClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return k8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
+	}
+
+	k8sDoguClient := ecoSystemClient.Dogus(namespace)
+
+	v1Alpha1Client, err := componentEcoClient.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return k8sClients{}, fmt.Errorf("failed to create component client: %w", err)
+	}
+
+	k8sComponentClient := v1Alpha1Client.Components(namespace)
+
 	return k8sClients{
-		pvcClient: k8sPVCClient,
-		podClient: k8sPodClient,
-		jobClient: k8sJobClient,
+		pvcClient:       k8sPVCClient,
+		podClient:       k8sPodClient,
+		jobClient:       k8sJobClient,
+		doguClient:      k8sDoguClient,
+		componentClient: k8sComponentClient,
 	}, nil
 }
