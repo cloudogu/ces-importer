@@ -64,7 +64,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 	t.Run("should run final migration", func(t *testing.T) {
 		testCtx := context.Background()
-		testCtx = context.WithValue(testCtx, finalMigrationKey, true)
+		testCtx = SetFinalMigration(testCtx)
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
@@ -387,7 +387,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 	t.Run("should fail to run final migration for error enabling maintenance-mode", func(t *testing.T) {
 		testCtx := context.Background()
-		testCtx = context.WithValue(testCtx, finalMigrationKey, true)
+		testCtx = SetFinalMigration(testCtx)
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
