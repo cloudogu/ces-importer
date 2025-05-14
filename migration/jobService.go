@@ -167,5 +167,5 @@ func handleWatchError(event watchAPI.Event) (err error) {
 		return fmt.Errorf("failed to cast event object to status: %T", event.Object)
 	}
 
-	return fmt.Errorf(status.Message)
+	return fmt.Errorf("%s", status.Message)
 }
