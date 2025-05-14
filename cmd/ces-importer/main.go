@@ -13,6 +13,7 @@ import (
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	"log/slog"
 	"net/http"
@@ -33,11 +34,6 @@ func main() {
 		panic(err)
 	}
 
-	mailSender := mail.CreateSender(
-		cfg.MailConfig,
-		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
-	)
-
 	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
@@ -56,6 +52,15 @@ func main() {
 		panic(fmt.Errorf("failed to create kube-client: %w", err))
 	}
 	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.ImporterNamespace)
+
+	globalConfig := repository.NewGlobalConfigRepository(kubernetesClient.CoreV1().ConfigMaps(cfg.ImporterNamespace))
+
+	mailSender := mail.CreateSender(
+		cfg.MailConfig,
+		cfg.ExporterHost,
+		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+		globalConfig,
+	)
 
 	ecosystemDoguClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {

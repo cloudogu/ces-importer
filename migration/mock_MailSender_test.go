@@ -3,6 +3,7 @@
 package migration
 
 import (
+	context "context"
 	time "time"
 
 	mock "github.com/stretchr/testify/mock"
@@ -21,17 +22,17 @@ func (_m *MockMailSender) EXPECT() *MockMailSender_Expecter {
 	return &MockMailSender_Expecter{mock: &_m.Mock}
 }
 
-// Send provides a mock function with given fields: isFinal, migrationResult, source, target, startTime, endTime
-func (_m *MockMailSender) Send(isFinal bool, migrationResult error, source string, target string, startTime time.Time, endTime time.Time) error {
-	ret := _m.Called(isFinal, migrationResult, source, target, startTime, endTime)
+// Send provides a mock function with given fields: ctx, isFinal, migrationResult, startTime, endTime
+func (_m *MockMailSender) Send(ctx context.Context, isFinal bool, migrationResult error, startTime time.Time, endTime time.Time) error {
+	ret := _m.Called(ctx, isFinal, migrationResult, startTime, endTime)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Send")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(bool, error, string, string, time.Time, time.Time) error); ok {
-		r0 = rf(isFinal, migrationResult, source, target, startTime, endTime)
+	if rf, ok := ret.Get(0).(func(context.Context, bool, error, time.Time, time.Time) error); ok {
+		r0 = rf(ctx, isFinal, migrationResult, startTime, endTime)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -45,19 +46,18 @@ type MockMailSender_Send_Call struct {
 }
 
 // Send is a helper method to define mock.On call
+//   - ctx context.Context
 //   - isFinal bool
 //   - migrationResult error
-//   - source string
-//   - target string
 //   - startTime time.Time
 //   - endTime time.Time
-func (_e *MockMailSender_Expecter) Send(isFinal interface{}, migrationResult interface{}, source interface{}, target interface{}, startTime interface{}, endTime interface{}) *MockMailSender_Send_Call {
-	return &MockMailSender_Send_Call{Call: _e.mock.On("Send", isFinal, migrationResult, source, target, startTime, endTime)}
+func (_e *MockMailSender_Expecter) Send(ctx interface{}, isFinal interface{}, migrationResult interface{}, startTime interface{}, endTime interface{}) *MockMailSender_Send_Call {
+	return &MockMailSender_Send_Call{Call: _e.mock.On("Send", ctx, isFinal, migrationResult, startTime, endTime)}
 }
 
-func (_c *MockMailSender_Send_Call) Run(run func(isFinal bool, migrationResult error, source string, target string, startTime time.Time, endTime time.Time)) *MockMailSender_Send_Call {
+func (_c *MockMailSender_Send_Call) Run(run func(ctx context.Context, isFinal bool, migrationResult error, startTime time.Time, endTime time.Time)) *MockMailSender_Send_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(bool), args[1].(error), args[2].(string), args[3].(string), args[4].(time.Time), args[5].(time.Time))
+		run(args[0].(context.Context), args[1].(bool), args[2].(error), args[3].(time.Time), args[4].(time.Time))
 	})
 	return _c
 }
@@ -67,7 +67,7 @@ func (_c *MockMailSender_Send_Call) Return(_a0 error) *MockMailSender_Send_Call 
 	return _c
 }
 
-func (_c *MockMailSender_Send_Call) RunAndReturn(run func(bool, error, string, string, time.Time, time.Time) error) *MockMailSender_Send_Call {
+func (_c *MockMailSender_Send_Call) RunAndReturn(run func(context.Context, bool, error, time.Time, time.Time) error) *MockMailSender_Send_Call {
 	_c.Call.Return(run)
 	return _c
 }

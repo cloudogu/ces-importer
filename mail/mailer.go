@@ -1,9 +1,11 @@
 package mail
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"net/smtp"
 	"os"
@@ -22,9 +24,16 @@ const (
 )
 
 const (
-	mailSubject = "Migration war %s."
-	mailBody    = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
+	mailSubject      = "Migration war %s."
+	mailBody         = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\n%sAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
+	errorMsgTemplate = "Die Fehlermeldung ist: %s\n\n"
 )
+
+const GLOBAL_CONFIG_FQDN_KEY = "fqdn"
+
+type globalConfigRepo interface {
+	Get(ctx context.Context) (config.GlobalConfig, error)
+}
 
 // OsReadFile defines a function type for reading a file from the given name and returning its contents as bytes.
 type OsReadFile func(name string) ([]byte, error)
@@ -35,20 +44,24 @@ type SenderService func(addr string, a smtp.Auth, from string, to []string, msg 
 
 // Sender provides functionality to send emails using a configured SMTP service.
 type Sender struct {
-	config        configuration.SmtpConfig // SMTP configuration
-	senderService SenderService            // Function to send email
-	readFile      OsReadFile               // Function to read email content from a file
-	attachments   []string                 // List of files to attach to each mail
+	config           configuration.SmtpConfig // SMTP configuration
+	sourceInstance   string                   // Source instance URL of the exporter
+	senderService    SenderService            // Function to send email
+	readFile         OsReadFile               // Function to read email content from a file
+	attachments      []string                 // List of files to attach to each mail
+	globalConfigRepo globalConfigRepo         // Repository for global configuration
 }
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config configuration.SmtpConfig, attachments []string) *Sender {
+func CreateSender(config configuration.SmtpConfig, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
 	return &Sender{
 		config,
+		sourceInstance,
 		smtp.SendMail,
 		os.ReadFile,
 		attachments,
+		globalConfigRepo,
 	}
 }
 
@@ -67,7 +80,7 @@ func CreateSender(config configuration.SmtpConfig, attachments []string) *Sender
 //   - isFinal: Whether this is the final report of a migration process.
 //
 // Returns an error if email composition or sending fails.
-func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time) error {
+func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, start time.Time, end time.Time) error {
 	slog.Info("Sending migration result via mail...")
 	slog.Info(fmt.Sprintf("Mail is sent from: %s", s.config.From))
 	slog.Info(fmt.Sprintf("Mail is sent to: %v", s.config.To))
@@ -78,8 +91,13 @@ func (s *Sender) Send(isFinal bool, migrationResult error, sourceInstance string
 		slog.Info("Mail server is unauthenticated")
 	}
 
+	targetInstance, err := s.getTargetInstance(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("failed to get target instance: %v", err))
+	}
+
 	from := fmt.Sprintf("From: %s\r\n", s.config.From)
-	body := s.body(migrationResult == nil, sourceInstance, targetInstance, start, end, isFinal)
+	body := s.body(migrationResult, s.sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
 	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
 	message := mime +
@@ -130,10 +148,12 @@ func (s *Sender) subject(success bool) string {
 	return fmt.Sprintf("Subject: %s\r\n", fmt.Sprintf(mailSubject, result))
 }
 
-func (s *Sender) body(success bool, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) string {
+func (s *Sender) body(migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) string {
 	result := stateMigrationSuccess
-	if !success {
+	errorMsg := ""
+	if migrationResult != nil {
 		result = stateMigrationFailure
+		errorMsg = fmt.Sprintf(errorMsgTemplate, migrationResult.Error())
 	}
 
 	migrationType := typeMigrationPartial
@@ -150,6 +170,7 @@ func (s *Sender) body(success bool, sourceInstance string, targetInstance string
 			result,
 			start.Format("15:04"),
 			end.Format("15:04"),
+			errorMsg,
 		),
 	)
 }
@@ -169,6 +190,20 @@ func (s *Sender) buildAttachment(filename, boundary string) (string, error) {
 		chunkSplit(encoded, 76) + "\r\n"
 
 	return attachment, nil
+}
+
+func (s *Sender) getTargetInstance(ctx context.Context) (string, error) {
+	cfg, err := s.globalConfigRepo.Get(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get global config: %w", err)
+	}
+
+	fqdn, exists := cfg.Get(GLOBAL_CONFIG_FQDN_KEY)
+	if !exists {
+		return "", fmt.Errorf("global config does not contain key %s", GLOBAL_CONFIG_FQDN_KEY)
+	}
+
+	return fqdn.String(), nil
 }
 
 func chunkSplit(body string, limit int) string {
