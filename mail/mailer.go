@@ -3,6 +3,7 @@ package mail
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/cloudogu/ces-importer/configuration"
 	"log/slog"
 	"net/smtp"
 	"os"
@@ -32,27 +33,17 @@ type OsReadFile func(name string) ([]byte, error)
 // sender, recipients, and message body.
 type SenderService func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 
-// SmtpConfig holds SMTP server configuration details required for sending emails.
-type SmtpConfig struct {
-	Server   string   // SMTP server address (e.g., smtp.example.com)
-	Port     string   // SMTP server port (default is "25" if not specified)
-	Username string   // Username for SMTP authentication
-	Password string   // Password for SMTP authentication
-	From     string   // Sender's email address
-	To       []string // List of recipient email addresses
-}
-
 // Sender provides functionality to send emails using a configured SMTP service.
 type Sender struct {
-	config        SmtpConfig    // SMTP configuration
-	senderService SenderService // Function to send email
-	readFile      OsReadFile    // Function to read email content from a file
-	attachments   []string      // List of files to attach to each mail
+	config        configuration.SmtpConfig // SMTP configuration
+	senderService SenderService            // Function to send email
+	readFile      OsReadFile               // Function to read email content from a file
+	attachments   []string                 // List of files to attach to each mail
 }
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config SmtpConfig, attachments []string) *Sender {
+func CreateSender(config configuration.SmtpConfig, attachments []string) *Sender {
 	return &Sender{
 		config,
 		smtp.SendMail,

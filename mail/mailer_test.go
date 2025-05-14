@@ -1,77 +1,18 @@
 package mail
 
 import (
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"net/smtp"
-	"os"
 	"testing"
 	"time"
 )
 
-func TestSmtpConfigFromEnv(t *testing.T) {
-	t.Run("can get config from env", func(t *testing.T) {
-		_ = os.Setenv(envSmtpServer, "server")
-		_ = os.Setenv(envSmtpPort, "port")
-		_ = os.Setenv(envSmtpUsername, "username")
-		_ = os.Setenv(envSmtpPassword, "password")
-		_ = os.Setenv(envSmtpFrom, "from")
-		_ = os.Setenv(envSmtpTo, "to")
-
-		config, err := SmtpConfigFromEnv()
-		require.NoError(t, err)
-		assert.Equal(t, "server", config.Server)
-		assert.Equal(t, "port", config.Port)
-		assert.Equal(t, "username", config.Username)
-		assert.Equal(t, "password", config.Password)
-		assert.Equal(t, "from", config.From)
-		assert.Equal(t, []string{"to"}, config.To)
-	})
-
-	t.Run("fail on unset server", func(t *testing.T) {
-		_ = os.Unsetenv(envSmtpServer)
-		_ = os.Setenv(envSmtpPort, "port")
-		_ = os.Setenv(envSmtpUsername, "username")
-		_ = os.Setenv(envSmtpPassword, "password")
-		_ = os.Setenv(envSmtpFrom, "from")
-		_ = os.Setenv(envSmtpTo, "to")
-
-		_, err := SmtpConfigFromEnv()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "smtp Server address is not configured")
-	})
-
-	t.Run("fallback to 25 on unset port", func(t *testing.T) {
-		_ = os.Setenv(envSmtpServer, "server")
-		_ = os.Unsetenv(envSmtpPort)
-		_ = os.Setenv(envSmtpUsername, "username")
-		_ = os.Setenv(envSmtpPassword, "password")
-		_ = os.Setenv(envSmtpFrom, "from")
-		_ = os.Setenv(envSmtpTo, "to")
-
-		config, err := SmtpConfigFromEnv()
-		require.NoError(t, err)
-		assert.Equal(t, "25", config.Port)
-	})
-
-	t.Run("fail on unset from", func(t *testing.T) {
-		_ = os.Setenv(envSmtpServer, "server")
-		_ = os.Setenv(envSmtpPort, "port")
-		_ = os.Setenv(envSmtpUsername, "username")
-		_ = os.Setenv(envSmtpPassword, "password")
-		_ = os.Unsetenv(envSmtpFrom)
-		_ = os.Setenv(envSmtpTo, "to")
-
-		_, err := SmtpConfigFromEnv()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "smtp from is not configured")
-	})
-}
-
 func TestSender(t *testing.T) {
 	t.Run("create auth if username and password are set", func(t *testing.T) {
-		config := SmtpConfig{
+		config := configuration.SmtpConfig{
 			Username: "user",
 			Password: "pw",
 		}
@@ -82,7 +23,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("return nil auth if empty", func(t *testing.T) {
-		config := SmtpConfig{}
+		config := configuration.SmtpConfig{}
 		sender := CreateSender(config, []string{})
 
 		auth := sender.auth()
@@ -90,7 +31,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create server address", func(t *testing.T) {
-		config := SmtpConfig{
+		config := configuration.SmtpConfig{
 			Port:   "123",
 			Server: "server",
 		}
@@ -100,7 +41,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create subject", func(t *testing.T) {
-		config := SmtpConfig{}
+		config := configuration.SmtpConfig{}
 		sender := CreateSender(config, []string{})
 
 		successSubject := sender.subject(true)
@@ -111,7 +52,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create body", func(t *testing.T) {
-		config := SmtpConfig{}
+		config := configuration.SmtpConfig{}
 		sender := CreateSender(config, []string{})
 
 		timeA, _ := time.Parse("15:04", "13:01")
@@ -131,7 +72,7 @@ func TestSender(t *testing.T) {
 
 func TestSendMigrationResult(t *testing.T) {
 	t.Run("send migration result", func(t *testing.T) {
-		config := SmtpConfig{
+		config := configuration.SmtpConfig{
 			Server:   "server",
 			Port:     "port",
 			Username: "username",

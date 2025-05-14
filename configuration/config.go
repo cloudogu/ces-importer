@@ -2,7 +2,6 @@ package configuration
 
 import (
 	"fmt"
-	"github.com/cloudogu/ces-importer/mail"
 	"os"
 	"strings"
 )
@@ -61,7 +60,17 @@ type Configuration struct {
 	// This value is optional, but a final migration without this value will then be impossible.
 	MigrationFinalTimestamp string
 	// MailConfig contains the smtp configuration for the mail server to which the migration log is sent
-	MailConfig mail.SmtpConfig
+	MailConfig SmtpConfig
+}
+
+// SmtpConfig holds SMTP server configuration details required for sending emails.
+type SmtpConfig struct {
+	Server   string   // SMTP server address (e.g., smtp.example.com)
+	Port     string   // SMTP server port (default is "25" if not specified)
+	Username string   // Username for SMTP authentication
+	Password string   // Password for SMTP authentication
+	From     string   // Sender's email address
+	To       []string // List of recipient email addresses
 }
 
 func ReadConfigFromEnv() (Configuration, error) {
@@ -123,10 +132,10 @@ func ReadConfigFromEnv() (Configuration, error) {
 //   - SMTP_PASSWORD
 //   - SMTP_FROM
 //   - SMTP_TO (comma-separated list of recipient emails)
-func SmtpConfigFromEnv() (mail.SmtpConfig, error) {
+func SmtpConfigFromEnv() (SmtpConfig, error) {
 	server := os.Getenv(envSmtpServer)
 	if server == "" {
-		return mail.SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
+		return SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
 	}
 	port := os.Getenv(envSmtpPort)
 	if port == "" {
@@ -138,12 +147,12 @@ func SmtpConfigFromEnv() (mail.SmtpConfig, error) {
 
 	from := os.Getenv(envSmtpFrom)
 	if from == "" {
-		return mail.SmtpConfig{}, fmt.Errorf("smtp from is not configured")
+		return SmtpConfig{}, fmt.Errorf("smtp from is not configured")
 	}
 	toAsStr := os.Getenv(envSmtpTo)
 	to := strings.Split(toAsStr, ",")
 
-	return mail.SmtpConfig{
+	return SmtpConfig{
 		Server:   server,
 		Port:     port,
 		Username: username,
