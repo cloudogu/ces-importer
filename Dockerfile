@@ -16,7 +16,7 @@
 ARG BINARY=ces-importer
 
 # BUILD_PATH specifies the path to application to be build. Default: ./
-ARG BUILD_PATH="./"
+ARG BUILD_PATH="./cmd/${BINARY}"
 
 ARG APP_VERSION=0.0.1
 ARG GO_VERSION=1.24
