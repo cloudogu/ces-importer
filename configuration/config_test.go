@@ -45,6 +45,21 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			SecretDataKey:     "privateKey",
 		}, cfg.SSH)
 
+		// job
+		assert.Equal(t, JobConfig{
+			DoguVolumeBasePath: "/data",
+			Exclude: []ExcludePattern{
+				{
+					DoguName: "jenkins",
+					Pattern:  "JENKINS_PATTERN",
+				},
+				{
+					DoguName: "redmine",
+					Pattern:  "REDMINE_PATTERN",
+				},
+			},
+		}, cfg.JobConfig)
+
 		// job-container
 		assert.Equal(t, JobContainer{
 			Image: ContainerImage{
@@ -66,6 +81,8 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					Memory: "128Mi",
 				},
 			},
+			JobConfigMap:      "ces-importer-job-config",
+			JobServiceAccount: "ces-importer-main-manager",
 		}, cfg.JobContainer)
 	})
 
@@ -99,6 +116,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read logging configuration",
@@ -113,6 +131,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					// Don't create API config
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read API configuration",
@@ -127,6 +146,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					// Don't create migration config
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read migration configuration",
@@ -141,9 +161,25 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					// Don't create SSH config
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read ssh configuration",
+			},
+			"should fail when job config is missing": {
+				setupEnv: func(t *testing.T) {
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+				},
+				setupFiles: func(t *testing.T, tmpDir string) {
+					createValidConfig(t, tmpDir, fileLoggingConfig)
+					createValidConfig(t, tmpDir, fileAPIConfig)
+					createValidConfig(t, tmpDir, fileMigrationConfig)
+					createValidConfig(t, tmpDir, fileSSHConfig)
+					// Don't create Job config
+					createValidConfig(t, tmpDir, fileJobContainerConfig)
+				},
+				expectedErrMsg: "failed to read job configuration",
 			},
 			"should fail when job container config is missing": {
 				setupEnv: func(t *testing.T) {
@@ -155,6 +191,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					// Don't create job container config
 				},
 				expectedErrMsg: "failed to read job container configuration",
@@ -169,6 +206,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read logging configuration: failed to unmarshal config",
@@ -183,6 +221,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					writeInvalidYaml(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read API configuration: failed to unmarshal config",
@@ -197,6 +236,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					writeInvalidYaml(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read migration configuration: failed to unmarshal config",
@@ -211,9 +251,25 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					writeInvalidYaml(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read ssh configuration: failed to unmarshal config",
+			},
+			"should fail when job config has invalid yaml": {
+				setupEnv: func(t *testing.T) {
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+				},
+				setupFiles: func(t *testing.T, tmpDir string) {
+					createValidConfig(t, tmpDir, fileLoggingConfig)
+					createValidConfig(t, tmpDir, fileAPIConfig)
+					createValidConfig(t, tmpDir, fileMigrationConfig)
+					createValidConfig(t, tmpDir, fileSSHConfig)
+					writeInvalidYaml(t, tmpDir, fileJobConfig)
+					createValidConfig(t, tmpDir, fileJobContainerConfig)
+				},
+				expectedErrMsg: "failed to read job configuration: failed to unmarshal config",
 			},
 			"should fail when job container config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
@@ -225,6 +281,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileAPIConfig)
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
 					writeInvalidYaml(t, tmpDir, fileJobContainerConfig)
 				},
 				expectedErrMsg: "failed to read job container configuration: failed to unmarshal config",

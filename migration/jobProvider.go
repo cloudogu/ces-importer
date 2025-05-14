@@ -127,10 +127,6 @@ func createSSHPrivateKeyMount(secretName, secretDataKey, privateSSHKeyPath strin
 	}
 }
 
-type pvcClient interface {
-	GetDoguVolumes(ctx context.Context) ([]doguPVC, error)
-}
-
 type jobSpec struct {
 	imageURL         string
 	imagePullPolicy  v1.PullPolicy
@@ -146,19 +142,21 @@ type JobProviderDependencies struct {
 	JobContainerConfig configuration.JobContainer
 	SSHConfig          configuration.SSH
 	APIKey             string
+	DoguVolumeBasePath string
 	PVCClient          pvcClient
 }
 
-func NewJobProvider(deps JobProviderDependencies) (JobProvider, error) {
+func newJobProvider(deps JobProviderDependencies) (*jobProvider, error) {
 	jSpec, err := createJobSpec(deps.JobContainerConfig, deps.APIKey)
 	if err != nil {
-		return JobProvider{}, fmt.Errorf("failed to create specification for job: %w", err)
+		return nil, fmt.Errorf("failed to create specification for job: %w", err)
 	}
 
-	return JobProvider{
-		jobSpec:   jSpec,
-		sshConfig: deps.SSHConfig,
-		pvcClient: deps.PVCClient,
+	return &jobProvider{
+		jobSpec:            jSpec,
+		sshConfig:          deps.SSHConfig,
+		pvcClient:          deps.PVCClient,
+		doguVolumeBasePath: deps.DoguVolumeBasePath,
 	}, nil
 }
 
@@ -280,14 +278,14 @@ func createContainerEnv(apiKey string) []v1.EnvVar {
 	}
 }
 
-type JobProvider struct {
+type jobProvider struct {
 	jobSpec
 	pvcClient
 	sshConfig          configuration.SSH
 	doguVolumeBasePath string
 }
 
-func (j JobProvider) CreateImportJob(ctx context.Context) (*batchv1.Job, error) {
+func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) {
 	backoffLimit := int32(0) // Allow no retries for the job before failing the job
 
 	pvcList, err := j.GetDoguVolumes(ctx)

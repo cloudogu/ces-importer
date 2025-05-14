@@ -8,8 +8,8 @@ import (
 func TestNewService(t *testing.T) {
 	apiClientMock := newMockApiClient(t)
 
-	sut := NewService("http://localhost:8080", apiClientMock)
+	sut := NewService(apiClientMock)
 
 	assert.NotNil(t, sut)
-	assert.NotNil(t, sut.maintenanceService)
+	assert.NotNil(t, sut.MaintenanceModeService)
 }

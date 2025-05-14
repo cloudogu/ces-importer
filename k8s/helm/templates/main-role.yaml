@@ -22,7 +22,7 @@ rules:
     - get
     - list
     - update
-# allow to inspect pvc size
+  # allow for dogu resizing
 - apiGroups: [""]
   resources:
     - persistentvolumeclaims
@@ -36,3 +36,12 @@ rules:
     - components
   verbs:
     - list
+  # allow for jobs creating
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - list
+    - create
+    - watch

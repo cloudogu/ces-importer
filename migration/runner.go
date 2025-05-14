@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-const (
-	finalMigrationKey = "TBD"
-)
-
 type ExportModeValidator interface {
 	Validate(ctx context.Context) error
 }
@@ -45,6 +41,10 @@ type MailSender interface {
 	Send(isFinal bool, migrationResult error, source string, target string, startTime time.Time, endTime time.Time) error
 }
 
+type LogInitializer interface {
+	Initialize() error
+}
+
 type Migrator struct {
 	exportModeValidator    ExportModeValidator
 	systemInfoValidator    SystemInfoValidator
@@ -54,6 +54,7 @@ type Migrator struct {
 	jobRunner              JobRunner
 	doguStopper            DoguStopper
 	doguStarter            DoguStarter
+	logInitializer         LogInitializer
 }
 
 type MigratorDependencies struct {
@@ -62,6 +63,7 @@ type MigratorDependencies struct {
 	MaintenanceModeHandler
 	MailSender
 	LogWriter
+	LogInitializer
 	JobRunner
 	DoguStopper
 	DoguStarter
@@ -77,14 +79,18 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 		jobRunner:              dependencies.JobRunner,
 		doguStopper:            dependencies.DoguStopper,
 		doguStarter:            dependencies.DoguStarter,
+		logInitializer:         dependencies.LogInitializer,
 	}
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	isFinalMigration, ok := ctx.Value(finalMigrationKey).(bool)
-	if !ok {
-		isFinalMigration = false
+	err = m.logInitializer.Initialize()
+	if err != nil {
+		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
+
+	isFinalMigration := IsFinalMigration(ctx)
+	slog.Debug("Starting migration", "finalMigration", isFinalMigration)
 
 	startTime := time.Now()
 	defer func() {

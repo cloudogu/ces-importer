@@ -13,3 +13,5 @@ resources:
   requests:
     cpu: "100m"
     memory: "128Mi"
+jobConfigMap: "ces-importer-job-config"
+jobServiceAccount: "ces-importer-main-manager"

@@ -251,6 +251,197 @@ func TestValidateSystemInfo(t *testing.T) {
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
+
+	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "onlyPresentHere",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			systemInfoProvider: s,
+		}
+		err := v.Validate(context.Background())
+		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
+	})
+
+	t.Run("should validate special nginx case", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "nginx-static",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "nginx-ingress",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "nginx",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			systemInfoProvider: s,
+		}
+		err := v.Validate(context.Background())
+		require.NoError(t, err)
+	})
+
+	t.Run("should throw error on nginx-static missing when validating nginx dogu", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "nginx-ingress",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "nginx",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			systemInfoProvider: s,
+		}
+		err := v.Validate(context.Background())
+		require.ErrorContains(t, err, "dogu nginx-static is not installed")
+	})
+
+	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "registrator",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		s := newMockSystemInfoProvider(t)
+		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
+		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
+
+		v := Validator{
+			systemInfoProvider: s,
+		}
+		err := v.Validate(context.Background())
+		require.NoError(t, err)
+	})
+
 }
 
 func TestUpdatePVC(t *testing.T) {
@@ -416,4 +607,132 @@ func TestUpdatePVC(t *testing.T) {
 			require.ErrorContains(t, err, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
 		}
 	})
+
+	t.Run("should fail on maximum amount of retries reached", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		v := Validator{
+			doguClient: doguClient,
+		}
+		exDogu := exporter.Dogu{
+			Name:    "",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := exporter.Dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 3,
+			},
+		}
+		dogu := v2.Dogu{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
+			},
+			Status: v2.DoguStatus{},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+
+		waitSecondsBetweenRetries = 1
+		maxRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "maximum amount of retries reached for the resize of Dogu testDogu volume")
+		}
+	})
+
+	t.Run("should fail on getting dogus pvc", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		pvcClient := newMockPvcClient(t)
+		v := Validator{
+			doguClient: doguClient,
+			pvcClient:  pvcClient,
+		}
+		exDogu := exporter.Dogu{
+			Name:    "",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := exporter.Dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 3,
+			},
+		}
+		dogu := v2.Dogu{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: v2.DoguSpec{
+				Resources: v2.DoguResources{},
+			},
+			Status: v2.DoguStatus{},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
+		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
+
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "could not get dogu testDogu pvc")
+		}
+	})
+
+	t.Run("should catch panic", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		v := Validator{
+			doguClient: doguClient,
+		}
+		exDogu := exporter.Dogu{
+			Name:    "",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 10,
+			},
+		}
+		imDogu := exporter.Dogu{
+			Name:    "testDogu",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 3,
+			},
+		}
+		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Run(func(ctx context.Context, name string, opts metav1.GetOptions) { panic("panic!") }).Return(nil, nil)
+
+		waitSecondsBetweenRetries = 1
+		maxRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		if err != nil {
+			require.ErrorContains(t, err, "panic while updating pvc:")
+		}
+	})
+
 }

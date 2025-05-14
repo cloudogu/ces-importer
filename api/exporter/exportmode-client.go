@@ -6,20 +6,21 @@ import (
 	"fmt"
 )
 
+// pathExportMode contains the endpoint which returns data on the readiness of the exporter system.
+const pathExportMode = "/export/mode"
+
 type ExportModeClient struct {
 	apiClient apiClient
-	endpoint  string
 }
 
-func NewExportModeClient(apiClient apiClient, exporterHost string) *ExportModeClient {
+func NewExportModeClient(apiClient apiClient) *ExportModeClient {
 	return &ExportModeClient{
 		apiClient: apiClient,
-		endpoint:  fmt.Sprintf("https://%s%s", exporterHost, endpointExportMode),
 	}
 }
 
 func (emc *ExportModeClient) GetExportMode(ctx context.Context) (isActive bool, err error) {
-	result, err := emc.apiClient.DoGetRequest(ctx, emc.endpoint)
+	result, err := emc.apiClient.DoGetRequest(ctx, pathExportMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to check whether export mode is ready: %w", err)
 	}

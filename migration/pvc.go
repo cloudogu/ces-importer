@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-type pvcGetter struct {
+type PVCGetter struct {
 	client       v1.PersistentVolumeClaimInterface
 	doguSelector string
 }
@@ -18,7 +18,7 @@ type doguPVC struct {
 	pvcName  string
 }
 
-func newPVCGetter(client v1.PersistentVolumeClaimInterface) *pvcGetter {
+func NewPVCGetter(client v1.PersistentVolumeClaimInterface) *PVCGetter {
 	doguSelector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
@@ -29,13 +29,16 @@ func newPVCGetter(client v1.PersistentVolumeClaimInterface) *pvcGetter {
 		},
 	}
 
-	return &pvcGetter{
+	// Convert the selector to a string
+	selector := metav1.FormatLabelSelector(&doguSelector)
+
+	return &PVCGetter{
 		client:       client,
-		doguSelector: doguSelector.String(),
+		doguSelector: selector,
 	}
 }
 
-func (p pvcGetter) GetDoguVolumes(ctx context.Context) ([]doguPVC, error) {
+func (p PVCGetter) GetDoguVolumes(ctx context.Context) ([]doguPVC, error) {
 	pvcList, err := p.client.List(ctx, metav1.ListOptions{LabelSelector: p.doguSelector})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list PVCs: %w", err)

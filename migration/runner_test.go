@@ -33,6 +33,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
 
@@ -51,6 +54,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -60,7 +64,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 	t.Run("should run final migration", func(t *testing.T) {
 		testCtx := context.Background()
-		testCtx = context.WithValue(testCtx, finalMigrationKey, true)
+		testCtx = SetFinalMigration(testCtx)
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
@@ -79,6 +83,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
 
@@ -97,11 +104,53 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("should fail to run delta migration for error initializing log", func(t *testing.T) {
+		testCtx := context.Background()
+
+		mExportModeValidator := NewMockExportModeValidator(t)
+
+		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+
+		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
+
+		mMailSender := NewMockMailSender(t)
+
+		mLogWriter := NewMockLogWriter(t)
+
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(assert.AnError)
+
+		mJobRunner := NewMockJobRunner(t)
+
+		mDoguStopper := NewMockDoguStopper(t)
+
+		mDoguStarter := NewMockDoguStarter(t)
+
+		m := &Migrator{
+			exportModeValidator:    mExportModeValidator,
+			systemInfoValidator:    mSystemInfoValidator,
+			maintenanceModeHandler: mMaintenanceModeHandler,
+			mailSender:             mMailSender,
+			logWriter:              mLogWriter,
+			jobRunner:              mJobRunner,
+			doguStopper:            mDoguStopper,
+			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
+		}
+
+		err := m.RunMigration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to reinitialize logger:")
 	})
 
 	t.Run("should fail to run delta migration for error validating export mode", func(t *testing.T) {
@@ -119,6 +168,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mLogWriter := NewMockLogWriter(t)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 
 		mDoguStopper := NewMockDoguStopper(t)
@@ -135,6 +187,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -160,6 +213,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mLogWriter := NewMockLogWriter(t)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 
 		mDoguStopper := NewMockDoguStopper(t)
@@ -177,6 +233,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -201,6 +258,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mLogWriter := NewMockLogWriter(t)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 
 		mDoguStopper := NewMockDoguStopper(t)
@@ -218,6 +278,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -243,6 +304,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mLogWriter := NewMockLogWriter(t)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(nil, assert.AnError)
 
@@ -261,6 +325,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -289,6 +354,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 		mLogWriter.EXPECT().Write(jobLogs).Return(assert.AnError)
 
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
+
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
 
@@ -307,6 +375,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -318,7 +387,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 	t.Run("should fail to run final migration for error enabling maintenance-mode", func(t *testing.T) {
 		testCtx := context.Background()
-		testCtx = context.WithValue(testCtx, finalMigrationKey, true)
+		testCtx = SetFinalMigration(testCtx)
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
@@ -334,6 +403,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender.EXPECT().Send(true, mock.Anything, "", "", mock.Anything, mock.Anything).Return(nil)
 
 		mLogWriter := NewMockLogWriter(t)
+
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().Initialize().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -352,6 +424,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
 		}
 
 		err := m.RunMigration(testCtx)
