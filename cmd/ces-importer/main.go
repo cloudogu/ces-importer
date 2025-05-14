@@ -52,7 +52,7 @@ func main() {
 		PodClient: k8sClientSet.podClient,
 	})
 	if err != nil {
-		return
+		panic(fmt.Errorf("failed to create a new job service: %v", err))
 	}
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
