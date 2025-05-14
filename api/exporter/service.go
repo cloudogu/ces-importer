@@ -4,8 +4,8 @@ type Service struct {
 	*MaintenanceModeService
 }
 
-func NewService(baseURL string, client apiClient) *Service {
+func NewService(client apiClient) *Service {
 	return &Service{
-		MaintenanceModeService: NewMaintenanceModeService(baseURL, client),
+		MaintenanceModeService: NewMaintenanceModeService(client),
 	}
 }

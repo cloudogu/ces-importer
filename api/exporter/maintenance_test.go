@@ -11,15 +11,12 @@ import (
 func Test_newMaintenanceModeService(t *testing.T) {
 	// given
 	apiClientMock := newMockApiClient(t)
-	baseURL := "http://example.com/api"
-	expectedServiceURL := "http://example.com/api/maintenance/mode"
 
 	// when
-	service := NewMaintenanceModeService(baseURL, apiClientMock)
+	service := NewMaintenanceModeService(apiClientMock)
 
 	// then
 	assert.NotNil(t, service)
-	assert.Equal(t, expectedServiceURL, service.serviceURL)
 	assert.Equal(t, apiClientMock, service.apiClient)
 }
 
@@ -59,16 +56,14 @@ func Test_maintenanceModeService_GetStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
 			apiClientMock := newMockApiClient(t)
-			serviceURL := "http://example.com/api/maintenance/mode"
 
 			ctx := context.Background()
 			apiClientMock.EXPECT().
-				DoGetRequest(ctx, serviceURL).
+				DoGetRequest(ctx, endpointMaintenanceMode).
 				Return(tt.responseBody, tt.responseErr)
 
 			service := MaintenanceModeService{
-				apiClient:  apiClientMock,
-				serviceURL: serviceURL,
+				apiClient: apiClientMock,
 			}
 
 			// when
@@ -131,17 +126,15 @@ func Test_maintenanceModeService_Enable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
 			apiClientMock := newMockApiClient(t)
-			serviceURL := "http://example.com/api/maintenance/mode"
 
 			ctx := context.Background()
 			// Verify that the correct maintenance mode is sent
 			apiClientMock.EXPECT().
-				DoPostRequest(ctx, serviceURL, mock.Anything, mock.Anything).
+				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything, mock.Anything).
 				Return(tt.responseBody, tt.responseErr)
 
 			service := MaintenanceModeService{
-				apiClient:  apiClientMock,
-				serviceURL: serviceURL,
+				apiClient: apiClientMock,
 			}
 
 			// when
@@ -199,17 +192,15 @@ func Test_maintenanceModeService_Disable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
 			apiClientMock := newMockApiClient(t)
-			serviceURL := "http://example.com/api/maintenance/mode"
 
 			ctx := context.Background()
 			// Verify that the correct maintenance mode is sent
 			apiClientMock.EXPECT().
-				DoPostRequest(ctx, serviceURL, mock.Anything, mock.Anything).
+				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything, mock.Anything).
 				Return(tt.responseBody, tt.responseErr)
 
 			service := MaintenanceModeService{
-				apiClient:  apiClientMock,
-				serviceURL: serviceURL,
+				apiClient: apiClientMock,
 			}
 
 			// when

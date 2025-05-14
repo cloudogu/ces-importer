@@ -172,7 +172,7 @@ func Test_client_DoPostRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := NewClient("test", testApiKey, httpClient)
 
 		// when
 		actualBytes, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})
@@ -184,7 +184,7 @@ func Test_client_DoPostRequest(t *testing.T) {
 	t.Run("should error on invalid URL", func(t *testing.T) {
 		// given
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := NewClient("test", testApiKey, httpClient)
 
 		// when
 		_, err := sut.DoPostRequest(testCtx, "pc:/h\x12", nil, []string{})
@@ -206,7 +206,7 @@ func Test_client_DoPostRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient(testApiKey, httpClient)
+		sut := NewClient("test", testApiKey, httpClient)
 
 		// when
 		_, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})

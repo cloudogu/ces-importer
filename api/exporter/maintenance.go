@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// EndpointMaintenanceMode contains the endpoint which returns data which describe the current
-	EndpointMaintenanceMode = "/maintenance/mode"
+	// endpointMaintenanceMode contains the endpoint which returns data which describe the current
+	endpointMaintenanceMode = "/maintenance/mode"
 )
 
 var _ migration.MaintenanceModeHandler = MaintenanceModeService{}
@@ -38,16 +38,15 @@ type MaintenanceModeService struct {
 }
 
 // NewMaintenanceModeService creates a new maintenance service for the given exporter API client.
-func NewMaintenanceModeService(baseURL string, client apiClient) *MaintenanceModeService {
+func NewMaintenanceModeService(client apiClient) *MaintenanceModeService {
 	return &MaintenanceModeService{
-		serviceURL: baseURL + EndpointMaintenanceMode,
-		apiClient:  client,
+		apiClient: client,
 	}
 }
 
 // GetMaintenanceModeStatus returns the current maintenance mode status of the exporter system.
 func (s MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (bool, error) {
-	result, err := s.DoGetRequest(ctx, s.serviceURL)
+	result, err := s.DoGetRequest(ctx, endpointMaintenanceMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to get maintenance mode status: %w", err)
 	}
@@ -77,7 +76,7 @@ func (s MaintenanceModeService) setMaintenanceMode(ctx context.Context, mode Mai
 		return fmt.Errorf("failed to encode maintenance mode: %w", err)
 	}
 
-	result, err := s.DoPostRequest(ctx, s.serviceURL, &buf, nil)
+	result, err := s.DoPostRequest(ctx, endpointMaintenanceMode, &buf, nil)
 	if err != nil {
 		return fmt.Errorf("failed to set maintenance mode: %w", err)
 	}
