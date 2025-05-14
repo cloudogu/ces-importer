@@ -18,7 +18,7 @@ import (
 )
 
 type dataSyncer interface {
-	SyncData(ctx context.Context) error
+	SyncData(ctx context.Context, config configuration.Job) error
 }
 
 type configSyncer interface {
@@ -49,7 +49,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	configMaps := k8sClient.CoreV1().ConfigMaps(jobConfig.Namespace)
 	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
 
-	exporterApiClient := exporter.NewClient(jobConfig.API.ExporterApiKey, http.DefaultClient)
+	exporterApiClient := exporter.NewClient(jobConfig.API.ExporterHost, jobConfig.API.ExporterApiKey, http.DefaultClient)
 	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)
 	doguConfigRepo := repository.NewDoguConfigRepository(configMaps)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(secrets)
@@ -65,7 +65,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	}
 
 	exportDoguApiClient := exporter.NewExportDoguClient(exporterApiClient, jobConfig.API.ExporterHost)
-	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient, jobConfig.API.ExporterHost)
+	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
 	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker, exportDoguApiClient, systemInfoApiClient)
 
@@ -83,7 +83,11 @@ func (j ImportExecutor) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
 
-	err = j.dataSyncer.SyncData(ctx)
+	config, err := configuration.ReadJobConfig()
+	if err != nil {
+		return fmt.Errorf("failed to read job configuration: %w", err)
+	}
+	err = j.dataSyncer.SyncData(ctx, config)
 	if err != nil {
 		return fmt.Errorf("failed to sync data: %w", err)
 	}

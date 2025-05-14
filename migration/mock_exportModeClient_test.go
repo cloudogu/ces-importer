@@ -26,7 +26,7 @@ func (_m *mockExportModeClient) GetExportMode(ctx context.Context) (bool, error)
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetExportDogu")
+		panic("no return value specified for GetExportMode")
 	}
 
 	var r0 bool
@@ -49,7 +49,7 @@ func (_m *mockExportModeClient) GetExportMode(ctx context.Context) (bool, error)
 	return r0, r1
 }
 
-// mockExportModeClient_GetExportMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExportDogu'
+// mockExportModeClient_GetExportMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExportMode'
 type mockExportModeClient_GetExportMode_Call struct {
 	*mock.Call
 }
@@ -57,7 +57,7 @@ type mockExportModeClient_GetExportMode_Call struct {
 // GetExportMode is a helper method to define mock.On call
 //   - ctx context.Context
 func (_e *mockExportModeClient_Expecter) GetExportMode(ctx interface{}) *mockExportModeClient_GetExportMode_Call {
-	return &mockExportModeClient_GetExportMode_Call{Call: _e.mock.On("GetExportDogu", ctx)}
+	return &mockExportModeClient_GetExportMode_Call{Call: _e.mock.On("GetExportMode", ctx)}
 }
 
 func (_c *mockExportModeClient_GetExportMode_Call) Run(run func(ctx context.Context)) *mockExportModeClient_GetExportMode_Call {

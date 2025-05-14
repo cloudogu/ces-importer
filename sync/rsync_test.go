@@ -2,11 +2,10 @@ package sync
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/ces-importer/systeminfo"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
 	"strings"
@@ -28,9 +27,10 @@ func TestSyncData(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
-		client := NewMockApiCli(t)
 		// system info request
 		systemInfo := exporter.SystemInfo{
 			FQDN:        "",
@@ -44,9 +44,8 @@ func TestSyncData(t *testing.T) {
 			},
 			Components: nil,
 		}
-		sIbytes, err := json.Marshal(systemInfo)
-		require.NoError(t, err)
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIbytes, nil)
+
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 
 		// set export dogu request
 		export := exporter.DoguExport{
@@ -54,8 +53,7 @@ func TestSyncData(t *testing.T) {
 			VolumePath:   "/a/b",
 			ExporterPort: 1234,
 		}
-		eBytes, err := json.Marshal(export)
-		client.EXPECT().DoPostRequest(context.Background(), "https:///export/dogu", nil, []string{"test"}).Return(eBytes, nil)
+		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
 
 		config := configuration.Job{
 			JobConfig: configuration.JobConfig{
@@ -64,7 +62,7 @@ func TestSyncData(t *testing.T) {
 				},
 			},
 		}
-		err = syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background(), config)
 		require.NoError(t, err)
 	})
 
@@ -74,11 +72,11 @@ func TestSyncData(t *testing.T) {
 			return command
 		}
 
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
-		client := NewMockApiCli(t)
-		// system info request
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(nil, fmt.Errorf("testerror"))
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		config := configuration.Job{}
 		err := syncer.SyncData(context.Background(), config)
@@ -90,9 +88,10 @@ func TestSyncData(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
-		client := NewMockApiCli(t)
 		// system info request
 		systemInfo := exporter.SystemInfo{
 			FQDN:        "",
@@ -106,14 +105,11 @@ func TestSyncData(t *testing.T) {
 			},
 			Components: nil,
 		}
-		sIbytes, err := json.Marshal(systemInfo)
-		require.NoError(t, err)
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIbytes, nil)
-
-		client.EXPECT().DoPostRequest(context.Background(), "https:///export/dogu", nil, []string{"test"}).Return(nil, fmt.Errorf("testerror"))
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
+		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
 		config := configuration.Job{}
-		err = syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to set dogu test as export dogu: testerror")
 	})
 
@@ -131,9 +127,10 @@ func TestSyncData(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
-		client := NewMockApiCli(t)
 		// system info request
 		systemInfo := exporter.SystemInfo{
 			FQDN:        "",
@@ -147,9 +144,7 @@ func TestSyncData(t *testing.T) {
 			},
 			Components: nil,
 		}
-		sIbytes, err := json.Marshal(systemInfo)
-		require.NoError(t, err)
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIbytes, nil)
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 
 		// set export dogu request
 		export := exporter.DoguExport{
@@ -157,8 +152,7 @@ func TestSyncData(t *testing.T) {
 			VolumePath:   "/a/b",
 			ExporterPort: 1234,
 		}
-		eBytes, err := json.Marshal(export)
-		client.EXPECT().DoPostRequest(context.Background(), "https:///export/dogu", nil, []string{"test"}).Return(eBytes, nil)
+		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
 
 		config := configuration.Job{
 			JobConfig: configuration.JobConfig{
@@ -167,47 +161,8 @@ func TestSyncData(t *testing.T) {
 				},
 			},
 		}
-		err = syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background(), config)
 		require.EqualError(t, err, "failed to sync source /a/b to destination test: rsync exited with error: testerror")
-	})
-
-	t.Run("should fail to read export dogu response", func(t *testing.T) {
-		command := NewMockCommand(t)
-		commandMaker := func(name string, arg ...string) Command {
-			return command
-		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
-
-		client := NewMockApiCli(t)
-		// system info request
-		systemInfo := exporter.SystemInfo{
-			FQDN:        "",
-			IsMultinode: false,
-			Dogus: []exporter.Dogu{
-				{
-					Name:    "test",
-					Version: "",
-					Volume:  exporter.DoguVolume{},
-				},
-			},
-			Components: nil,
-		}
-		sIbytes, err := json.Marshal(systemInfo)
-		require.NoError(t, err)
-		client.EXPECT().DoGetRequest(context.Background(), "https:///system-info").Return(sIbytes, nil)
-
-		eBytes := []byte("bad response")
-		client.EXPECT().DoPostRequest(context.Background(), "https:///export/dogu", nil, []string{"test"}).Return(eBytes, nil)
-
-		config := configuration.Job{
-			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.ExcludePattern{
-					{DoguName: "testDogu", Pattern: "*.file"},
-				},
-			},
-		}
-		err = syncer.SyncData(context.Background(), config)
-		require.EqualError(t, err, "failed to parse dogu export response: \"bad response\": invalid character 'b' looking for beginning of value")
 	})
 }
 
@@ -226,7 +181,9 @@ func TestSyncDogu(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
 		exclude := configuration.ExcludePattern{
 			DoguName: "test",
@@ -242,7 +199,9 @@ func TestSyncDogu(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
@@ -260,7 +219,9 @@ func TestSyncDogu(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
@@ -280,7 +241,9 @@ func TestSyncDogu(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
@@ -301,7 +264,9 @@ func TestSyncDogu(t *testing.T) {
 		commandMaker := func(name string, arg ...string) Command {
 			return command
 		}
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker)
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
