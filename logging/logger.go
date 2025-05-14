@@ -22,7 +22,7 @@ type LogInitializer struct {
 
 func NewLogInitializer(cfg configuration.Configuration) *LogInitializer {
 	return &LogInitializer{
-		open: func(name string, flag int, perm os.FileMode) (File, error) {
+		open: func(name string, flag int, perm os.FileMode) (file, error) {
 			return os.OpenFile(name, flag, perm)
 		},
 		newMultiWriter: io.MultiWriter,

@@ -22,23 +22,23 @@ func (_m *mockOsOpenFile) EXPECT() *mockOsOpenFile_Expecter {
 }
 
 // Execute provides a mock function with given fields: name, flag, perm
-func (_m *mockOsOpenFile) Execute(name string, flag int, perm fs.FileMode) (File, error) {
+func (_m *mockOsOpenFile) Execute(name string, flag int, perm fs.FileMode) (file, error) {
 	ret := _m.Called(name, flag, perm)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 File
+	var r0 file
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int, fs.FileMode) (File, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, int, fs.FileMode) (file, error)); ok {
 		return rf(name, flag, perm)
 	}
-	if rf, ok := ret.Get(0).(func(string, int, fs.FileMode) File); ok {
+	if rf, ok := ret.Get(0).(func(string, int, fs.FileMode) file); ok {
 		r0 = rf(name, flag, perm)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(File)
+			r0 = ret.Get(0).(file)
 		}
 	}
 
@@ -71,12 +71,12 @@ func (_c *mockOsOpenFile_Execute_Call) Run(run func(name string, flag int, perm 
 	return _c
 }
 
-func (_c *mockOsOpenFile_Execute_Call) Return(_a0 File, _a1 error) *mockOsOpenFile_Execute_Call {
+func (_c *mockOsOpenFile_Execute_Call) Return(_a0 file, _a1 error) *mockOsOpenFile_Execute_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockOsOpenFile_Execute_Call) RunAndReturn(run func(string, int, fs.FileMode) (File, error)) *mockOsOpenFile_Execute_Call {
+func (_c *mockOsOpenFile_Execute_Call) RunAndReturn(run func(string, int, fs.FileMode) (file, error)) *mockOsOpenFile_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -14,7 +14,7 @@ func TestWrite(t *testing.T) {
 		mockCreate := newMockOsOpenFile(t)
 		mockCreate.EXPECT().Execute("mockpath", logFilesMode, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 		w := NewWriter("mockpath")
-		w.openFile = func(name string, flag int, perm os.FileMode) (File, error) {
+		w.openFile = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockCreate.Execute(name, flag, perm)
 		}
 		rc := NewMockReadCloser(t)
@@ -25,7 +25,7 @@ func TestWrite(t *testing.T) {
 		assert.Equal(t, "failed to open log file: testerror", err.Error())
 	})
 	t.Run("fail on copy", func(t *testing.T) {
-		mockFile := NewMockFile(t)
+		mockFile := newMockFile(t)
 		mockFile.EXPECT().Close().Return(nil)
 		mockCopy := newMockIoCopy(t)
 		mockCopy.EXPECT().Execute(mockFile, mock.Anything).Return(0, fmt.Errorf("testerror"))
@@ -35,7 +35,7 @@ func TestWrite(t *testing.T) {
 		w.copy = func(dst io.Writer, src io.Reader) (written int64, err error) {
 			return mockCopy.Execute(dst, src)
 		}
-		w.openFile = func(name string, flag int, perm os.FileMode) (File, error) {
+		w.openFile = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockCreate.Execute(name, flag, perm)
 		}
 		rc := NewMockReadCloser(t)
@@ -46,7 +46,7 @@ func TestWrite(t *testing.T) {
 		assert.Equal(t, "failed to copy log to path mockpath: testerror", err.Error())
 	})
 	t.Run("success", func(t *testing.T) {
-		mockFile := NewMockFile(t)
+		mockFile := newMockFile(t)
 		mockFile.EXPECT().Close().Return(nil)
 		rc := NewMockReadCloser(t)
 		rc.EXPECT().Close().Return(nil)
@@ -58,7 +58,7 @@ func TestWrite(t *testing.T) {
 		w.copy = func(dst io.Writer, src io.Reader) (written int64, err error) {
 			return mockCopy.Execute(dst, src)
 		}
-		w.openFile = func(name string, flag int, perm os.FileMode) (File, error) {
+		w.openFile = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockCreate.Execute(name, flag, perm)
 		}
 

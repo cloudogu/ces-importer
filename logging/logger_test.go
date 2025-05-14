@@ -29,7 +29,7 @@ func Test_configureLogger(t *testing.T) {
 
 		// when
 		initializer := NewLogInitializer(brokenConfig)
-		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
 		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
@@ -54,7 +54,7 @@ func Test_configureLogger(t *testing.T) {
 
 		// when
 		initializer := NewLogInitializer(brokenConfig)
-		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
 		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
@@ -82,7 +82,7 @@ func Test_configureLogger(t *testing.T) {
 
 		// when
 		initializer := NewLogInitializer(brokenConfig)
-		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
 		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
@@ -109,7 +109,7 @@ func Test_configureLogger(t *testing.T) {
 
 		// when
 		initializer := NewLogInitializer(config)
-		initializer.open = func(name string, flag int, perm os.FileMode) (File, error) {
+		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
 		initializer.newMultiWriter = func(writers ...io.Writer) io.Writer {
