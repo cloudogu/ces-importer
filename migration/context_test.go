@@ -9,19 +9,19 @@ import (
 func TestSetFinalMigration(t *testing.T) {
 	ctx := SetFinalMigration(context.Background())
 
-	result, ok := ctx.Value(finalMigrationKey).(bool)
+	result, ok := ctx.Value(finalMigrationKey).(finalMigration)
 	assert.True(t, ok)
-	assert.True(t, result)
+	assert.True(t, bool(result))
 }
 
 func TestIsFinalMigration(t *testing.T) {
 	t.Run("Final migration should be true", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), finalMigrationKey, true)
+		ctx := context.WithValue(context.Background(), finalMigrationKey, finalMigration(true))
 		assert.True(t, IsFinalMigration(ctx))
 	})
 
 	t.Run("Final migration should be false", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), finalMigrationKey, false)
+		ctx := context.WithValue(context.Background(), finalMigrationKey, finalMigration(false))
 		assert.False(t, IsFinalMigration(ctx))
 	})
 
