@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
 	"github.com/cloudogu/ces-importer/migration"
-	"k8s.io/client-go/kubernetes"
-	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
 	"k8s.io/client-go/kubernetes"
+	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"log/slog"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,7 +37,7 @@ func main() {
 
 	k8sClientSet, err := createK8Sclientset(cfg.Namespace)
 
-	service, err := migration.NewJobService(migration.JobServiceDependencies{
+	jobService, err := migration.NewJobService(migration.JobServiceDependencies{
 		JobProviderDependencies: migration.JobProviderDependencies{
 			JobContainerConfig: cfg.JobContainer,
 			SSHConfig:          cfg.SSH,
@@ -52,11 +50,6 @@ func main() {
 	})
 	if err != nil {
 		return
-	}
-
-	deps := migration.MigratorDependencies{
-		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		JobRunner:              service,
 	}
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
@@ -74,19 +67,19 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed to create kube-client: %w", err))
 	}
-	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.ImporterNamespace)
+	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.Namespace)
 
 	ecosystemDoguClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
 	if err != nil {
 		panic(fmt.Errorf("failed to create dogu client: %w", err))
 	}
-	doguClient := ecosystemDoguClient.Dogus(cfg.ImporterNamespace)
+	doguClient := ecosystemDoguClient.Dogus(cfg.Namespace)
 
 	ecosystemComponentClient, err := componentEcoClient.NewForConfig(k8sRestConfig)
 	if err != nil {
 		panic(fmt.Errorf("failed to create component client: %w", err))
 	}
-	componentClient := ecosystemComponentClient.Components(cfg.ImporterNamespace)
+	componentClient := ecosystemComponentClient.Components(cfg.Namespace)
 
 	doguStartStopper := importer.NewDoguClient(doguClient)
 
@@ -103,10 +96,10 @@ func main() {
 	deps := migration.MigratorDependencies{
 		ExportModeValidator:    exportModeValidator,
 		SystemInfoValidator:    systemInfoValidator,
-		MaintenanceModeHandler: nil,
+		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
 		MailSender:             nil,
 		LogWriter:              nil,
-		JobRunner:              nil,
+		JobRunner:              jobService,
 		DoguStopper:            doguStartStopper,
 		DoguStarter:            doguStartStopper,
 	}
@@ -130,8 +123,8 @@ func main() {
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
 	httpClient := http.DefaultClient
-	exportClient := exporter.NewClient(apiCfg.ExporterHost, httpClient)
-	exportService := exporter.NewService(apiCfg.ExporterHost, exportClient)
+	exportClient := exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, httpClient)
+	exportService := exporter.NewService(exportClient)
 
 	return exportService
 }
