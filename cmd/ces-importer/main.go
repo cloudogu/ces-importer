@@ -36,6 +36,9 @@ func main() {
 	exportAPIService := createAPIService(cfg.API)
 
 	k8sClientSet, err := createK8Sclientset(cfg.Namespace)
+	if err != nil {
+		panic(fmt.Errorf("failed to create clients for kubernetes: %v", err))
+	}
 
 	jobService, err := migration.NewJobService(migration.JobServiceDependencies{
 		JobProviderDependencies: migration.JobProviderDependencies{
