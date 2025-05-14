@@ -6,20 +6,21 @@ import (
 	"fmt"
 )
 
+// pathSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
+const pathSystemInfo = "/system-info"
+
 type SystemInfoClient struct {
 	apiClient apiClient
-	endpoint  string
 }
 
-func NewSystemInfoClient(apiClient apiClient, exporterHost string) *SystemInfoClient {
+func NewSystemInfoClient(apiClient apiClient) *SystemInfoClient {
 	return &SystemInfoClient{
 		apiClient: apiClient,
-		endpoint:  fmt.Sprintf("https://%s%s", exporterHost, endpointSystemInfo),
 	}
 }
 
 func (emc *SystemInfoClient) GetSystemInfo(ctx context.Context) (systemInfo *SystemInfo, err error) {
-	result, err := emc.apiClient.DoGetRequest(ctx, emc.endpoint)
+	result, err := emc.apiClient.DoGetRequest(ctx, pathSystemInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get system info: %w", err)
 	}

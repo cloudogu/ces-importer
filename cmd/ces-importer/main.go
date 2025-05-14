@@ -31,11 +31,11 @@ func main() {
 		panic(err)
 	}
 
-	exporterApiClient := exporter.NewClient(cfg.ExporterApiKey, http.DefaultClient)
-	exportModeClient := exporter.NewExportModeClient(exporterApiClient, cfg.ExporterHost)
+	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
+	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
 
-	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient, cfg.ExporterHost)
+	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
 	k8sRestConfig, err := ctrl.GetConfig()
 	if err != nil {
