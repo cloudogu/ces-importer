@@ -3,7 +3,6 @@ package logging
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 const (
@@ -11,18 +10,16 @@ const (
 )
 
 type Writer struct {
-	path   string
-	remove osRemove
-	create osCreate
-	copy   ioCopy
+	path     string
+	copy     ioCopy
+	openFile osOpenFile
 }
 
-func NewWriter(path string, remove osRemove, create osCreate, copy ioCopy) *Writer {
+func NewWriter(path string, copy ioCopy, openFile osOpenFile) *Writer {
 	return &Writer{
-		path:   path,
-		remove: remove,
-		create: create,
-		copy:   copy,
+		path:     path,
+		copy:     copy,
+		openFile: openFile,
 	}
 }
 
@@ -31,12 +28,7 @@ func (w Writer) Write(readCloser io.ReadCloser) error {
 		_ = readCloser.Close()
 	}()
 
-	err := w.remove(w.path)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to clear old log file: %w", err)
-	}
-
-	logFile, err := w.create(w.path)
+	logFile, err := w.openFile(w.path, logFilesMode, logFilesPerm)
 	if err != nil {
 		return fmt.Errorf("failed to create log file: %w", err)
 	}

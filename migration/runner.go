@@ -150,9 +150,9 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 	//	}
 	//}
 	//
-	//if err := m.doguStarter.StartAll(ctx); err != nil {
-	//	slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
-	//}
+	if err := m.doguStarter.StartAll(ctx); err != nil {
+		slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
+	}
 
 	endTime := time.Now()
 	if err := m.mailSender.Send(isFinalMigration, runError, "", "", startTime, endTime); err != nil {

@@ -82,7 +82,7 @@ func TestSender(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte(""), nil
-			})
+			}, []string{})
 
 		auth := sender.auth()
 		assert.NotNil(t, auth)
@@ -97,7 +97,7 @@ func TestSender(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte(""), nil
-			})
+			}, []string{})
 
 		auth := sender.auth()
 		assert.Nil(t, auth)
@@ -115,7 +115,7 @@ func TestSender(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte(""), nil
-			})
+			}, []string{})
 
 		assert.Equal(t, "server:123", sender.server())
 	})
@@ -129,7 +129,7 @@ func TestSender(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte(""), nil
-			})
+			}, []string{})
 
 		successSubject := sender.subject(true)
 		failureSubject := sender.subject(false)
@@ -147,7 +147,7 @@ func TestSender(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte(""), nil
-			})
+			}, []string{})
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
@@ -165,7 +165,7 @@ func TestSender(t *testing.T) {
 }
 
 func TestSendMigrationResult(t *testing.T) {
-	t.Run("asdf", func(t *testing.T) {
+	t.Run("send migration result", func(t *testing.T) {
 		config := SmtpConfig{
 			Server:   "server",
 			Port:     "port",
@@ -181,8 +181,8 @@ func TestSendMigrationResult(t *testing.T) {
 		senderFunc.EXPECT().Execute("server:port", mock.Anything, "from", []string{"a@test.de", "b@test.de"}, mock.Anything).Run(func(addr string, a smtp.Auth, from string, to []string, msg []byte) {
 			body := string(msg)
 			assert.Contains(t, body, "From: from\r\nSubject: Migration war erfolgreich.\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=MIME_BOUNDARY_CES_IMPORTER\r\n\r\n--MIME_BOUNDARY_CES_IMPORTER\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n")
-			assert.Contains(t, body, "Die finale Migration von der Instanz  zu der Instanz  war erfolgreich.\n\nStartzeitpunkt: 13:01\nEndzeitpunkt: 13:06\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.\r\n\r\n\r\n")
-			assert.Contains(t, body, "--MIME_BOUNDARY_CES_IMPORTER\r\nContent-Type: application/octet-stream\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"a\"\r\n\r\nZmlsZWNvbnRlbnQ=\r\n\r\n--MIME_BOUNDARY_CES_IMPORTER\r\nContent-Type: application/octet-stream\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"b\"\r\n\r\nZmlsZWNvbnRlbnQ=\r\n--MIME_BOUNDARY_CES_IMPORTER")
+			assert.Contains(t, body, "Die finale Migration von der Instanz source zu der Instanz target war erfolgreich.\n\nStartzeitpunkt: 13:01\nEndzeitpunkt: 13:06\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.\r\n\r\n")
+			assert.Contains(t, body, "--MIME_BOUNDARY_CES_IMPORTER\r\nContent-Type: application/octet-stream\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"b\"\r\n\r\nZmlsZWNvbnRlbnQ=\r\n--MIME_BOUNDARY_CES_IMPORTER")
 		}).Return(nil)
 		sender := CreateSender(
 			config,
@@ -191,12 +191,12 @@ func TestSendMigrationResult(t *testing.T) {
 			},
 			func(name string) ([]byte, error) {
 				return []byte("filecontent"), nil
-			})
+			}, []string{"a", "b"})
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
 
-		err := sender.SendMigrationResult(true, []string{"a", "b"}, "", "", timeA, timeB, true)
+		err := sender.Send(true, nil, "source", "target", timeA, timeB)
 		require.NoError(t, err)
 	})
 }

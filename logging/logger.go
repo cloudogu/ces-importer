@@ -9,8 +9,8 @@ import (
 
 const (
 	PathAppLogFile = "/home/ces-importer/migration-log/log.log"
-	appLogFileMode = os.O_CREATE | os.O_WRONLY | os.O_APPEND
-	appLogPerm     = 0666
+	logFilesMode   = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	logFilesPerm   = 0666
 )
 
 type LogInitializer struct {
@@ -35,7 +35,7 @@ func (li LogInitializer) Initialize() error {
 		level = slog.LevelInfo
 	}
 
-	logFile, err := li.open(PathAppLogFile, appLogFileMode, appLogPerm)
+	logFile, err := li.open(PathAppLogFile, logFilesMode, logFilesPerm)
 	if err != nil {
 		return fmt.Errorf("failed to create app log file: %w", err)
 	}

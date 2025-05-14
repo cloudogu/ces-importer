@@ -51,11 +51,10 @@ func main() {
 
 	logWriter := logging.NewWriter(
 		logging.PathJobLogFile,
-		os.Remove,
-		func(name string) (logging.File, error) {
-			return os.Create(name)
-		},
 		io.Copy,
+		func(name string, flag int, perm os.FileMode) (logging.File, error) {
+			return os.OpenFile(name, flag, perm)
+		},
 	)
 
 	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
@@ -106,9 +105,9 @@ func main() {
 		JobRunner:              nil,
 		DoguStopper:            doguStartStopper,
 		DoguStarter:            doguStartStopper,
-		LogWriter: logWriter,
-		LogInitializer: logInitializer,
-		MailSender:     mailSender,
+		LogWriter:              logWriter,
+		LogInitializer:         logInitializer,
+		MailSender:             mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 
