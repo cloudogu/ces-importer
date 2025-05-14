@@ -21,15 +21,6 @@ const (
 )
 
 const (
-	envSmtpServer   = "SMTP_SERVER"
-	envSmtpPort     = "SMTP_PORT"
-	envSmtpUsername = "SMTP_USERNAME"
-	envSmtpPassword = "SMTP_PASSWORD"
-	envSmtpFrom     = "SMTP_FROM"
-	envSmtpTo       = "SMTP_TO"
-)
-
-const (
 	mailSubject = "Migration war %s."
 	mailBody    = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
 )
@@ -68,46 +59,6 @@ func CreateSender(config SmtpConfig, attachments []string) *Sender {
 		os.ReadFile,
 		attachments,
 	}
-}
-
-// SmtpConfigFromEnv reads SMTP configuration from environment variables and returns
-// a SmtpConfig struct. Returns an error if required fields like server or from address are missing.
-//
-// Expected environment variables:
-//   - SMTP_SERVER
-//   - SMTP_PORT (optional, defaults to "25")
-//   - SMTP_USERNAME
-//   - SMTP_PASSWORD
-//   - SMTP_FROM
-//   - SMTP_TO (comma-separated list of recipient emails)
-func SmtpConfigFromEnv() (SmtpConfig, error) {
-	server := os.Getenv(envSmtpServer)
-	if server == "" {
-		return SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
-	}
-	port := os.Getenv(envSmtpPort)
-	if port == "" {
-		port = "25"
-	}
-
-	username := os.Getenv(envSmtpUsername)
-	password := os.Getenv(envSmtpPassword)
-
-	from := os.Getenv(envSmtpFrom)
-	if from == "" {
-		return SmtpConfig{}, fmt.Errorf("smtp from is not configured")
-	}
-	toAsStr := os.Getenv(envSmtpTo)
-	to := strings.Split(toAsStr, ",")
-
-	return SmtpConfig{
-		Server:   server,
-		Port:     port,
-		Username: username,
-		Password: password,
-		From:     from,
-		To:       to,
-	}, nil
 }
 
 // Send composes and sends an email containing the result of a migration operation.

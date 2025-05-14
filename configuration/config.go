@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/mail"
 	"os"
+	"strings"
 )
 
 const (
@@ -14,6 +15,15 @@ const (
 	importerNamespaceKeyEnv     = "IMPORTER_NAMESPACE"
 	migrationRegularScheduleEnv = "MIGRATION_REGULAR_SCHEDULE"
 	migrationFinalScheduleEnv   = "MIGRATION_FINAL_SCHEDULE"
+)
+
+const (
+	envSmtpServer   = "SMTP_SERVER"
+	envSmtpPort     = "SMTP_PORT"
+	envSmtpUsername = "SMTP_USERNAME"
+	envSmtpPassword = "SMTP_PASSWORD"
+	envSmtpFrom     = "SMTP_FROM"
+	envSmtpTo       = "SMTP_TO"
 )
 
 const errorFormat = "environment variable %s is not set"
@@ -95,10 +105,50 @@ func ReadConfigFromEnv() (Configuration, error) {
 		return conf, fmt.Errorf(errorFormat, importerNamespaceKeyEnv)
 	}
 
-	conf.MailConfig, err = mail.SmtpConfigFromEnv()
+	conf.MailConfig, err = SmtpConfigFromEnv()
 	if err != nil {
 		return conf, fmt.Errorf("failed to get smtp config: %w", err)
 	}
 
 	return conf, nil
+}
+
+// SmtpConfigFromEnv reads SMTP configuration from environment variables and returns
+// a SmtpConfig struct. Returns an error if required fields like server or from address are missing.
+//
+// Expected environment variables:
+//   - SMTP_SERVER
+//   - SMTP_PORT (optional, defaults to "25")
+//   - SMTP_USERNAME
+//   - SMTP_PASSWORD
+//   - SMTP_FROM
+//   - SMTP_TO (comma-separated list of recipient emails)
+func SmtpConfigFromEnv() (mail.SmtpConfig, error) {
+	server := os.Getenv(envSmtpServer)
+	if server == "" {
+		return mail.SmtpConfig{}, fmt.Errorf("smtp Server address is not configured")
+	}
+	port := os.Getenv(envSmtpPort)
+	if port == "" {
+		port = "25"
+	}
+
+	username := os.Getenv(envSmtpUsername)
+	password := os.Getenv(envSmtpPassword)
+
+	from := os.Getenv(envSmtpFrom)
+	if from == "" {
+		return mail.SmtpConfig{}, fmt.Errorf("smtp from is not configured")
+	}
+	toAsStr := os.Getenv(envSmtpTo)
+	to := strings.Split(toAsStr, ",")
+
+	return mail.SmtpConfig{
+		Server:   server,
+		Port:     port,
+		Username: username,
+		Password: password,
+		From:     from,
+		To:       to,
+	}, nil
 }
