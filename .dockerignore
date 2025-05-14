@@ -5,11 +5,13 @@
 !*.go
 !go.*
 !/api/**/*
+!/cmd/**/*
 !/configuration/**/*
 !/cron/**/*
-!/systeminfo/**/*
+!/logging/**/*
+!/migration/**/*
 !/sync/**/*
-!/validate/**/*
+!/systeminfo/**/*
 
 # and other resources
 !build/**/*
