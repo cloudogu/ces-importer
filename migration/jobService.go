@@ -147,7 +147,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	// Set up deferred function to retrieve logs when the method returns
 	// This ensures we attempt to get logs regardless of whether the job succeeds or fails
 	defer func() {
-		logs, logErr := j.getLogs(jobResource.GetName())
+		logs, logErr := j.getLogs(ctx, jobResource.GetName())
 		if logErr != nil {
 			slog.Error("Failed to get logs for job", "name", jobResource.GetName(), "error", logErr)
 			return
@@ -207,7 +207,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 // getLogs retrieves the logs from a job's pod
 // It uses the getStreamer function to find the pod associated with the job
 // and create a log streamer, then returns the log stream
-func (j JobService) getLogs(jobName string) (io.ReadCloser, error) {
+func (j JobService) getLogs(ctx context.Context, jobName string) (io.ReadCloser, error) {
 	// Get a log streamer for the job's pod
 	logStreamer, err := j.getStreamer(jobName, &corev1.PodLogOptions{})
 	if err != nil {
@@ -215,7 +215,7 @@ func (j JobService) getLogs(jobName string) (io.ReadCloser, error) {
 	}
 
 	// Start streaming the logs
-	logs, err := logStreamer.Stream(context.Background())
+	logs, err := logStreamer.Stream(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stream logs for job %s: %w", jobName, err)
 	}
