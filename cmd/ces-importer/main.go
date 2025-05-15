@@ -78,10 +78,10 @@ func main() {
 		panic(fmt.Errorf("failed to create systeminfo validator: %w", err))
 	}
 
-	globalConfig := repository.NewGlobalConfigRepository(kubernetesClient.CoreV1().ConfigMaps(cfg.ImporterNamespace))
+	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
 
 	mailSender := mail.CreateSender(
-		cfg.MailConfig,
+		cfg.Smtp,
 		cfg.ExporterHost,
 		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
 		globalConfig,
@@ -128,6 +128,7 @@ type k8sClients struct {
 	pvcClient       corev1.PersistentVolumeClaimInterface
 	podClient       corev1.PodInterface
 	jobClient       batchv1.JobInterface
+	configMap       corev1.ConfigMapInterface
 	doguClient      ecoSystemV2.DoguInterface
 	componentClient componentEcoClient.ComponentInterface
 }
@@ -146,6 +147,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 	k8sCoreClient := k8sClientSet.CoreV1()
 	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(namespace)
 	k8sPodClient := k8sCoreClient.Pods(namespace)
+	k8sConfigMapClient := k8sCoreClient.ConfigMaps(namespace)
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
@@ -167,6 +169,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 		pvcClient:       k8sPVCClient,
 		podClient:       k8sPodClient,
 		jobClient:       k8sJobClient,
+		configMap:       k8sConfigMapClient,
 		doguClient:      k8sDoguClient,
 		componentClient: k8sComponentClient,
 	}, nil

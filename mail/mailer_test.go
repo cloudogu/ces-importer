@@ -15,7 +15,7 @@ import (
 
 func TestSender(t *testing.T) {
 	t.Run("create auth if username and password are set", func(t *testing.T) {
-		config := configuration.SmtpConfig{
+		config := configuration.Smtp{
 			Username: "user",
 			Password: "pw",
 		}
@@ -29,7 +29,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("return nil auth if empty", func(t *testing.T) {
-		config := configuration.SmtpConfig{}
+		config := configuration.Smtp{}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
 		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
@@ -39,7 +39,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create server address", func(t *testing.T) {
-		config := configuration.SmtpConfig{
+		config := configuration.Smtp{
 			Port:   "123",
 			Server: "server",
 		}
@@ -51,7 +51,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create subject", func(t *testing.T) {
-		config := configuration.SmtpConfig{}
+		config := configuration.Smtp{}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
 		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
@@ -64,7 +64,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will create body", func(t *testing.T) {
-		config := configuration.SmtpConfig{}
+		config := configuration.Smtp{}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
 		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
@@ -86,7 +86,7 @@ func TestSender(t *testing.T) {
 
 func TestSendMigrationResult(t *testing.T) {
 	t.Run("send migration result", func(t *testing.T) {
-		config := configuration.SmtpConfig{
+		config := configuration.Smtp{
 			Server:   "server",
 			Port:     "port",
 			Username: "username",

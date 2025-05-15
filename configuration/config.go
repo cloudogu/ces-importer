@@ -19,6 +19,7 @@ const (
 	fileSSHConfig          = "ssh.yaml"
 	fileJobContainerConfig = "job-container.yaml"
 	fileJobConfig          = "job.yaml"
+	fileSMTPConfig         = "smtp.yaml"
 )
 
 const errorFormat = "environment variable %s is not set"
@@ -132,6 +133,16 @@ type JobConfig struct {
 	Exclude []ExcludePattern `yaml:"exclude"`
 }
 
+// Smtp holds SMTP server configuration details required for sending emails.
+type Smtp struct {
+	Server   string   `yaml:"server"`   // SMTP server address (e.g., smtp.example.com)
+	Port     string   `yaml:"port"`     // SMTP server port (default is "25" if not specified)
+	Username string   `yaml:"username"` // Username for SMTP authentication
+	Password string   `yaml:"password"` // Password for SMTP authentication
+	From     string   `yaml:"from"`     // Sender's email address
+	To       []string `yaml:"to"`       // List of recipient email addresses
+}
+
 // Coordinator consists of configuration data. The most fields are obtained from the Helm chart
 // values file through a configmap, while others are hardcoded or obtained from secrets.
 type Coordinator struct {
@@ -141,6 +152,7 @@ type Coordinator struct {
 	SSH
 	JobConfig
 	JobContainer
+	Smtp
 
 	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
 	// "ecosystem". This value is required but inferred from the used Helm chart.
@@ -188,6 +200,11 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		return Coordinator{}, fmt.Errorf("failed to read job container configuration: %w", err)
 	}
 
+	smtpConfig, err := readConfigYAML[Smtp](path.Join(configBaseDir, fileSMTPConfig))
+	if err != nil {
+		return Coordinator{}, fmt.Errorf("failed to read smtp configuration: %w", err)
+	}
+
 	return Coordinator{
 		Logging:      loggingConfig,
 		API:          apiConfig,
@@ -195,6 +212,7 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		SSH:          sshConfig,
 		JobConfig:    jobConfig,
 		JobContainer: jobContainerConfig,
+		Smtp:         smtpConfig,
 		Namespace:    namespace,
 	}, nil
 }
@@ -253,7 +271,7 @@ func ReadJobConfig() (Job, error) {
 }
 
 type ConfigTypes interface {
-	API | Logging | Migration | JobContainer | JobConfig | SSH
+	API | Logging | Migration | JobContainer | JobConfig | SSH | Smtp
 }
 
 func readConfigYAML[T ConfigTypes](configPath string) (T, error) {

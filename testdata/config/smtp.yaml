@@ -1,0 +1,9 @@
+---
+server: 192.168.56.1
+port: 1025
+username:
+password:
+from: importer@ces.com
+to:
+  - recipient1@example.com
+  - recipient2@example.com

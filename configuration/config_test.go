@@ -118,6 +118,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read logging configuration",
 			},
@@ -133,6 +134,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read API configuration",
 			},
@@ -148,6 +150,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read migration configuration",
 			},
@@ -163,6 +166,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					// Don't create SSH config
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read ssh configuration",
 			},
@@ -178,6 +182,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					// Don't create Job config
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read job configuration",
 			},
@@ -192,6 +197,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileMigrationConfig)
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 					// Don't create job container config
 				},
 				expectedErrMsg: "failed to read job container configuration",
@@ -208,6 +214,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read logging configuration: failed to unmarshal config",
 			},
@@ -223,6 +230,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read API configuration: failed to unmarshal config",
 			},
@@ -238,6 +246,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read migration configuration: failed to unmarshal config",
 			},
@@ -253,6 +262,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					writeInvalidYaml(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read ssh configuration: failed to unmarshal config",
 			},
@@ -268,6 +278,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					writeInvalidYaml(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read job configuration: failed to unmarshal config",
 			},
@@ -283,6 +294,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					writeInvalidYaml(t, tmpDir, fileJobContainerConfig)
+					createValidConfig(t, tmpDir, fileSMTPConfig)
 				},
 				expectedErrMsg: "failed to read job container configuration: failed to unmarshal config",
 			},
