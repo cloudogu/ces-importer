@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -60,7 +61,11 @@ func main() {
 		panic(fmt.Errorf("failed to create a new job service: %v", err))
 	}
 
-	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
+	httpClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, httpClient)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
 
@@ -117,7 +122,9 @@ func main() {
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
-	httpClient := http.DefaultClient
+	httpClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
 	exportClient := exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, httpClient)
 	exportService := exporter.NewService(exportClient)
 

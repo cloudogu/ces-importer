@@ -35,7 +35,7 @@ func New(ctx context.Context, expr string, jobClosure JobFunc) (*Task, error) {
 	taskManager := tasker.New(tasker.Option{}).WithContext(ctx)
 
 	return &Task{
-		taskExecutor: taskManager.Task(expr, tasker.TaskFunc(jobClosure)),
+		taskExecutor: taskManager.Task(expr, tasker.TaskFunc(jobClosure), false),
 	}, nil
 }
 

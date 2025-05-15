@@ -72,9 +72,9 @@ ARG BINARY
 ARG UID
 ARG GID
 
-RUN \
-  addgroup -S -g ${GID} ${BINARY} && \
-  adduser -S -h /home/${BINARY} -s /bin/bash -G ${BINARY} -u ${UID} ${BINARY}
+#RUN \
+#  addgroup -S -g ${GID} ${BINARY} && \
+#  adduser -S -h /home/${BINARY} -s /bin/bash -G ${BINARY} -u ${UID} ${BINARY}
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
@@ -55,6 +56,11 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc doguC
 	}
 
 	if err := importLocalConfig(dc.Name, dc.LocalConfig); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			slog.Debug("no local config found for dogu '%s'", dc.Name)
+			return nil
+		}
+
 		return fmt.Errorf("failed to import local config for dogu '%s': %w", dc.Name, err)
 	}
 

@@ -20,7 +20,7 @@ type client struct {
 // HTTP client f. i. adding proxy settings.
 func NewClient(hostName string, apiKey string, httpClient requestExecuter) *client {
 	return &client{
-		baseUrl:    fmt.Sprintf("https://%s", hostName),
+		baseUrl:    fmt.Sprintf("https://%s/ces-exporter", hostName),
 		apiKey:     apiKey,
 		httpClient: httpClient,
 	}
