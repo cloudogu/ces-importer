@@ -24,3 +24,6 @@ data:
     jobConfigMap: {{ include "job-config.name" . | quote }}
     jobServiceAccount: {{ include "ces-importer.name" . }}-main-manager
     {{- toYaml .Values.job | nindent 4 }}
+
+  smtp.yaml: |
+  {{- toYaml .Values.config.smtp | nindent 4 }}

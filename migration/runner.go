@@ -38,7 +38,7 @@ type MaintenanceModeHandler interface {
 }
 
 type MailSender interface {
-	Send(isFinal bool, migrationResult error, source string, target string, startTime time.Time, endTime time.Time) error
+	Send(ctx context.Context, isFinal bool, migrationResult error, startTime time.Time, endTime time.Time) error
 }
 
 type LogInitializer interface {
@@ -134,6 +134,10 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 }
 
 func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigration bool, runError error) {
+	if runError != nil {
+		slog.Error(fmt.Sprintf("migration failed: %s", runError.Error()))
+	}
+
 	if runError != nil && isFinalMigration {
 		if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
 			slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
@@ -145,7 +149,7 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 	}
 
 	endTime := time.Now()
-	if err := m.mailSender.Send(isFinalMigration, runError, "", "", startTime, endTime); err != nil {
+	if err := m.mailSender.Send(ctx, isFinalMigration, runError, startTime, endTime); err != nil {
 		slog.Error(fmt.Sprintf("failed to send mail: %s", err.Error()))
 	}
 }
