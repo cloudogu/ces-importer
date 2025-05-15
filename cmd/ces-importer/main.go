@@ -8,10 +8,12 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -28,10 +30,13 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = logging.Initialize(cfg)
+	logInitializer := logging.NewLogInitializer(cfg)
+	err = logInitializer.Initialize()
 	if err != nil {
 		panic(err)
 	}
+
+	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exportAPIService := createAPIService(cfg.API)
 
@@ -73,15 +78,25 @@ func main() {
 		panic(fmt.Errorf("failed to create systeminfo validator: %w", err))
 	}
 
+	globalConfig := repository.NewGlobalConfigRepository(kubernetesClient.CoreV1().ConfigMaps(cfg.ImporterNamespace))
+
+	mailSender := mail.CreateSender(
+		cfg.MailConfig,
+		cfg.ExporterHost,
+		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+		globalConfig,
+	)
+
 	deps := migration.MigratorDependencies{
 		ExportModeValidator:    exportModeValidator,
 		SystemInfoValidator:    systemInfoValidator,
 		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		MailSender:             nil,
-		LogWriter:              nil,
 		JobRunner:              jobService,
 		DoguStopper:            doguStartStopper,
 		DoguStarter:            doguStartStopper,
+		LogWriter:              logWriter,
+		LogInitializer:         logInitializer,
+		MailSender:             mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 
