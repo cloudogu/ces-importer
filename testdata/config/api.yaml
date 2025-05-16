@@ -1,3 +1,4 @@
 ---
 apiKey: "${API_KEY}"
 host: "classic-ces.exporter"
+skipTLSVerify: true
