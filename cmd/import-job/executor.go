@@ -7,6 +7,7 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	migration "github.com/cloudogu/ces-importer/migration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
+	"log/slog"
 
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
 
@@ -91,33 +92,40 @@ func (j ImportExecutor) Start(ctx context.Context) (e error) {
 	}
 
 	if j.coordinator.Migration.ChangeFQDN && migration.IsFinalMigration(ctx) {
+		slog.Info("Change FQDN in final Migration")
 		err = j.configSyncer.Backup(ctx, migrationConfig.Backup)
 		// The defer function is only started, if we are in a final migration
 		// therefor it do not check for final migration again
 		defer func() {
+			slog.Info("Run Cleanup after final Migration")
 			if e != nil {
-				// There is an error during fqdn or certificate sync -> Restore old values and cleanup backup
+				slog.Info("There is an error during fqdn or certificate sync -> Restore old values and cleanup backup")
 				err = j.configSyncer.Backup(ctx, migrationConfig.Restore)
 				if err != nil {
+					slog.Error("failed to restore backup of fqdn and certificates in final migration: %w because of %w", err, e)
 					e = fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", err, e)
 				}
 			} else {
-				// There is no error during fqdn or certificate sync -> just cleanup backup
+				slog.Info("There is no error during fqdn or certificate sync -> just cleanup backup")
 				err = j.configSyncer.Backup(ctx, migrationConfig.Cleanup)
 				if err != nil {
+					slog.Error("failed to cleanup backup of fqdn and certificates in final migration: %w because of %w", err, e)
 					e = fmt.Errorf("failed to cleanup backup of fqdn and certificates in final migration: %w because of %w", err, e)
 				}
 			}
 		}()
 		if err != nil {
+			slog.Error("failed to backup fqdn and certificates in final migration: %w", err)
 			return fmt.Errorf("failed to backup fqdn and certificates in final migration: %w", err)
 		}
 		err = j.configSyncer.SyncCertificates(ctx)
 		if err != nil {
+			slog.Error("failed to sync certificates in final migration: %w", err)
 			return fmt.Errorf("failed to sync certificates in final migration: %w", err)
 		}
 		err = j.configSyncer.ChangeFQDN(ctx)
 		if err != nil {
+			slog.Error("failed to change fqdn in final migration: %w", err)
 			return fmt.Errorf("failed to change fqdn in final migration: %w", err)
 		}
 	}
