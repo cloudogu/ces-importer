@@ -21,6 +21,54 @@ func (_m *mockGlobalConfigImporter) EXPECT() *mockGlobalConfigImporter_Expecter 
 	return &mockGlobalConfigImporter_Expecter{mock: &_m.Mock}
 }
 
+// backupGlobalConfigByKeys provides a mock function with given fields: ctx, keys, backupType
+func (_m *mockGlobalConfigImporter) backupGlobalConfigByKeys(ctx context.Context, keys []string, backupType BackupType) error {
+	ret := _m.Called(ctx, keys, backupType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for backupGlobalConfigByKeys")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []string, BackupType) error); ok {
+		r0 = rf(ctx, keys, backupType)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// mockGlobalConfigImporter_backupGlobalConfigByKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'backupGlobalConfigByKeys'
+type mockGlobalConfigImporter_backupGlobalConfigByKeys_Call struct {
+	*mock.Call
+}
+
+// backupGlobalConfigByKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - keys []string
+//   - backupType BackupType
+func (_e *mockGlobalConfigImporter_Expecter) backupGlobalConfigByKeys(ctx interface{}, keys interface{}, backupType interface{}) *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call {
+	return &mockGlobalConfigImporter_backupGlobalConfigByKeys_Call{Call: _e.mock.On("backupGlobalConfigByKeys", ctx, keys, backupType)}
+}
+
+func (_c *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call) Run(run func(ctx context.Context, keys []string, backupType BackupType)) *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]string), args[2].(BackupType))
+	})
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call) Return(_a0 error) *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call) RunAndReturn(run func(context.Context, []string, BackupType) error) *mockGlobalConfigImporter_backupGlobalConfigByKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // importGlobalCertificates provides a mock function with given fields: ctx, config
 func (_m *mockGlobalConfigImporter) importGlobalCertificates(ctx context.Context, config globalConfig) error {
 	ret := _m.Called(ctx, config)
