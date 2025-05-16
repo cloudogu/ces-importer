@@ -9,8 +9,6 @@ import (
 	"github.com/cloudogu/ces-importer/logging"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
-	"log/slog"
-	"os"
 	"os/exec"
 
 	"github.com/cloudogu/ces-importer/sync"
