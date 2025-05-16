@@ -5,10 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	"io"
 	"log/slog"
+	path2 "path"
+	"time"
 )
 
 type exportDoguApiClient interface {
@@ -71,9 +74,13 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) e
 	// sync data for every dogu
 	for _, dogu := range systemInfo.Dogus {
 		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
-
+		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
+		if err != nil {
+			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))
+			continue
+		}
 		// set the current dogu as export dogu in exporter
-		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, dogu.Name)
+		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, string(doguName.SimpleName))
 		if err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
 			continue
@@ -82,8 +89,8 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) e
 		// exclude pattern might be an empty string
 		excludePattern := excludeMap[dogu.Name]
 		// default is /data/{doguName}
-		importerDestination := config.DoguVolumeBasePath + dogu.Name
 
+		importerDestination := path2.Join(config.DoguVolumeBasePath, string(doguName.SimpleName))
 		if err := rs.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern, true); err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
 		}
@@ -102,6 +109,7 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	cmd := rs.makeCommand("rsync", args...)
 
 	slog.Info(fmt.Sprintf("executing rsync command: %s", cmd.String()))
+	time.Sleep(time.Hour)
 
 	// Get stdout and stderr pipes
 	stdoutPipe, err := cmd.StdoutPipe()

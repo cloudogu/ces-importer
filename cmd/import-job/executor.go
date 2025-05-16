@@ -83,7 +83,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 		return exec.Command(name, arg...)
 	}
 
-	exportDoguApiClient := exporter.NewExportDoguClient(exporterApiClient, jobConfig.API.ExporterHost)
+	exportDoguApiClient := exporter.NewExportDoguClient(exporterApiClient)
 	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
 	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker, exportDoguApiClient, systemInfoApiClient)

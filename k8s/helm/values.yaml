@@ -36,7 +36,7 @@ config:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
     # contact the exporter API which returns all required data like data paths etc.
     # The exporter API endpoint is fixed and will be routed on source side.
-    host: classic-ces.exporter
+    host: 35.207.95.105
     # secretName contains the secret with the exporter API key
     secretName: "ces-exporter-secret"
     # secretDataKey contains the key name that accommodates the actual exporter API key as value.
@@ -58,8 +58,8 @@ config:
     regularSchedule: "* * * * *"
     # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active
     # users.
-    # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
-    finalSchedule: "2025-04-03 12:34:56Z"
+    # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
+    finalSchedule: "2025-04-03T12:34:56Z"
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"

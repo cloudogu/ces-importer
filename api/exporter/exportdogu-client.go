@@ -4,22 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	path2 "path"
 )
+
+const exportModeEndpoint = "/export/dogu"
 
 type ExportDoguClient struct {
 	apiClient apiClient
-	endpoint  string
 }
 
-func NewExportDoguClient(apiClient apiClient, exporterHost string) *ExportDoguClient {
+func NewExportDoguClient(apiClient apiClient) *ExportDoguClient {
 	return &ExportDoguClient{
 		apiClient: apiClient,
-		endpoint:  fmt.Sprintf("https://%s%s", exporterHost, endpointExportDogu),
 	}
 }
 
 func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExport, err error) {
-	result, err := emc.apiClient.DoGetRequest(ctx, emc.endpoint)
+	result, err := emc.apiClient.DoGetRequest(ctx, exportModeEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check whether export mode is ready: %w", err)
 	}
@@ -34,7 +35,8 @@ func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExp
 }
 
 func (emc *ExportDoguClient) SetExportDogu(ctx context.Context, doguName string) (export *DoguExport, err error) {
-	result, err := emc.apiClient.DoPostRequest(ctx, emc.endpoint, nil, []string{doguName})
+	path := path2.Join(exportModeEndpoint, doguName)
+	result, err := emc.apiClient.DoPostRequest(ctx, path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check whether export mode is ready: %w", err)
 	}
