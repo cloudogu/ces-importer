@@ -22,6 +22,8 @@ type HTTPClientOption func(*http.Client)
 // WithCustomHTTPClient sets a custom HTTP Client to be used when executing requests.
 func WithCustomHTTPClient(httpClient *http.Client) HTTPClientOption {
 	return func(client *http.Client) {
+		slog.Debug("Use custom HTTP Client for API requests")
+
 		*client = *httpClient
 	}
 }
@@ -31,6 +33,8 @@ func WithCustomHTTPClient(httpClient *http.Client) HTTPClientOption {
 // Client with the WithCustomHTTPClient option.
 func WithInsecure() HTTPClientOption {
 	return func(client *http.Client) {
+		slog.Debug("Skip TLS certificate verification for API requests")
+
 		var transportConfig *http.Transport
 
 		if client.Transport == nil {
