@@ -183,7 +183,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 
 	// Process events from the watcher until the job completes, fails, or an error occurs
 	for event := range watcher.ResultChan() {
-		slog.Debug("Received event from watcher for job", "name", job.GetName(), "event", event)
+		slog.Debug("Received event from watcher for job", "name", job.GetName(), "type", event.Type)
 
 		// Handle watch errors
 		if event.Type == watchAPI.Error {
