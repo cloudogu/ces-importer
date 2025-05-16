@@ -29,6 +29,7 @@ type globalConfigImporter interface {
 	importGlobalConfig(ctx context.Context, config globalConfig) error
 	importGlobalCertificates(ctx context.Context, config globalConfig) error
 	importGlobalFQDN(ctx context.Context, config globalConfig) error
+	backupGlobalConfigByKeys(ctx context.Context, keys []string, backupType BackupType) error
 }
 
 type doguConfigImporter interface {
@@ -100,6 +101,17 @@ func (ci *ConfigImporter) ChangeFQDN(ctx context.Context) error {
 		return fmt.Errorf("failed to get configuration from exporter: %w", err)
 	}
 	if err := ci.globalConfigImporter.importGlobalFQDN(ctx, config.GlobalConfig); err != nil {
+		return fmt.Errorf("failed to import fqdn: %w", err)
+	}
+	return nil
+}
+
+func (ci *ConfigImporter) Backup(ctx context.Context, backupType BackupType) error {
+	keys := []string{
+		"fqdn",
+		"certificate/*",
+	}
+	if err := ci.globalConfigImporter.backupGlobalConfigByKeys(ctx, keys, backupType); err != nil {
 		return fmt.Errorf("failed to import fqdn: %w", err)
 	}
 	return nil

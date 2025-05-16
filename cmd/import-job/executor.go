@@ -25,6 +25,7 @@ type configSyncer interface {
 	SyncConfig(ctx context.Context) error
 	SyncCertificates(ctx context.Context) error
 	ChangeFQDN(ctx context.Context) error
+	Backup(ctx context.Context, backupType migrationConfig.BackupType) error
 }
 
 type ImportExecutor struct {
@@ -90,12 +91,24 @@ func (j ImportExecutor) Start(ctx context.Context) error {
 	}
 
 	if j.coordinator.Migration.ChangeFQDN && migration.IsFinalMigration(ctx) {
+		err = j.configSyncer.Backup(ctx, migrationConfig.Backup)
+		if err != nil {
+			return fmt.Errorf("failed to backup fqdn and certificates in final migration: %w", err)
+		}
 		err = j.configSyncer.SyncCertificates(ctx)
 		if err != nil {
+			suberr := j.configSyncer.Backup(ctx, migrationConfig.Restore)
+			if suberr != nil {
+				return fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", suberr, err)
+			}
 			return fmt.Errorf("failed to sync certificates in final migration: %w", err)
 		}
 		err = j.configSyncer.ChangeFQDN(ctx)
 		if err != nil {
+			suberr := j.configSyncer.Backup(ctx, migrationConfig.Restore)
+			if suberr != nil {
+				return fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", suberr, err)
+			}
 			return fmt.Errorf("failed to change fqdn in final migration: %w", err)
 		}
 	}
