@@ -58,8 +58,8 @@ config:
     regularSchedule: "0 4 * * *"
     # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active
     # users.
-    # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
-    finalSchedule: "2025-04-03 12:34:56Z"
+    # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
+    finalSchedule: "2025-05-16T06:18:00Z"
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"

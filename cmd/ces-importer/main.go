@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sync/atomic"
+	"time"
 )
 
 func main() {
@@ -98,12 +100,29 @@ func main() {
 		LogInitializer:         logInitializer,
 		MailSender:             mailSender,
 	}
-	migrator := migration.NewMigrator(deps)
 
+	// validate final timestamp
+	finalTimestamp, err := time.Parse(time.RFC3339, cfg.FinalTimestamp)
+	if err != nil {
+		panic(fmt.Errorf("failed to create final migration timestamp from %q: %w", cfg.FinalTimestamp, err))
+	}
+	if time.Now().After(finalTimestamp) {
+		panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
+	}
+
+	migrator := migration.NewMigrator(deps)
+	var migrationRunning atomic.Bool
 	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
-		err = migrator.RunMigration(ctx)
-		if err != nil {
-			return 1, err
+		// set migration to running to prevent simultaneous migrations
+		migrationRunning.Store(true)
+		defer migrationRunning.Swap(false)
+
+		// do not run migration after the final migration took place
+		if !time.Now().After(finalTimestamp) {
+			err = migrator.RunMigration(ctx)
+			if err != nil {
+				return 1, err
+			}
 		}
 
 		return 0, nil
@@ -113,7 +132,33 @@ func main() {
 	}
 
 	slog.Info("Starting main loop")
-	cronLooper.Run()
+	go cronLooper.Run()
+
+	err = startFinalMigrationLoop(ctx, migrator, &migrationRunning, finalTimestamp)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, migrationRunning *atomic.Bool, finalTimestamp time.Time) error {
+	duration := time.Until(finalTimestamp)
+	<-time.After(duration)
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for _ = range ticker.C {
+		// do not start until the current migration is finished
+		if !migrationRunning.Load() {
+			// start final migration
+			slog.Info("Starting final migration")
+			ctx = migration.SetFinalMigration(ctx)
+			err := migrator.RunMigration(ctx)
+			if err != nil {
+				return fmt.Errorf("error running final migration: %w", err)
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
