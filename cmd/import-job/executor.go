@@ -88,12 +88,6 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	}
 	backupScheduleClient := backupClient.BackupSchedules(jobConfig.Namespace)
 
-	backupClient, err := backupEcosystem.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup schedule client: %w", err)
-	}
-	backupScheduleClient := backupClient.BackupSchedules(jobConfig.Namespace)
-
 	commandMaker := func(name string, arg ...string) sync.Command {
 		return exec.Command(name, arg...)
 	}
@@ -103,7 +97,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 
 	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, commandMaker, exportDoguApiClient, systemInfoApiClient)
 
-	cs := migrationConfig.NewConfigImporter(jobConfig.ExporterHost, exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
 	return &ImportExecutor{
 		configSyncer: cs,
