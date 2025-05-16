@@ -13,7 +13,7 @@ import (
 
 const exporterBasePath = "/ces-exporter"
 
-type client struct {
+type Client struct {
 	baseUrl    string
 	apiKey     string
 	httpClient requestExecuter
