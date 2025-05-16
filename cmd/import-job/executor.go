@@ -79,7 +79,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	}, nil
 }
 
-func (j ImportExecutor) Start(ctx context.Context) error {
+func (j ImportExecutor) Start(ctx context.Context) (e error) {
 	err := j.configSyncer.SyncConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync configuration: %w", err)
@@ -92,23 +92,32 @@ func (j ImportExecutor) Start(ctx context.Context) error {
 
 	if j.coordinator.Migration.ChangeFQDN && migration.IsFinalMigration(ctx) {
 		err = j.configSyncer.Backup(ctx, migrationConfig.Backup)
+		// The defer function is only started, if we are in a final migration
+		// therefor it do not check for final migration again
+		defer func() {
+			if e != nil {
+				// There is an error during fqdn or certificate sync -> Restore old values and cleanup backup
+				err = j.configSyncer.Backup(ctx, migrationConfig.Restore)
+				if err != nil {
+					e = fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", err, e)
+				}
+			} else {
+				// There is no error during fqdn or certificate sync -> just cleanup backup
+				err = j.configSyncer.Backup(ctx, migrationConfig.Cleanup)
+				if err != nil {
+					e = fmt.Errorf("failed to cleanup backup of fqdn and certificates in final migration: %w because of %w", err, e)
+				}
+			}
+		}()
 		if err != nil {
 			return fmt.Errorf("failed to backup fqdn and certificates in final migration: %w", err)
 		}
 		err = j.configSyncer.SyncCertificates(ctx)
 		if err != nil {
-			suberr := j.configSyncer.Backup(ctx, migrationConfig.Restore)
-			if suberr != nil {
-				return fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", suberr, err)
-			}
 			return fmt.Errorf("failed to sync certificates in final migration: %w", err)
 		}
 		err = j.configSyncer.ChangeFQDN(ctx)
 		if err != nil {
-			suberr := j.configSyncer.Backup(ctx, migrationConfig.Restore)
-			if suberr != nil {
-				return fmt.Errorf("failed to restore backup of fqdn and certificates in final migration: %w because of %w", suberr, err)
-			}
 			return fmt.Errorf("failed to change fqdn in final migration: %w", err)
 		}
 	}
