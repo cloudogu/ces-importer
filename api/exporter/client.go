@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const exporterBasePath = "/ces-exporter"
+
 type client struct {
 	baseUrl    string
 	apiKey     string
@@ -20,7 +22,7 @@ type client struct {
 // HTTP client f. i. adding proxy settings.
 func NewClient(hostName string, apiKey string, httpClient requestExecuter) *client {
 	return &client{
-		baseUrl:    fmt.Sprintf("https://%s/ces-exporter", hostName),
+		baseUrl:    fmt.Sprintf("https://%s%s", hostName, exporterBasePath),
 		apiKey:     apiKey,
 		httpClient: httpClient,
 	}

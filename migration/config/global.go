@@ -3,6 +3,7 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 )
@@ -18,7 +19,7 @@ type cesGlobalConfigImporter struct {
 	globalConfigRepo globalConfigRepo
 }
 
-func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config globalConfig) error {
+func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config exporter.GlobalConfig) error {
 	slog.Info("Importing global config...")
 
 	previousGlobalConfig, err := gci.globalConfigRepo.Get(ctx)
