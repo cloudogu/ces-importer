@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -28,10 +31,13 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	err = logging.Initialize(cfg)
+	logInitializer := logging.NewLogInitializer(cfg)
+	err = logInitializer.Initialize()
 	if err != nil {
 		panic(err)
 	}
+
+	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exportAPIService := createAPIService(cfg.API)
 
@@ -52,59 +58,50 @@ func main() {
 		PodClient: k8sClientSet.podClient,
 	})
 	if err != nil {
-		return
+		panic(fmt.Errorf("failed to create a new job service: %v", err))
 	}
 
-	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
+	httpClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, httpClient)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
 
 	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
-	k8sRestConfig, err := ctrl.GetConfig()
-	if err != nil {
-		panic(fmt.Errorf("failed to read kube config: %w", err))
-	}
+	doguStartStopper := importer.NewDoguClient(k8sClientSet.doguClient)
 
-	kubernetesClient, err := kubernetes.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create kube-client: %w", err))
-	}
-	pvcClient := kubernetesClient.CoreV1().PersistentVolumeClaims(cfg.Namespace)
-
-	ecosystemDoguClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create dogu client: %w", err))
-	}
-	doguClient := ecosystemDoguClient.Dogus(cfg.Namespace)
-
-	ecosystemComponentClient, err := componentEcoClient.NewForConfig(k8sRestConfig)
-	if err != nil {
-		panic(fmt.Errorf("failed to create component client: %w", err))
-	}
-	componentClient := ecosystemComponentClient.Components(cfg.Namespace)
-
-	doguStartStopper := importer.NewDoguClient(doguClient)
-
-	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(componentClient, doguClient, systemInfoApiClient)
+	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.componentClient, k8sClientSet.doguClient, systemInfoApiClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
 	}
 
-	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, doguClient, pvcClient)
+	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient)
 	if err != nil {
 		panic(fmt.Errorf("failed to create systeminfo validator: %w", err))
 	}
+
+	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
+
+	mailSender := mail.CreateSender(
+		cfg.Smtp,
+		cfg.ExporterHost,
+		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+		globalConfig,
+	)
 
 	deps := migration.MigratorDependencies{
 		ExportModeValidator:    exportModeValidator,
 		SystemInfoValidator:    systemInfoValidator,
 		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		MailSender:             nil,
-		LogWriter:              nil,
 		JobRunner:              jobService,
 		DoguStopper:            doguStartStopper,
 		DoguStarter:            doguStartStopper,
+		LogWriter:              logWriter,
+		LogInitializer:         logInitializer,
+		MailSender:             mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 
@@ -125,7 +122,9 @@ func main() {
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
-	httpClient := http.DefaultClient
+	httpClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
 	exportClient := exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, httpClient)
 	exportService := exporter.NewService(exportClient)
 
@@ -133,9 +132,12 @@ func createAPIService(apiCfg configuration.API) *exporter.Service {
 }
 
 type k8sClients struct {
-	pvcClient corev1.PersistentVolumeClaimInterface
-	podClient corev1.PodInterface
-	jobClient batchv1.JobInterface
+	pvcClient       corev1.PersistentVolumeClaimInterface
+	podClient       corev1.PodInterface
+	jobClient       batchv1.JobInterface
+	configMap       corev1.ConfigMapInterface
+	doguClient      ecoSystemV2.DoguInterface
+	componentClient componentEcoClient.ComponentInterface
 }
 
 func createK8Sclientset(namespace string) (k8sClients, error) {
@@ -152,12 +154,30 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 	k8sCoreClient := k8sClientSet.CoreV1()
 	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(namespace)
 	k8sPodClient := k8sCoreClient.Pods(namespace)
+	k8sConfigMapClient := k8sCoreClient.ConfigMaps(namespace)
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
+	ecoSystemClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return k8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
+	}
+
+	k8sDoguClient := ecoSystemClient.Dogus(namespace)
+
+	v1Alpha1Client, err := componentEcoClient.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return k8sClients{}, fmt.Errorf("failed to create component client: %w", err)
+	}
+
+	k8sComponentClient := v1Alpha1Client.Components(namespace)
+
 	return k8sClients{
-		pvcClient: k8sPVCClient,
-		podClient: k8sPodClient,
-		jobClient: k8sJobClient,
+		pvcClient:       k8sPVCClient,
+		podClient:       k8sPodClient,
+		jobClient:       k8sJobClient,
+		configMap:       k8sConfigMapClient,
+		doguClient:      k8sDoguClient,
+		componentClient: k8sComponentClient,
 	}, nil
 }

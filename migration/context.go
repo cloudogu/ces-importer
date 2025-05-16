@@ -2,19 +2,19 @@ package migration
 
 import "context"
 
-const finalMigrationKey = "finalMigration"
+type migrationContextKeyType uint8
 
-type finalMigration bool
+const finalMigrationKey migrationContextKeyType = iota
 
 func SetFinalMigration(ctx context.Context) context.Context {
-	return context.WithValue(ctx, finalMigrationKey, finalMigration(true))
+	return context.WithValue(ctx, finalMigrationKey, true)
 }
 
 func IsFinalMigration(ctx context.Context) bool {
-	isSet, ok := ctx.Value(finalMigrationKey).(finalMigration)
+	isSet, ok := ctx.Value(finalMigrationKey).(bool)
 	if !ok {
 		return false
 	}
 
-	return bool(isSet)
+	return isSet
 }

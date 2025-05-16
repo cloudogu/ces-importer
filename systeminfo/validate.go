@@ -17,9 +17,9 @@ import (
 const (
 	defaultWaitSecondsBetweenRetries = 10
 	defaultMaxWaitMinutes            = 10
-	doguNginx                        = "nginx"
-	doguNginxStatic                  = "nginx-static"
-	doguNginxIngress                 = "nginx-ingress"
+	doguNginx                        = "official/nginx"
+	doguNginxStatic                  = "k8s/nginx-static"
+	doguNginxIngress                 = "k8s/nginx-ingress"
 )
 
 var (
@@ -27,9 +27,9 @@ var (
 	maxWaitMinutes            = defaultMaxWaitMinutes
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
 	excludedDogus             = []string{
-		"monitoring",
-		"backup",
-		"registrator",
+		"official/monitoring",
+		"official/backup",
+		"official/registrator",
 	}
 )
 

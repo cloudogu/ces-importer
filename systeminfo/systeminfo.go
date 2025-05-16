@@ -48,7 +48,7 @@ func (s *Provider) getImporterSystemInfo(ctx context.Context) (*exporter.SystemI
 	for _, d := range dogus.Items {
 		vol := d.GetDataVolumeSize()
 		systemInfoDogus = append(systemInfoDogus, exporter.Dogu{
-			Name:    d.Name,
+			Name:    d.Spec.Name,
 			Version: d.Spec.Version,
 			Volume:  exporter.DoguVolume{SizeInBytes: vol.Value()},
 		})

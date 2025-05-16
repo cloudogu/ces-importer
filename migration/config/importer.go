@@ -6,6 +6,7 @@ import (
 	"github.com/cloudogu/ces-commons-lib/dogu"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"path"
+	"strings"
 )
 
 type configGetter interface {
@@ -44,8 +45,8 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(exporterHost string, apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
-	getter := newExporterConfigGetter(exporterHost, apiClient)
+func NewConfigImporter(apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
+	getter := newExporterConfigGetter(apiClient)
 	gci := &cesGlobalConfigImporter{globalConfigRepo}
 	dci := &cesDoguConfigImporter{doguConfigRepo, sensitiveDoguConfigRepo}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
@@ -82,6 +83,11 @@ func (ci *ConfigImporter) SyncConfig(ctx context.Context) error {
 }
 
 func matchesAnyKeyByPattern(key string, keyPatterns []string) bool {
+	// sanitize key
+	if strings.HasPrefix(key, "/") {
+		key = key[1:]
+	}
+
 	for _, pattern := range keyPatterns {
 		matched, err := path.Match(pattern, key)
 		if err == nil && matched {

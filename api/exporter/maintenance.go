@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// endpointMaintenanceMode contains the endpoint which returns data which describe the current
+	// endpointMaintenanceMode contains the endpoint to set and get the maintenance mode of the exporter system.
 	endpointMaintenanceMode = "/maintenance/mode"
 )
 
@@ -44,6 +44,7 @@ func NewMaintenanceModeService(client apiClient) *MaintenanceModeService {
 }
 
 // GetMaintenanceModeStatus returns the current maintenance mode status of the exporter system.
+// Returns true if the exporter system is in maintenance mode, false otherwise.
 func (s MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (bool, error) {
 	result, err := s.DoGetRequest(ctx, endpointMaintenanceMode)
 	if err != nil {
