@@ -298,7 +298,7 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 		return nil, fmt.Errorf("failed to get dogu volumes: %w", err)
 	}
 
-	slog.Debug("Found %d dogu volumes", len(pvcList))
+	slog.Debug("Got dogu volumes", "volumeCount", len(pvcList))
 
 	jobConfigVolumeMount := createConfigVolumeMount(j.jobConfigMap)
 	doguVolumeMounts := createDoguVolumeMounts(j.doguVolumeBasePath, pvcList)
