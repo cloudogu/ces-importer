@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"os"
@@ -21,7 +22,7 @@ type cesDoguConfigImporter struct {
 	sensitiveDoguConfigRepo doguConfigRepo
 }
 
-func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []doguConfig) error {
+func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []exporter.DoguConfig) error {
 	slog.Info("Importing dogu config...")
 
 	for _, dc := range config {
@@ -46,7 +47,7 @@ func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 	return nil
 }
 
-func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc doguConfig) error {
+func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc exporter.DoguConfig) error {
 	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.NormalConfig, dci.doguConfigRepo); err != nil {
 		return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)
 	}
@@ -57,7 +58,7 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc doguC
 
 	if err := importLocalConfig(dc.Name, dc.LocalConfig); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			slog.Debug("no local config found for dogu '%s'", dc.Name)
+			slog.Debug("no local config found for dogu", "dogu", dc.Name)
 			return nil
 		}
 
@@ -67,7 +68,7 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc doguC
 	return nil
 }
 
-func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []keyValue, repo doguConfigRepo) error {
+func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []exporter.KeyValue, repo doguConfigRepo) error {
 	doguName := doguCommons.SimpleName(dogu)
 
 	err := repo.Delete(ctx, doguName)
@@ -101,7 +102,7 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []keyValue, r
 	return nil
 }
 
-func importLocalConfig(dogu string, dc []keyValue) error {
+func importLocalConfig(dogu string, dc []exporter.KeyValue) error {
 	localConfigFile := getLocalConfigFileForDogu(dogu)
 
 	file, err := os.OpenFile(localConfigFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)

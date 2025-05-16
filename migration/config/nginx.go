@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"github.com/cloudogu/ces-importer/api/exporter"
 	"log/slog"
 	"strings"
 )
@@ -14,20 +15,20 @@ const (
 
 var (
 	nginxStaticExcludeConfigKeys = []string{
-		"/google_tracking_id",
-		"/disable_access_log",
-		"/buffering/*",
-		"/externals/*",
+		"google_tracking_id",
+		"disable_access_log",
+		"buffering/*",
+		"externals/*",
 	}
 
 	nginxIngressExcludeConfigKeys = []string{
-		"/buffering/*",
-		"/externals/*",
-		"/html_content_url",
+		"buffering/*",
+		"externals/*",
+		"html_content_url",
 	}
 )
 
-func mergeNginxExternalsConfigIntoGlobalConfig(config *configuration) {
+func mergeNginxExternalsConfigIntoGlobalConfig(config *exporter.Configuration) {
 	for _, dc := range config.DoguConfigs {
 		if dc.Name != nginxDoguName {
 			continue
@@ -48,18 +49,18 @@ func mergeNginxExternalsConfigIntoGlobalConfig(config *configuration) {
 	}
 }
 
-func createDoguConfigForNginxStatic(config doguConfig) doguConfig {
+func createDoguConfigForNginxStatic(config exporter.DoguConfig) exporter.DoguConfig {
 	return createDoguConfigForNginxDogu(config, nginxStaticDoguName, nginxStaticExcludeConfigKeys)
 }
 
-func createDoguConfigForNginxIngress(config doguConfig) doguConfig {
+func createDoguConfigForNginxIngress(config exporter.DoguConfig) exporter.DoguConfig {
 	return createDoguConfigForNginxDogu(config, nginxIngressDoguName, nginxIngressExcludeConfigKeys)
 }
 
-func createDoguConfigForNginxDogu(config doguConfig, doguName string, excludeWithPrefix []string) doguConfig {
-	var newNormalConfig []keyValue
-	var newSensitiveConfig []keyValue
-	var newLocalConfig []keyValue
+func createDoguConfigForNginxDogu(config exporter.DoguConfig, doguName string, excludeWithPrefix []string) exporter.DoguConfig {
+	var newNormalConfig []exporter.KeyValue
+	var newSensitiveConfig []exporter.KeyValue
+	var newLocalConfig []exporter.KeyValue
 
 	for _, configKey := range config.NormalConfig {
 		if matchesAnyKeyByPattern(configKey.Key, excludeWithPrefix) {
@@ -85,7 +86,7 @@ func createDoguConfigForNginxDogu(config doguConfig, doguName string, excludeWit
 		newLocalConfig = append(newLocalConfig, configKey)
 	}
 
-	return doguConfig{
+	return exporter.DoguConfig{
 		Name:            doguName,
 		NormalConfig:    newNormalConfig,
 		SensitiveConfig: newSensitiveConfig,

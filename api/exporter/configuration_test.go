@@ -1,9 +1,8 @@
-package configuration
+package exporter
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -11,23 +10,21 @@ import (
 func TestGetConfig(t *testing.T) {
 	tests := []struct {
 		name           string
-		exporterHost   string
 		mockResponse   []byte
 		mockError      error
-		expectedConfig *configuration
+		expectedConfig *Configuration
 		expectedError  bool
 	}{
 		{
 			name:         "successful config fetch",
-			exporterHost: "test-host",
 			mockResponse: []byte(`{"global": [{"key": "key","value": "value"}],"dogus": [{"name": "test-dogu","normal": [{"key": "key","value": "value"}]}]}`),
-			expectedConfig: &configuration{
-				GlobalConfig: []keyValue{
+			expectedConfig: &Configuration{
+				GlobalConfig: []KeyValue{
 					{Key: "key", Value: "value"},
 				},
-				DoguConfigs: []doguConfig{
+				DoguConfigs: []DoguConfig{
 					{Name: "test-dogu",
-						NormalConfig: []keyValue{
+						NormalConfig: []KeyValue{
 							{Key: "key", Value: "value"},
 						},
 					},
@@ -37,14 +34,12 @@ func TestGetConfig(t *testing.T) {
 		},
 		{
 			name:           "error in API client",
-			exporterHost:   "test-host",
 			mockError:      errors.New("network error"),
 			expectedConfig: nil,
 			expectedError:  true,
 		},
 		{
 			name:           "invalid JSON response",
-			exporterHost:   "test-host",
 			mockResponse:   []byte(`invalid-json`),
 			expectedConfig: nil,
 			expectedError:  true,
@@ -54,12 +49,11 @@ func TestGetConfig(t *testing.T) {
 	for _, tt := range tests {
 		ctx := context.Background()
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := newMockExporterApiClient(t)
-			mockClient.EXPECT().DoGetRequest(ctx, fmt.Sprintf("https://%s/configuration", tt.exporterHost)).Return(tt.mockResponse, tt.mockError)
+			mockClient := newMockApiClient(t)
+			mockClient.EXPECT().DoGetRequest(ctx, "/configuration").Return(tt.mockResponse, tt.mockError)
 
-			getter := exporterConfigGetter{
-				exporterHost: tt.exporterHost,
-				apiClient:    mockClient,
+			getter := ConfigApiClient{
+				apiClient: mockClient,
 			}
 
 			config, err := getter.GetConfig(ctx)
@@ -79,24 +73,22 @@ func TestNewExporterConfigGetter(t *testing.T) {
 	tests := []struct {
 		name           string
 		exporterHost   string
-		apiClient      exporterApiClient
-		expectedGetter *exporterConfigGetter
+		apiClient      apiClient
+		expectedGetter *ConfigApiClient
 	}{
 		{
 			name:         "valid parameters",
 			exporterHost: "test-host",
-			apiClient:    newMockExporterApiClient(t),
-			expectedGetter: &exporterConfigGetter{
-				exporterHost: "test-host",
-				apiClient:    newMockExporterApiClient(t),
+			apiClient:    newMockApiClient(t),
+			expectedGetter: &ConfigApiClient{
+				apiClient: newMockApiClient(t),
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getter := newExporterConfigGetter(tt.exporterHost, tt.apiClient)
-			assert.Equal(t, tt.expectedGetter.exporterHost, getter.exporterHost)
+			getter := NewConfigApiClient(tt.apiClient)
 			assert.Equal(t, tt.expectedGetter.apiClient, getter.apiClient)
 		})
 	}

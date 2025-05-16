@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/logging"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
-	"log/slog"
-	"os"
 
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
 
@@ -48,21 +47,11 @@ func NewImportExecutor() (*ImportExecutor, error) {
 		return nil, fmt.Errorf("failed to read job configuration: %w", err)
 	}
 
-	var level slog.Level
-	if err := level.UnmarshalText([]byte(jobConfig.Logging.Level)); err != nil {
-		slog.New(slog.NewTextHandler(os.Stderr, nil)).
-			Error("Error parsing log level. Setting to INFO.", "err", err)
-		level = slog.LevelInfo
+	logInitializer := logging.NewLogInitializer(jobConfig.Logging.Level)
+	err = logInitializer.Initialize()
+	if err != nil {
+		panic(err)
 	}
-
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-	})
-
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
-
-	slog.Info("Configured logger", "level", level.String())
 
 	clusterConfig, err := ctrl.GetConfig()
 	if err != nil {
@@ -78,6 +67,8 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
 
 	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey, createInsecureHTTPClient())
+	exporterService := exporter.NewService(exporterApiClient)
+
 	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)
 	doguConfigRepo := repository.NewDoguConfigRepository(configMaps)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(secrets)
@@ -90,7 +81,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 
 	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
 
-	cs := migrationConfig.NewConfigImporter(exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(exporterService.ConfigApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
 	return &ImportExecutor{
 		configSyncer: cs,

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"path"
 	"strings"
 )
 
 type configGetter interface {
-	GetConfig(ctx context.Context) (*configuration, error)
+	GetConfig(ctx context.Context) (*exporter.Configuration, error)
 }
 
 type globalConfigRepo interface {
@@ -27,15 +28,15 @@ type doguConfigRepo interface {
 }
 
 type globalConfigImporter interface {
-	importGlobalConfig(ctx context.Context, config globalConfig) error
+	importGlobalConfig(ctx context.Context, config exporter.GlobalConfig) error
 }
 
 type doguConfigImporter interface {
-	importDoguConfigs(ctx context.Context, config []doguConfig) error
+	importDoguConfigs(ctx context.Context, config []exporter.DoguConfig) error
 }
 
 type backupScheduleImporter interface {
-	importBackupSchedules(ctx context.Context, config []backupSchedule) error
+	importBackupSchedules(ctx context.Context, config []exporter.BackupSchedule) error
 }
 
 type ConfigImporter struct {
@@ -45,14 +46,13 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(apiClient exporterApiClient, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
-	getter := newExporterConfigGetter(apiClient)
+func NewConfigImporter(configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
 	gci := &cesGlobalConfigImporter{globalConfigRepo}
 	dci := &cesDoguConfigImporter{doguConfigRepo, sensitiveDoguConfigRepo}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
 	return &ConfigImporter{
-		getter:                 getter,
+		getter:                 configGetter,
 		globalConfigImporter:   gci,
 		doguConfigImporter:     dci,
 		backupScheduleImporter: bsi,

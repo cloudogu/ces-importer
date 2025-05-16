@@ -5,6 +5,7 @@ package configuration
 import (
 	context "context"
 
+	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -22,7 +23,7 @@ func (_m *mockDoguConfigImporter) EXPECT() *mockDoguConfigImporter_Expecter {
 }
 
 // importDoguConfigs provides a mock function with given fields: ctx, config
-func (_m *mockDoguConfigImporter) importDoguConfigs(ctx context.Context, config []doguConfig) error {
+func (_m *mockDoguConfigImporter) importDoguConfigs(ctx context.Context, config []exporter.DoguConfig) error {
 	ret := _m.Called(ctx, config)
 
 	if len(ret) == 0 {
@@ -30,7 +31,7 @@ func (_m *mockDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, []doguConfig) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []exporter.DoguConfig) error); ok {
 		r0 = rf(ctx, config)
 	} else {
 		r0 = ret.Error(0)
@@ -46,14 +47,14 @@ type mockDoguConfigImporter_importDoguConfigs_Call struct {
 
 // importDoguConfigs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - config []doguConfig
+//   - config []exporter.DoguConfig
 func (_e *mockDoguConfigImporter_Expecter) importDoguConfigs(ctx interface{}, config interface{}) *mockDoguConfigImporter_importDoguConfigs_Call {
 	return &mockDoguConfigImporter_importDoguConfigs_Call{Call: _e.mock.On("importDoguConfigs", ctx, config)}
 }
 
-func (_c *mockDoguConfigImporter_importDoguConfigs_Call) Run(run func(ctx context.Context, config []doguConfig)) *mockDoguConfigImporter_importDoguConfigs_Call {
+func (_c *mockDoguConfigImporter_importDoguConfigs_Call) Run(run func(ctx context.Context, config []exporter.DoguConfig)) *mockDoguConfigImporter_importDoguConfigs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]doguConfig))
+		run(args[0].(context.Context), args[1].([]exporter.DoguConfig))
 	})
 	return _c
 }
@@ -63,7 +64,7 @@ func (_c *mockDoguConfigImporter_importDoguConfigs_Call) Return(_a0 error) *mock
 	return _c
 }
 
-func (_c *mockDoguConfigImporter_importDoguConfigs_Call) RunAndReturn(run func(context.Context, []doguConfig) error) *mockDoguConfigImporter_importDoguConfigs_Call {
+func (_c *mockDoguConfigImporter_importDoguConfigs_Call) RunAndReturn(run func(context.Context, []exporter.DoguConfig) error) *mockDoguConfigImporter_importDoguConfigs_Call {
 	_c.Call.Return(run)
 	return _c
 }

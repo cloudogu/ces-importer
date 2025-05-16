@@ -42,7 +42,7 @@ type MailSender interface {
 }
 
 type LogInitializer interface {
-	Initialize() error
+	InitializeWithLogFile() error
 }
 
 type Migrator struct {
@@ -84,7 +84,7 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	err = m.logInitializer.Initialize()
+	err = m.logInitializer.InitializeWithLogFile()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
