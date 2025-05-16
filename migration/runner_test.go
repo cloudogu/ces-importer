@@ -465,7 +465,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, true, runErr)
+		m.cleanup(testCtx, startTime, true, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to disabled maintenance mode:")
 	})
@@ -498,7 +498,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, false, runErr)
+		m.cleanup(testCtx, startTime, false, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to start all dogus:")
 	})
@@ -531,7 +531,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, false, runErr)
+		m.cleanup(testCtx, startTime, false, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to send mail:")
 	})
