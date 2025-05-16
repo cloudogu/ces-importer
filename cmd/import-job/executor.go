@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/logging"
 	migration "github.com/cloudogu/ces-importer/migration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
 	"log/slog"
@@ -35,10 +37,26 @@ type ImportExecutor struct {
 	coordinator configuration.Coordinator
 }
 
+// createInsecureHTTPClient creates an HTTP client that accepts self-signed certificates
+func createInsecureHTTPClient() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if transport.TLSClientConfig == nil {
+		transport.TLSClientConfig = &tls.Config{}
+	}
+	transport.TLSClientConfig.InsecureSkipVerify = true
+	return &http.Client{Transport: transport}
+}
+
 func NewImportExecutor() (*ImportExecutor, error) {
 	jobConfig, err := configuration.ReadJobConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read job configuration: %w", err)
+	}
+
+	logInitializer := logging.NewLogInitializer(jobConfig.Logging.Level)
+	err = logInitializer.Initialize()
+	if err != nil {
+		panic(err)
 	}
 
 	clusterConfig, err := ctrl.GetConfig()
@@ -54,7 +72,9 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	configMaps := k8sClient.CoreV1().ConfigMaps(jobConfig.Namespace)
 	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
 
-	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey, http.DefaultClient)
+	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey, createInsecureHTTPClient())
+	exporterService := exporter.NewService(exporterApiClient)
+
 	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)
 	doguConfigRepo := repository.NewDoguConfigRepository(configMaps)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(secrets)
@@ -67,7 +87,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 
 	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
 
-	cs := migrationConfig.NewConfigImporter(jobConfig.ExporterHost, exporterApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(exporterService.ConfigApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
 	co, err := configuration.ReadCoordinatorConfig()
 	if err != nil {
@@ -86,10 +106,10 @@ func (j ImportExecutor) Start(ctx context.Context) (e error) {
 		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
 
-	err = j.dataSyncer.SyncData(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to sync data: %w", err)
-	}
+	//err = j.dataSyncer.SyncData(ctx)
+	//if err != nil {
+	//	return fmt.Errorf("failed to sync data: %w", err)
+	//}
 
 	if j.coordinator.Migration.ChangeFQDN && migration.IsFinalMigration(ctx) {
 		slog.Info("Change FQDN in final Migration")

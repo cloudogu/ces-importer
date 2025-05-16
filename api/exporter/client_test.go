@@ -103,7 +103,7 @@ func Test_NewClient(t *testing.T) {
 			apiKey:     "validApiKey",
 			httpClient: &http.Client{},
 			expected: &client{
-				baseUrl:    "https://example.com",
+				baseUrl:    "https://example.com/ces-exporter",
 				apiKey:     "validApiKey",
 				httpClient: &http.Client{},
 			},
@@ -114,7 +114,7 @@ func Test_NewClient(t *testing.T) {
 			apiKey:     "someApiKey",
 			httpClient: &http.Client{},
 			expected: &client{
-				baseUrl:    "https://",
+				baseUrl:    "https:///ces-exporter",
 				apiKey:     "someApiKey",
 				httpClient: &http.Client{},
 			},
@@ -125,7 +125,7 @@ func Test_NewClient(t *testing.T) {
 			apiKey:     "",
 			httpClient: &http.Client{},
 			expected: &client{
-				baseUrl:    "https://example.com",
+				baseUrl:    "https://example.com/ces-exporter",
 				apiKey:     "",
 				httpClient: &http.Client{},
 			},
@@ -136,7 +136,7 @@ func Test_NewClient(t *testing.T) {
 			apiKey:     "validApiKey",
 			httpClient: nil,
 			expected: &client{
-				baseUrl:    "https://example.com",
+				baseUrl:    "https://example.com/ces-exporter",
 				apiKey:     "validApiKey",
 				httpClient: nil,
 			},

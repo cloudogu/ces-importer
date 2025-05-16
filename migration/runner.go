@@ -39,11 +39,11 @@ type MaintenanceModeHandler interface {
 }
 
 type MailSender interface {
-	Send(isFinal bool, migrationResult error, source string, target string, startTime time.Time, endTime time.Time) error
+	Send(ctx context.Context, isFinal bool, migrationResult error, startTime time.Time, endTime time.Time) error
 }
 
 type LogInitializer interface {
-	Initialize() error
+	InitializeWithLogFile() error
 }
 
 type Migrator struct {
@@ -85,7 +85,7 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	err = m.logInitializer.Initialize()
+	err = m.logInitializer.InitializeWithLogFile()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
@@ -122,13 +122,15 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 	}
 
 	logs, err := m.jobRunner.Run(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to run migration job: %w", err)
+	if logs != nil {
+		lerr := m.logWriter.Write(logs)
+		if lerr != nil {
+			slog.Error(fmt.Sprintf("failed to write job log file: %s", lerr.Error()))
+		}
 	}
 
-	err = m.logWriter.Write(logs)
 	if err != nil {
-		return fmt.Errorf("failed to write job log file: %w", err)
+		return fmt.Errorf("failed to run migration job: %w", err)
 	}
 
 	return
@@ -136,6 +138,13 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 
 func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigration bool, runError error, runPanic any) error {
 	retError := runError
+	if runError != nil {
+		slog.Error(fmt.Sprintf("migration failed: %s", runError.Error()))
+	}
+	if runPanic != nil {
+		slog.Error(fmt.Sprintf("migration failed: %s", runPanic))
+	}
+
 	if (runError != nil || runPanic != nil) && isFinalMigration {
 		if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
 			retError = errors.Join(runError, err)
@@ -149,7 +158,7 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 	}
 
 	endTime := time.Now()
-	if err := m.mailSender.Send(isFinalMigration, runError, "", "", startTime, endTime); err != nil {
+	if err := m.mailSender.Send(ctx, isFinalMigration, runError, startTime, endTime); err != nil {
 		retError = errors.Join(runError, err)
 		slog.Error(fmt.Sprintf("failed to send mail: %s", err.Error()))
 	}

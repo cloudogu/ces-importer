@@ -22,6 +22,8 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "ces-importer.name" . }}-config
+        - name: migration-log
+          emptyDir: {}
       containers:
         - env:
             - name: API_KEY
@@ -39,6 +41,8 @@ spec:
             - mountPath: "/etc/{{ include "ces-importer.name" . }}/config"
               name: config-volume
               readOnly: true
+            - mountPath: /home/ces-importer/migration-log
+              name: migration-log
           image: "{{ .Values.main.image.registry }}/{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main

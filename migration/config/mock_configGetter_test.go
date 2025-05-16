@@ -5,6 +5,7 @@ package configuration
 import (
 	context "context"
 
+	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -22,23 +23,23 @@ func (_m *mockConfigGetter) EXPECT() *mockConfigGetter_Expecter {
 }
 
 // GetConfig provides a mock function with given fields: ctx
-func (_m *mockConfigGetter) GetConfig(ctx context.Context) (*configuration, error) {
+func (_m *mockConfigGetter) GetConfig(ctx context.Context) (*exporter.Configuration, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetConfig")
 	}
 
-	var r0 *configuration
+	var r0 *exporter.Configuration
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*configuration, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (*exporter.Configuration, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) *configuration); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) *exporter.Configuration); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*configuration)
+			r0 = ret.Get(0).(*exporter.Configuration)
 		}
 	}
 
@@ -69,12 +70,12 @@ func (_c *mockConfigGetter_GetConfig_Call) Run(run func(ctx context.Context)) *m
 	return _c
 }
 
-func (_c *mockConfigGetter_GetConfig_Call) Return(_a0 *configuration, _a1 error) *mockConfigGetter_GetConfig_Call {
+func (_c *mockConfigGetter_GetConfig_Call) Return(_a0 *exporter.Configuration, _a1 error) *mockConfigGetter_GetConfig_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockConfigGetter_GetConfig_Call) RunAndReturn(run func(context.Context) (*configuration, error)) *mockConfigGetter_GetConfig_Call {
+func (_c *mockConfigGetter_GetConfig_Call) RunAndReturn(run func(context.Context) (*exporter.Configuration, error)) *mockConfigGetter_GetConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }
