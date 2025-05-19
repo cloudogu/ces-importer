@@ -72,7 +72,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	configMaps := k8sClient.CoreV1().ConfigMaps(jobConfig.Namespace)
 	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
 
-	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey, createInsecureHTTPClient())
+	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey)
 	exporterService := exporter.NewService(exporterApiClient)
 
 	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)

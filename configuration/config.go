@@ -40,6 +40,8 @@ type API struct {
 	// ExporterApiKey contains the API key to authenticate against the source system's exporter system info endpoint.
 	// This value is required.
 	ExporterApiKey string `yaml:"apiKey"`
+	// SkipTLSVerify controls whether to skip check the server's certificate
+	SkipTLSVerify bool `yaml:"skipTLSVerify"`
 }
 
 // Migration contains the configuration data for the migration schedule.

@@ -8,6 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
@@ -152,6 +153,8 @@ func newJobProvider(deps JobProviderDependencies) (*jobProvider, error) {
 		return nil, fmt.Errorf("failed to create specification for job: %w", err)
 	}
 
+	slog.Debug("Successfully created job specification")
+
 	return &jobProvider{
 		jobSpec:            jSpec,
 		sshConfig:          deps.SSHConfig,
@@ -286,12 +289,16 @@ type jobProvider struct {
 }
 
 func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) {
+	slog.Debug("Creating import job")
+
 	backoffLimit := int32(0) // Allow no retries for the job before failing the job
 
 	pvcList, err := j.GetDoguVolumes(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dogu volumes: %w", err)
 	}
+
+	slog.Debug("Got dogu volumes", "volumeCount", len(pvcList))
 
 	jobConfigVolumeMount := createConfigVolumeMount(j.jobConfigMap)
 	doguVolumeMounts := createDoguVolumeMounts(j.doguVolumeBasePath, pvcList)
