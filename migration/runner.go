@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-const (
-	finalMigrationKey = "TBD"
-)
-
 type ExportModeValidator interface {
 	Validate(ctx context.Context) error
 }
@@ -93,14 +89,8 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
 
-	var isFinalMigration bool
-	isFinalMigration, ok := ctx.Value(finalMigrationKey).(bool)
-	if !ok {
-		slog.Debug("Starting a non final migration...")
-		isFinalMigration = false
-	} else if isFinalMigration {
-		slog.Debug("Starting a final migration...")
-	}
+	isFinalMigration := IsFinalMigration(ctx)
+	slog.Debug("Starting migration", "finalMigration", isFinalMigration)
 
 	startTime := time.Now()
 	defer func() {

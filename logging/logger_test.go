@@ -18,7 +18,7 @@ var testCtx = context.Background()
 func Test_configureLogger(t *testing.T) {
 	t.Run("should fallback to INFO on config error", func(t *testing.T) {
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "banana"}
+		brokenConfig := configuration.Coordinator{Logging: configuration.Logging{Level: "banana"}}
 
 		mockOpen := newMockOsOpenFile(t)
 		mockOpen.EXPECT().Execute(PathAppLogFile, mock.Anything, mock.Anything).Return(nil, nil)
@@ -46,7 +46,7 @@ func Test_configureLogger(t *testing.T) {
 	})
 	t.Run("should return error if file cannot be opened", func(t *testing.T) {
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "banana"}
+		brokenConfig := configuration.Coordinator{Logging: configuration.Logging{Level: "banana"}}
 
 		mockOpen := newMockOsOpenFile(t)
 		mockOpen.EXPECT().Execute(PathAppLogFile, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
@@ -72,7 +72,7 @@ func Test_configureLogger(t *testing.T) {
 	})
 	t.Run("should set loglevel to ERROR", func(t *testing.T) {
 		// given
-		brokenConfig := configuration.Configuration{LogLevel: "ERROR"}
+		brokenConfig := configuration.Coordinator{Logging: configuration.Logging{Level: "ERROR"}}
 
 		mockOpen := newMockOsOpenFile(t)
 		mockOpen.EXPECT().Execute(PathAppLogFile, mock.Anything, mock.Anything).Return(nil, nil)
@@ -99,7 +99,7 @@ func Test_configureLogger(t *testing.T) {
 	})
 	t.Run("should set loglevel to WARN", func(t *testing.T) {
 		// given
-		config := configuration.Configuration{LogLevel: "WARN"}
+		config := configuration.Coordinator{Logging: configuration.Logging{Level: "WARN"}}
 
 		mockOpen := newMockOsOpenFile(t)
 		mockOpen.EXPECT().Execute(PathAppLogFile, mock.Anything, mock.Anything).Return(nil, nil)

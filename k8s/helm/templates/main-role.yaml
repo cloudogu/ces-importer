@@ -41,11 +41,12 @@ rules:
     - get
     - list
     - update
-# allow to inspect pvc size
+  # allow for dogu resizing
 - apiGroups: [""]
   resources:
     - persistentvolumeclaims
   verbs:
+    - list
     - get
   # allow for systeminfo comparison
 - apiGroups:
@@ -54,3 +55,12 @@ rules:
     - components
   verbs:
     - list
+  # allow for jobs creating
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - list
+    - create
+    - watch

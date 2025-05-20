@@ -5,8 +5,25 @@ metadata:
   labels:
     {{- include "ces-importer.labels" . | nindent 4 }}
 data:
-  log_level: "{{.Values.config.logLevel}}"
-  exporter_host: "{{.Values.config.exporter.host}}"
-  exporter_ssh_user: "{{ include "ces-importer.sshUser" . }}"
-  migration_regular_schedule: "{{.Values.config.migration.regularSchedule}}"
-  migration_final_schedule: "{{.Values.config.migration.finalSchedule}}"
+  logging.yaml: |
+  {{- toYaml .Values.config.logging | nindent 4 }}
+
+  api.yaml: |
+  {{- toYaml .Values.config.api | nindent 4 }}
+
+  migration.yaml: |
+  {{- toYaml .Values.config.migration | nindent 4 }}
+
+  ssh.yaml: |
+  {{- toYaml .Values.config.ssh | nindent 4 }}  
+
+  job.yaml: |
+  {{- toYaml .Values.config.job | nindent 4 }}
+
+  job-container.yaml: |
+    jobConfigMap: {{ include "job-config.name" . | quote }}
+    jobServiceAccount: {{ include "ces-importer.name" . }}-main-manager
+    {{- toYaml .Values.job | nindent 4 }}
+
+  smtp.yaml: |
+  {{- toYaml .Values.config.smtp | nindent 4 }}

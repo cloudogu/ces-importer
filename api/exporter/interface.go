@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"io"
 	"net/http"
 )
 
@@ -15,4 +16,5 @@ type apiClient interface {
 	// errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 	// provided API key.
 	DoGetRequest(ctx context.Context, exporterUrl string) (result []byte, err error)
+	DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error)
 }

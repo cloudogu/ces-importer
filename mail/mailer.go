@@ -44,17 +44,17 @@ type SenderService func(addr string, a smtp.Auth, from string, to []string, msg 
 
 // Sender provides functionality to send emails using a configured SMTP service.
 type Sender struct {
-	config           configuration.SmtpConfig // SMTP configuration
-	sourceInstance   string                   // Source instance URL of the exporter
-	senderService    SenderService            // Function to send email
-	readFile         OsReadFile               // Function to read email content from a file
-	attachments      []string                 // List of files to attach to each mail
-	globalConfigRepo globalConfigRepo         // Repository for global configuration
+	config           configuration.Smtp // SMTP configuration
+	sourceInstance   string             // Source instance URL of the exporter
+	senderService    SenderService      // Function to send email
+	readFile         OsReadFile         // Function to read email content from a file
+	attachments      []string           // List of files to attach to each mail
+	globalConfigRepo globalConfigRepo   // Repository for global configuration
 }
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config configuration.SmtpConfig, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
+func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
 	return &Sender{
 		config,
 		sourceInstance,

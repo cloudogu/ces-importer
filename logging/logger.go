@@ -17,10 +17,10 @@ const (
 type LogInitializer struct {
 	open           osOpenFile
 	newMultiWriter createMultiWriter
-	config         configuration.Configuration
+	config         configuration.Coordinator
 }
 
-func NewLogInitializer(cfg configuration.Configuration) *LogInitializer {
+func NewLogInitializer(cfg configuration.Coordinator) *LogInitializer {
 	return &LogInitializer{
 		open: func(name string, flag int, perm os.FileMode) (file, error) {
 			return os.OpenFile(name, flag, perm)
@@ -32,7 +32,7 @@ func NewLogInitializer(cfg configuration.Configuration) *LogInitializer {
 
 func (li LogInitializer) Initialize() error {
 	var level slog.Level
-	if err := level.UnmarshalText([]byte(li.config.LogLevel)); err != nil {
+	if err := level.UnmarshalText([]byte(li.config.Logging.Level)); err != nil {
 		slog.New(slog.NewTextHandler(os.Stderr, nil)).
 			Error("Error parsing log level. Setting to INFO.", "err", err)
 		level = slog.LevelInfo
