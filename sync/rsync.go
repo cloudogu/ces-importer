@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -110,15 +111,15 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	slog.Info(fmt.Sprintf("executing rsync command: %s", cmd.String()))
 
 	// Get stdout and stderr pipes
-	// 	stdoutPipe, err := cmd.StdoutPipe()
-	// 	if err != nil {
-	// 		return fmt.Errorf("error creating stdout pipe: %w", err)
-	// 	}
-	//
-	// 	stderrPipe, err := cmd.StderrPipe()
-	// 	if err != nil {
-	// 		return fmt.Errorf("error creating stderr pipe: %w", err)
-	// 	}
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stdout pipe: %w", err)
+	}
+
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stderr pipe: %w", err)
+	}
 
 	// Start the rsync process
 	if err := cmd.Start(); err != nil {
@@ -126,37 +127,36 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	}
 	//
 	slog.Info("started rsync")
-	//
-	// 	// Create a channel to signal when output is complete
-	// 	done := make(chan struct{})
-	//
-	// 	// Function to read and print output in real-time
-	// 	go func() {
-	// 		scanner := bufio.NewScanner(stdoutPipe)
-	// 		for scanner.Scan() {
-	// 			slog.Info(scanner.Text()) // Print real-time stdout
-	// 		}
-	// 		done <- struct{}{}
-	// 	}()
-	//
-	// 	// Function to read and print errors in real-time
-	// 	go func() {
-	// 		scanner := bufio.NewScanner(stderrPipe)
-	// 		for scanner.Scan() {
-	// 			slog.Error(scanner.Text()) // Print real-time stderr
-	// 		}
-	// 		done <- struct{}{}
-	// 	}()
-	//
-	// 	// Wait for both output streams to complete
-	// 	<-done
-	// 	<-done
 
+	// Create a channel to signal when output is complete
+	done := make(chan struct{})
+
+	// Function to read and print output in real-time
+	go func() {
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			slog.Info(scanner.Text()) // Print real-time stdout
+		}
+		slog.Info("std out scanner is done")
+		done <- struct{}{}
+	}()
+
+	// Function to read and print errors in real-time
+	go func() {
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			slog.Error(scanner.Text()) // Print real-time stderr
+		}
+		done <- struct{}{}
+	}()
+
+	// Wait for both output streams to complete
+	<-done
+	<-done
 	// Wait for rsync to finish
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("rsync exited with error: %w", err)
 	}
-	time.Sleep(time.Minute * 2)
 	return nil
 }
 
