@@ -177,13 +177,23 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	// Ensure the watcher is stopped when we're done
 	defer watcher.Stop()
 
-	var errWatch error
-
 	slog.Debug("Starting to wait for job to complete or fail")
 
 	// Process events from the watcher until the job completes, fails, or an error occurs
-	for event := range watcher.ResultChan() {
-		slog.Debug("Received event from watcher for job", "name", job.GetName(), "type", event.Type)
+	errWatch := watchEvents(watcher.ResultChan())
+	if errWatch != nil {
+		return nil, fmt.Errorf("received error while watching job: %w", errWatch)
+	}
+
+	// Return nil values because the actual logs are set by the deferred function
+	return nil, nil
+}
+
+// watchEvents processes events from a watcher until the job completes, fails, or an error occurs.
+// It logs the event type and returns an error if the job fails, or an error occurs during processing
+func watchEvents(resultChan <-chan watchAPI.Event) (errWatch error) {
+	for event := range resultChan {
+		slog.Debug("Received event from watcher for import job", "type", event.Type)
 
 		// Handle watch errors
 		if event.Type == watchAPI.Error {
@@ -211,13 +221,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 		}
 	}
 
-	// Handle any errors that occurred during watching
-	if errWatch != nil {
-		return nil, fmt.Errorf("received error while watching job: %w", errWatch)
-	}
-
-	// Return nil values because the actual logs are set by the deferred function
-	return nil, nil
+	return errWatch
 }
 
 // getLogs retrieves the logs from a job's pod
