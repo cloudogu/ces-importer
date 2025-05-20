@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,16 +12,63 @@ import (
 
 const exporterBasePath = "/ces-exporter"
 
-type client struct {
+type Client struct {
 	baseUrl    string
 	apiKey     string
 	httpClient requestExecuter
 }
 
-// NewClient creates a client for easy API access with the given HTTP client. This allows for generically modifying the
-// HTTP client f. i. adding proxy settings.
-func NewClient(hostName string, apiKey string, httpClient requestExecuter) *client {
-	return &client{
+type HTTPClientOption func(*http.Client)
+
+// WithCustomHTTPClient sets a custom HTTP Client to be used when executing requests.
+func WithCustomHTTPClient(httpClient *http.Client) HTTPClientOption {
+	return func(client *http.Client) {
+		slog.Debug("Use custom HTTP Client for API requests")
+
+		*client = *httpClient
+	}
+}
+
+// WithInsecure configures the HTTP Client to skip TLS certificate verification, enabling insecure connections.
+// A valid Client needs to be provided for this option. Either by using the default Client or by creating a custom
+// Client with the WithCustomHTTPClient option.
+func WithInsecure() HTTPClientOption {
+	return func(client *http.Client) {
+		slog.Debug("Skip TLS certificate verification for API requests")
+
+		var transportConfig *http.Transport
+
+		if client.Transport == nil {
+			transportConfig = &http.Transport{}
+		} else {
+			clientTransportConfig, ok := client.Transport.(*http.Transport)
+			if !ok {
+				transportConfig = &http.Transport{}
+			} else {
+				transportConfig = clientTransportConfig
+			}
+		}
+
+		if transportConfig.TLSClientConfig == nil {
+			transportConfig.TLSClientConfig = &tls.Config{}
+		}
+
+		transportConfig.TLSClientConfig.InsecureSkipVerify = true
+
+		client.Transport = transportConfig
+	}
+}
+
+// NewClient creates a Client for easy API access with the given HTTP Client. This allows for generically modifying the
+// HTTP Client f. i. adding proxy settings.
+func NewClient(hostName string, apiKey string, options ...HTTPClientOption) *Client {
+	httpClient := &http.Client{}
+
+	for _, option := range options {
+		option(httpClient)
+	}
+
+	return &Client{
 		baseUrl:    fmt.Sprintf("https://%s%s", hostName, exporterBasePath),
 		apiKey:     apiKey,
 		httpClient: httpClient,
@@ -30,7 +78,7 @@ func NewClient(hostName string, apiKey string, httpClient requestExecuter) *clie
 // DoGetRequest creates an HTTP GET request towards the exporter API. Any unexpected HTTP codes (other than 200 OK) or
 // errors will be returned as an error. For authentication, request headers will automatically be enriched with the
 // provided API key.
-func (c *client) DoGetRequest(ctx context.Context, path string) (result []byte, err error) {
+func (c *Client) DoGetRequest(ctx context.Context, path string) (result []byte, err error) {
 	requestUrl, err := url.JoinPath(c.baseUrl, path)
 	if err != nil {
 		return result, fmt.Errorf("failed to create request url: %w", err)

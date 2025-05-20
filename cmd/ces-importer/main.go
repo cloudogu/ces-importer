@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -19,7 +18,6 @@ import (
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"log/slog"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -61,11 +59,7 @@ func main() {
 		panic(fmt.Errorf("failed to create a new job service: %v", err))
 	}
 
-	httpClient := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
-
-	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, httpClient)
+	exporterApiClient := createAPIClient(cfg.API)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
 
@@ -122,13 +116,20 @@ func main() {
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
-	httpClient := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
-	exportClient := exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, httpClient)
+	exportClient := createAPIClient(apiCfg)
 	exportService := exporter.NewService(exportClient)
 
 	return exportService
+}
+
+func createAPIClient(apiCfg configuration.API) *exporter.Client {
+	var options []exporter.HTTPClientOption
+
+	if apiCfg.SkipTLSVerify {
+		options = append(options, exporter.WithInsecure())
+	}
+
+	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
 }
 
 type k8sClients struct {
