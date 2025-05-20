@@ -40,7 +40,12 @@ func WithInsecure() HTTPClientOption {
 		if client.Transport == nil {
 			transportConfig = &http.Transport{}
 		} else {
-			transportConfig = client.Transport.(*http.Transport)
+			clientTransportConfig, ok := client.Transport.(*http.Transport)
+			if !ok {
+				transportConfig = &http.Transport{}
+			} else {
+				transportConfig = clientTransportConfig
+			}
 		}
 
 		if transportConfig.TLSClientConfig == nil {
