@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+const exporterBasePath = "/ces-exporter"
+
 type Client struct {
 	baseUrl    string
 	apiKey     string
@@ -68,7 +70,7 @@ func NewClient(hostName string, apiKey string, options ...HTTPClientOption) *Cli
 	}
 
 	return &Client{
-		baseUrl:    fmt.Sprintf("https://%s", hostName),
+		baseUrl:    fmt.Sprintf("https://%s%s", hostName, exporterBasePath),
 		apiKey:     apiKey,
 		httpClient: httpClient,
 	}

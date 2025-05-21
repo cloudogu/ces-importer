@@ -34,7 +34,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
@@ -84,7 +84,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
@@ -126,7 +126,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(assert.AnError)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(assert.AnError)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -169,7 +169,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -214,7 +214,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -259,7 +259,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -305,7 +305,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(nil, assert.AnError)
@@ -335,8 +335,16 @@ func TestMigrator_RunMigration(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to run migration job:")
 	})
 
-	t.Run("should fail to run delta migration for error in logWriter", func(t *testing.T) {
+	t.Run("should log error when running delta migration with error in logWriter", func(t *testing.T) {
 		testCtx := context.Background()
+
+		originalLogger := slog.Default()
+		defer func() {
+			slog.SetDefault(originalLogger)
+		}()
+		sb := new(strings.Builder)
+		testLogger := slog.New(slog.NewTextHandler(sb, nil))
+		slog.SetDefault(testLogger)
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
@@ -355,7 +363,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter.EXPECT().Write(jobLogs).Return(assert.AnError)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
@@ -380,9 +388,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		err := m.RunMigration(testCtx)
 
-		require.Error(t, err)
-		assert.ErrorIs(t, err, assert.AnError)
-		assert.ErrorContains(t, err, "failed to write job log file")
+		require.NoError(t, err)
+		assert.Contains(t, sb.String(), "failed to write job log file")
 	})
 
 	t.Run("should fail to run final migration for error enabling maintenance-mode", func(t *testing.T) {
@@ -405,7 +412,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mLogWriter := NewMockLogWriter(t)
 
 		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().Initialize().Return(nil)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 

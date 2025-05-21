@@ -310,7 +310,7 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: jobName,
+			Name: fmt.Sprintf("%s-%s", jobName, unixTimeStr),
 			Labels: map[string]string{
 				"app.kubernetes.io/name":      fmt.Sprintf("%s-%s", jobName, unixTimeStr),
 				"app.kubernetes.io/instance":  fmt.Sprintf("%s-%s", jobName, unixTimeStr),

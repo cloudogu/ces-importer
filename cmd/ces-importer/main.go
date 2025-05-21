@@ -29,8 +29,8 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	logInitializer := logging.NewLogInitializer(cfg)
-	err = logInitializer.Initialize()
+	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
+	err = logInitializer.InitializeWithLogFile()
 	if err != nil {
 		panic(err)
 	}

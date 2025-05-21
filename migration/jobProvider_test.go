@@ -140,7 +140,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, job)
 
-		assert.Equal(t, jobName, job.Name)
+		assert.Contains(t, job.Name, jobName)
 		assert.Equal(t, fmt.Sprintf("%s-container", jobName), job.Spec.Template.Spec.Containers[0].Name)
 		assert.Equal(t, "registry.example.com/test-repo:latest", job.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, v1.PullPolicy("IfNotPresent"), job.Spec.Template.Spec.Containers[0].ImagePullPolicy)

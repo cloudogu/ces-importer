@@ -13,6 +13,19 @@ rules:
   verbs:
     - list
     - get
+    - delete
+    - update
+    - create
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - list
+    - get
+    - delete
+    - update
+    - create
 - apiGroups:
     - ""
   resources:

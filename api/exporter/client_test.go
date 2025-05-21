@@ -113,7 +113,7 @@ func Test_NewClient(t *testing.T) {
 			hostName: "example.com",
 			apiKey:   "validApiKey",
 			expected: expClient{
-				baseUrl:    "https://example.com",
+				baseUrl:    "https://example.com/ces-exporter",
 				apiKey:     "validApiKey",
 				httpClient: http.DefaultClient,
 			},
@@ -124,7 +124,7 @@ func Test_NewClient(t *testing.T) {
 			hostName: "",
 			apiKey:   "someApiKey",
 			expected: expClient{
-				baseUrl:    "https://",
+				baseUrl:    "https:///ces-exporter",
 				apiKey:     "someApiKey",
 				httpClient: http.DefaultClient,
 			},
@@ -134,7 +134,7 @@ func Test_NewClient(t *testing.T) {
 			hostName: "example.com",
 			apiKey:   "",
 			expected: expClient{
-				baseUrl:    "https://example.com",
+				baseUrl:    "https://example.com/ces-exporter",
 				apiKey:     "",
 				httpClient: http.DefaultClient,
 			},
@@ -143,7 +143,7 @@ func Test_NewClient(t *testing.T) {
 			name:              "Default Client with insecure option",
 			httpClientOptions: []HTTPClientOption{WithInsecure()},
 			expected: expClient{
-				baseUrl: "https://",
+				baseUrl: "https:///ces-exporter",
 				apiKey:  "",
 				httpClient: func() *http.Client {
 					c := &http.Client{}
@@ -157,7 +157,7 @@ func Test_NewClient(t *testing.T) {
 			name:              "Use custom Client",
 			httpClientOptions: []HTTPClientOption{WithCustomHTTPClient(customClient)},
 			expected: expClient{
-				baseUrl:    "https://",
+				baseUrl:    "https:///ces-exporter",
 				apiKey:     "",
 				httpClient: customClient,
 			},
@@ -167,7 +167,7 @@ func Test_NewClient(t *testing.T) {
 			name:              "Use custom Client with insecure Option",
 			httpClientOptions: []HTTPClientOption{WithCustomHTTPClient(customClient), WithInsecure()},
 			expected: expClient{
-				baseUrl: "https://",
+				baseUrl: "https:///ces-exporter",
 				apiKey:  "",
 				httpClient: func() *http.Client {
 					c := &http.Client{Timeout: 5}
