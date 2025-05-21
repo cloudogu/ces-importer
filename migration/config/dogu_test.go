@@ -13,7 +13,7 @@ import (
 )
 
 func Test_getLocalConfigFileForDogu(t *testing.T) {
-	localConfigFile := getLocalConfigFileForDogu("cas")
+	localConfigFile := getLocalConfigFileForDogu("/data", "cas")
 	assert.Equal(t, "/data/cas/localConfig/local.yaml", localConfigFile)
 }
 
@@ -24,14 +24,14 @@ func Test_importLocalConfig(t *testing.T) {
 		localConfigFile := tempDir + "/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		err := importLocalConfig("cas", []exporter.KeyValue{})
+		err := importLocalConfig("", "cas", []exporter.KeyValue{})
 		require.NoError(t, err)
 
 		file, err := os.ReadFile(localConfigFile)
@@ -46,7 +46,7 @@ func Test_importLocalConfig(t *testing.T) {
 		localConfigFile := tempDir + "/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -58,7 +58,7 @@ func Test_importLocalConfig(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importLocalConfig("cas", cfg)
+		err := importLocalConfig("", "cas", cfg)
 		require.NoError(t, err)
 
 		file, err := os.ReadFile(localConfigFile)
@@ -75,7 +75,7 @@ func Test_importLocalConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -87,7 +87,7 @@ func Test_importLocalConfig(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err = importLocalConfig("cas", cfg)
+		err = importLocalConfig("", "cas", cfg)
 		require.NoError(t, err)
 
 		file, err := os.ReadFile(localConfigFile)
@@ -106,7 +106,7 @@ func Test_importLocalConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -118,7 +118,7 @@ func Test_importLocalConfig(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err = importLocalConfig("cas", cfg)
+		err = importLocalConfig("", "cas", cfg)
 		require.NoError(t, err)
 
 		file, err := os.ReadFile(localConfigFile)
@@ -132,7 +132,7 @@ func Test_importLocalConfig(t *testing.T) {
 		localConfigFile := "not-exists/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -144,7 +144,7 @@ func Test_importLocalConfig(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importLocalConfig("cas", cfg)
+		err := importLocalConfig("", "cas", cfg)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, os.ErrNotExist)
 		assert.ErrorContains(t, err, "failed to open local config file at 'not-exists/local.yaml': open not-exists/local.yaml: no such file or directory")
@@ -301,7 +301,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 		localConfigFile := tempDir + "/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -453,7 +453,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 		localConfigFile := "not_exists/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -574,7 +574,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		localConfigFile := tempDir + "/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {
@@ -701,7 +701,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		localConfigFile := tempDir + "/local.yaml"
 
 		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dogu string) string {
+		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 			return localConfigFile
 		}
 		defer func() {

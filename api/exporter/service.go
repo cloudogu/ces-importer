@@ -2,12 +2,12 @@ package exporter
 
 type Service struct {
 	*MaintenanceModeService
-	*ConfigApiClient
+	*ConfigService
 }
 
 func NewService(client apiClient) *Service {
 	return &Service{
 		MaintenanceModeService: NewMaintenanceModeService(client),
-		ConfigApiClient:        NewConfigApiClient(client),
+		ConfigService:          NewConfigService(client),
 	}
 }

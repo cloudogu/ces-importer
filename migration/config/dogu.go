@@ -9,15 +9,19 @@ import (
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"os"
+	"path"
 )
 
-const localConfigPathTemplate = "/data/%s/localConfig/local.yaml"
+const localConfigPathTemplate = "%s/localConfig/local.yaml"
 
-var getLocalConfigFileForDogu = func(dogu string) string {
-	return fmt.Sprintf(localConfigPathTemplate, dogu)
+var getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
+	doguPath := fmt.Sprintf(localConfigPathTemplate, dogu)
+
+	return path.Join(dataBasePath, doguPath)
 }
 
 type cesDoguConfigImporter struct {
+	dataBasePath            string
 	doguConfigRepo          doguConfigRepo
 	sensitiveDoguConfigRepo doguConfigRepo
 }
@@ -56,7 +60,7 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc expor
 		return fmt.Errorf("failed to import sensitive dogu config for dogu '%s': %w", dc.Name, err)
 	}
 
-	if err := importLocalConfig(dc.Name, dc.LocalConfig); err != nil {
+	if err := importLocalConfig(dci.dataBasePath, dc.Name, dc.LocalConfig); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Debug("no local config found for dogu", "dogu", dc.Name)
 			return nil
@@ -102,8 +106,8 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []exporter.Ke
 	return nil
 }
 
-func importLocalConfig(dogu string, dc []exporter.KeyValue) error {
-	localConfigFile := getLocalConfigFileForDogu(dogu)
+func importLocalConfig(dataBasePath string, dogu string, dc []exporter.KeyValue) error {
+	localConfigFile := getLocalConfigFileForDogu(dataBasePath, dogu)
 
 	file, err := os.OpenFile(localConfigFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {

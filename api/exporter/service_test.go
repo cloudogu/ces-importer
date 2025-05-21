@@ -12,4 +12,5 @@ func TestNewService(t *testing.T) {
 
 	assert.NotNil(t, sut)
 	assert.NotNil(t, sut.MaintenanceModeService)
+	assert.NotNil(t, sut.ConfigService)
 }
