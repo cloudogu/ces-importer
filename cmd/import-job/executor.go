@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -14,7 +13,6 @@ import (
 	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -29,16 +27,6 @@ type configSyncer interface {
 type ImportExecutor struct {
 	configSyncer
 	dataSyncer
-}
-
-// createInsecureHTTPClient creates an HTTP client that accepts self-signed certificates
-func createInsecureHTTPClient() *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if transport.TLSClientConfig == nil {
-		transport.TLSClientConfig = &tls.Config{}
-	}
-	transport.TLSClientConfig.InsecureSkipVerify = true
-	return &http.Client{Transport: transport}
 }
 
 func NewImportExecutor() (*ImportExecutor, error) {
@@ -66,7 +54,7 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	configMaps := k8sClient.CoreV1().ConfigMaps(jobConfig.Namespace)
 	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
 
-	exporterApiClient := exporter.NewClient(jobConfig.ExporterHost, jobConfig.ExporterApiKey)
+	exporterApiClient := createAPIClient(jobConfig.API)
 	exporterService := exporter.NewService(exporterApiClient)
 
 	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)
@@ -81,11 +69,21 @@ func NewImportExecutor() (*ImportExecutor, error) {
 
 	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
 
-	cs := migrationConfig.NewConfigImporter(exporterService.ConfigApiClient, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(jobConfig.DoguVolumeBasePath, exporterService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
 	return &ImportExecutor{
 		configSyncer: cs,
 	}, nil
+}
+
+func createAPIClient(apiCfg configuration.API) *exporter.Client {
+	var options []exporter.HTTPClientOption
+
+	if apiCfg.SkipTLSVerify {
+		options = append(options, exporter.WithInsecure())
+	}
+
+	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
 }
 
 func (j ImportExecutor) Start(ctx context.Context) error {

@@ -52,7 +52,7 @@ func TestGetConfig(t *testing.T) {
 			mockClient := newMockApiClient(t)
 			mockClient.EXPECT().DoGetRequest(ctx, "/configuration").Return(tt.mockResponse, tt.mockError)
 
-			getter := ConfigApiClient{
+			getter := ConfigService{
 				apiClient: mockClient,
 			}
 
@@ -69,18 +69,18 @@ func TestGetConfig(t *testing.T) {
 	}
 }
 
-func TestNewExporterConfigGetter(t *testing.T) {
+func TestNewConfigService(t *testing.T) {
 	tests := []struct {
 		name           string
 		exporterHost   string
 		apiClient      apiClient
-		expectedGetter *ConfigApiClient
+		expectedGetter *ConfigService
 	}{
 		{
 			name:         "valid parameters",
 			exporterHost: "test-host",
 			apiClient:    newMockApiClient(t),
-			expectedGetter: &ConfigApiClient{
+			expectedGetter: &ConfigService{
 				apiClient: newMockApiClient(t),
 			},
 		},
@@ -88,7 +88,7 @@ func TestNewExporterConfigGetter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getter := NewConfigApiClient(tt.apiClient)
+			getter := NewConfigService(tt.apiClient)
 			assert.Equal(t, tt.expectedGetter.apiClient, getter.apiClient)
 		})
 	}

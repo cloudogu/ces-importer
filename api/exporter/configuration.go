@@ -50,22 +50,22 @@ type Configuration struct {
 	BackupSchedules []BackupSchedule `json:"backupSchedules"`
 }
 
-// NewConfigApiClient creates a new ConfigApiClient.
-func NewConfigApiClient(apiClient apiClient) *ConfigApiClient {
-	return &ConfigApiClient{
+// NewConfigService creates a new ConfigService.
+func NewConfigService(apiClient apiClient) *ConfigService {
+	return &ConfigService{
 		apiClient: apiClient,
 	}
 }
 
-// ConfigApiClient is a client for the exporter configuration API.
-type ConfigApiClient struct {
+// ConfigService is a client for the exporter configuration API.
+type ConfigService struct {
 	apiClient apiClient
 }
 
 // GetConfig returns the configuration of the exporter system.
-func (e ConfigApiClient) GetConfig(ctx context.Context) (*Configuration, error) {
+func (cs *ConfigService) GetConfig(ctx context.Context) (*Configuration, error) {
 	var config Configuration
-	res, err := e.apiClient.DoGetRequest(ctx, pathConfiguration)
+	res, err := cs.apiClient.DoGetRequest(ctx, pathConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("error getting configuration from exporter: %w", err)
 	}
