@@ -114,7 +114,7 @@ func (c *Client) DoGetRequest(ctx context.Context, path string) (result []byte, 
 // DoPostRequest creates an HTTP POST request towards the exporter API. Path params will be appended to the given url.
 // Any unexpected HTTP codes (other than 200 OK) or errors will be returned as an error. For authentication, request
 // headers will automatically be enriched with the provided API key.
-func (c *client) DoPostRequest(ctx context.Context, path string, body io.Reader) (result []byte, err error) {
+func (c *Client) DoPostRequest(ctx context.Context, path string, body io.Reader) (result []byte, err error) {
 	requestUrl, err := url.JoinPath(c.baseUrl, path)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestUrl, body)

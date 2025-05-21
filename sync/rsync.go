@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	path2 "path"
-	"time"
 )
 
 type exportDoguApiClient interface {
@@ -97,7 +96,6 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) e
 
 		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
 	}
-	time.Sleep(time.Hour)
 	return result
 }
 

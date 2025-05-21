@@ -37,7 +37,7 @@ func TestSyncData(t *testing.T) {
 			IsMultinode: false,
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "test",
+					Name:    "official/test",
 					Version: "",
 					Volume:  exporter.DoguVolume{},
 				},
@@ -98,7 +98,7 @@ func TestSyncData(t *testing.T) {
 			IsMultinode: false,
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "test",
+					Name:    "official/test",
 					Version: "",
 					Volume:  exporter.DoguVolume{},
 				},
@@ -110,7 +110,7 @@ func TestSyncData(t *testing.T) {
 
 		config := configuration.Job{}
 		err := syncer.SyncData(context.Background(), config)
-		require.EqualError(t, err, "failed to set dogu test as export dogu: testerror")
+		require.EqualError(t, err, "failed to set dogu official/test as export dogu: testerror")
 	})
 
 	t.Run("should catch sync dogu error", func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestSyncData(t *testing.T) {
 			IsMultinode: false,
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "test",
+					Name:    "official/test",
 					Version: "",
 					Volume:  exporter.DoguVolume{},
 				},

@@ -5,6 +5,8 @@ package main
 import (
 	context "context"
 
+	configuration "github.com/cloudogu/ces-importer/configuration"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -21,17 +23,17 @@ func (_m *mockDataSyncer) EXPECT() *mockDataSyncer_Expecter {
 	return &mockDataSyncer_Expecter{mock: &_m.Mock}
 }
 
-// SyncData provides a mock function with given fields: ctx
-func (_m *mockDataSyncer) SyncData(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// SyncData provides a mock function with given fields: ctx, config
+func (_m *mockDataSyncer) SyncData(ctx context.Context, config configuration.Job) error {
+	ret := _m.Called(ctx, config)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncData")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, configuration.Job) error); ok {
+		r0 = rf(ctx, config)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,13 +48,14 @@ type mockDataSyncer_SyncData_Call struct {
 
 // SyncData is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *mockDataSyncer_Expecter) SyncData(ctx interface{}) *mockDataSyncer_SyncData_Call {
-	return &mockDataSyncer_SyncData_Call{Call: _e.mock.On("SyncData", ctx)}
+//   - config configuration.Job
+func (_e *mockDataSyncer_Expecter) SyncData(ctx interface{}, config interface{}) *mockDataSyncer_SyncData_Call {
+	return &mockDataSyncer_SyncData_Call{Call: _e.mock.On("SyncData", ctx, config)}
 }
 
-func (_c *mockDataSyncer_SyncData_Call) Run(run func(ctx context.Context)) *mockDataSyncer_SyncData_Call {
+func (_c *mockDataSyncer_SyncData_Call) Run(run func(ctx context.Context, config configuration.Job)) *mockDataSyncer_SyncData_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(configuration.Job))
 	})
 	return _c
 }
@@ -62,7 +65,7 @@ func (_c *mockDataSyncer_SyncData_Call) Return(_a0 error) *mockDataSyncer_SyncDa
 	return _c
 }
 
-func (_c *mockDataSyncer_SyncData_Call) RunAndReturn(run func(context.Context) error) *mockDataSyncer_SyncData_Call {
+func (_c *mockDataSyncer_SyncData_Call) RunAndReturn(run func(context.Context, configuration.Job) error) *mockDataSyncer_SyncData_Call {
 	_c.Call.Return(run)
 	return _c
 }
