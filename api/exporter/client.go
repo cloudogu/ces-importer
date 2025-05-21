@@ -116,6 +116,9 @@ func (c *Client) DoGetRequest(ctx context.Context, path string) (result []byte, 
 // headers will automatically be enriched with the provided API key.
 func (c *Client) DoPostRequest(ctx context.Context, path string, body io.Reader) (result []byte, err error) {
 	requestUrl, err := url.JoinPath(c.baseUrl, path)
+	if err != nil {
+		return result, fmt.Errorf("failed to join url path %s: %w", path, err)
+	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestUrl, body)
 	if err != nil {

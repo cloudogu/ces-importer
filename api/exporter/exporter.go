@@ -6,16 +6,6 @@ const (
 	apiKeyAuthName = "X-CES-EXPORTER-API-KEY"
 )
 
-// exporter endpoints
-const (
-	// EndpointExportMode contains the endpoint which returns data on the readiness of the exporter system.
-	endpointExportMode = "/export/mode"
-	// EndpointSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
-	endpointSystemInfo = "/system-info"
-	// EndpointExportDogu contains the endpoint for getting the current export dogu or setting a new export dogu
-	endpointExportDogu = "/export/dogu"
-)
-
 // ExportMode contains data about the export readiness of the exporter system.
 type ExportMode struct {
 	// IsActive indicates whether the exporter system is ready to conduct an export (true) or not (false).

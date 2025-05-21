@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -14,7 +13,6 @@ import (
 	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -29,16 +27,6 @@ type configSyncer interface {
 type ImportExecutor struct {
 	configSyncer
 	dataSyncer
-}
-
-// createInsecureHTTPClient creates an HTTP client that accepts self-signed certificates
-func createInsecureHTTPClient() *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if transport.TLSClientConfig == nil {
-		transport.TLSClientConfig = &tls.Config{}
-	}
-	transport.TLSClientConfig.InsecureSkipVerify = true
-	return &http.Client{Transport: transport}
 }
 
 func NewImportExecutor() (*ImportExecutor, error) {

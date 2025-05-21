@@ -84,9 +84,7 @@ func (ci *ConfigImporter) SyncConfig(ctx context.Context) error {
 
 func matchesAnyKeyByPattern(key string, keyPatterns []string) bool {
 	// sanitize key
-	if strings.HasPrefix(key, "/") {
-		key = key[1:]
-	}
+	strings.TrimPrefix(key, "/")
 
 	for _, pattern := range keyPatterns {
 		matched, err := path.Match(pattern, key)
