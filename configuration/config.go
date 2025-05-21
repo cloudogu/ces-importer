@@ -133,7 +133,7 @@ type JobConfig struct {
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
 	Exclude []ExcludePattern `yaml:"exclude"`
-	// Verbose makes the sync process log on verbose mode
+	// Verbose makes the sync process log in verbose mode
 	Verbose bool `yaml:"verbose"`
 }
 

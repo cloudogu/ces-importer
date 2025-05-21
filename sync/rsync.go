@@ -108,7 +108,7 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	args := rs.buildRSyncArgs(port, source, destination, exclude, verbose)
 	cmd := rs.makeCommand("rsync", args...)
 
-	slog.Info(fmt.Sprintf("executing rsync command: %s", cmd.String()))
+	slog.Debug(fmt.Sprintf("executing rsync command: %s", cmd.String()))
 
 	// Get stdout and stderr pipes
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -125,7 +125,7 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("error starting rsync: %w", err)
 	}
-	//
+
 	slog.Info("started rsync")
 
 	// Create a channel to signal when output is complete
@@ -137,7 +137,6 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 		for scanner.Scan() {
 			slog.Info(scanner.Text()) // Print real-time stdout
 		}
-		slog.Info("std out scanner is done")
 		done <- struct{}{}
 	}()
 

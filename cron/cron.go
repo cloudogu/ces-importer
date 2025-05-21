@@ -42,7 +42,7 @@ func New(ctx context.Context, expr string, jobClosure JobFunc) (*Task, error) {
 
 // Run executes the given function. It can be stopped with Stop(). Please note that Run() does not return an error.
 func (t *Task) Run() {
-	slog.Info("starting a new run")
+	slog.Debug("starting a new run")
 	t.taskExecutor.Run()
 }
 
