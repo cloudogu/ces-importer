@@ -36,6 +36,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 		assert.Equal(t, Migration{
 			RegularCron:    "0 4 * * *",
 			FinalTimestamp: "2025-04-03 12:34:56Z",
+			ChangeFQDN:     true,
 		}, cfg.Migration)
 
 		// ssh

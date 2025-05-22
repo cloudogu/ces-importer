@@ -6,7 +6,7 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/logging"
-	migration "github.com/cloudogu/ces-importer/migration"
+	"github.com/cloudogu/ces-importer/migration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
 	"log/slog"
 

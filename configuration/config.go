@@ -55,9 +55,9 @@ type Migration struct {
 	// Uses RFC 3339 notation f. e. "2025-04-03 12:34:56Z"
 	// This value is optional, but a final migration without this value will then be impossible.
 	FinalTimestamp string `yaml:"finalSchedule"`
-	// ChangeFQDN triggers a fqdn change
-	// the certificates and the fqdn get migrateted from exporter to import site
-	// this is only taken into account when the job runs as final migration
+	// ChangeFQDN triggers a fqdn change.
+	// The certificates and the fqdn get migrated from the exporter to the import site.
+	// This is only taken into account when the job runs as final migration.
 	// Default: False
 	ChangeFQDN bool `yaml:"changeFQDN"`
 }
