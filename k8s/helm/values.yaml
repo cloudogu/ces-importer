@@ -36,13 +36,13 @@ config:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
     # contact the exporter API which returns all required data like data paths etc.
     # The exporter API endpoint is fixed and will be routed on source side.
-    host: 35.207.95.105
+    host: classic-ces.exporter
     # secretName contains the secret with the exporter API key
     secretName: "ces-exporter-secret"
     # secretDataKey contains the key name that accommodates the actual exporter API key as value.
     secretDataKey: "apiKey"
     # apiKey is the actual api key read from the specified env var.
-    apiKey: "${API_KEY}"
+    apiKey: ""
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
     # If skipTLSVerify is true, the client accepts any certificate presented by the server and any host name in that certificate.
     skipTLSVerify: false

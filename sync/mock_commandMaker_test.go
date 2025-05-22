@@ -18,7 +18,7 @@ func (_m *mockCommandMaker) EXPECT() *mockCommandMaker_Expecter {
 }
 
 // Execute provides a mock function with given fields: name, arg
-func (_m *mockCommandMaker) Execute(name string, arg ...string) Command {
+func (_m *mockCommandMaker) Execute(name string, arg ...string) command {
 	_va := make([]interface{}, len(arg))
 	for _i := range arg {
 		_va[_i] = arg[_i]
@@ -32,12 +32,12 @@ func (_m *mockCommandMaker) Execute(name string, arg ...string) Command {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 Command
-	if rf, ok := ret.Get(0).(func(string, ...string) Command); ok {
+	var r0 command
+	if rf, ok := ret.Get(0).(func(string, ...string) command); ok {
 		r0 = rf(name, arg...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Command)
+			r0 = ret.Get(0).(command)
 		}
 	}
 
@@ -70,12 +70,12 @@ func (_c *mockCommandMaker_Execute_Call) Run(run func(name string, arg ...string
 	return _c
 }
 
-func (_c *mockCommandMaker_Execute_Call) Return(_a0 Command) *mockCommandMaker_Execute_Call {
+func (_c *mockCommandMaker_Execute_Call) Return(_a0 command) *mockCommandMaker_Execute_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *mockCommandMaker_Execute_Call) RunAndReturn(run func(string, ...string) Command) *mockCommandMaker_Execute_Call {
+func (_c *mockCommandMaker_Execute_Call) RunAndReturn(run func(string, ...string) command) *mockCommandMaker_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

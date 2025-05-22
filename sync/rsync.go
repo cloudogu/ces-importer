@@ -10,7 +10,9 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"io"
 	"log/slog"
+	"os/exec"
 	path2 "path"
+	"sync"
 )
 
 type exportDoguApiClient interface {
@@ -30,23 +32,30 @@ type RsyncSyncer struct {
 	makeCommand         commandMaker
 	exportModeApiClient exportDoguApiClient
 	systemInfoProvider  systemInfoProvider
+	excludePattern      []configuration.ExcludePattern
+	doguVolumeBasePath  string
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string, makeCommand commandMaker, client exportDoguApiClient, provider systemInfoProvider) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string) *RsyncSyncer {
+	commandMaker := func(name string, arg ...string) command {
+		return exec.Command(name, arg...)
+	}
 	return &RsyncSyncer{
 		host:                host,
 		user:                user,
 		privateKeyPath:      privateKeyPath,
-		makeCommand:         makeCommand,
+		makeCommand:         commandMaker,
 		exportModeApiClient: client,
 		systemInfoProvider:  provider,
+		excludePattern:      excludePattern,
+		doguVolumeBasePath:  doguVolumeBasePath,
 	}
 }
 
-type commandMaker func(name string, arg ...string) Command
+type commandMaker func(name string, arg ...string) command
 
-type Command interface {
+type command interface {
 	StdoutPipe() (io.ReadCloser, error)
 	StderrPipe() (io.ReadCloser, error)
 	Start() error
@@ -56,7 +65,7 @@ type Command interface {
 
 // SyncData gets the exporting systems system info and synchronizes the volume data of every dogu
 // errors are collected and returned
-func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) error {
+func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 	var result error
 
 	systemInfo, err := rs.systemInfoProvider.GetSystemInfo(ctx)
@@ -66,7 +75,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) e
 
 	// map exclude patterns to dogu name for easy retrieval
 	excludeMap := make(map[string]configuration.ExcludePattern)
-	for _, p := range config.Exclude {
+	for _, p := range rs.excludePattern {
 		excludeMap[p.DoguName] = p
 	}
 
@@ -89,7 +98,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context, config configuration.Job) e
 		excludePattern := excludeMap[dogu.Name]
 		// default is /data/{doguName}
 
-		importerDestination := path2.Join(config.DoguVolumeBasePath, string(doguName.SimpleName))
+		importerDestination := path2.Join(rs.doguVolumeBasePath, string(doguName.SimpleName))
 		if err := rs.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern, true); err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
 		}
@@ -127,15 +136,16 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 	slog.Info("started rsync")
 
 	// Create a channel to signal when output is complete
-	done := make(chan struct{})
-
+	var wg sync.WaitGroup
+	// waitGroup for 2 output channels
+	wg.Add(2)
 	// Function to read and print output in real-time
 	go func() {
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
 			slog.Info(scanner.Text()) // Print real-time stdout
 		}
-		done <- struct{}{}
+		wg.Done()
 	}()
 
 	// Function to read and print errors in real-time
@@ -144,12 +154,11 @@ func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination
 		for scanner.Scan() {
 			slog.Error(scanner.Text()) // Print real-time stderr
 		}
-		done <- struct{}{}
+		wg.Done()
 	}()
 
 	// Wait for both output streams to complete
-	<-done
-	<-done
+	wg.Wait()
 	// Wait for rsync to finish
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("rsync exited with error: %w", err)

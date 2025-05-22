@@ -24,7 +24,7 @@ type taskRunner interface {
 // Task allows executing functions in recurring points in time, depending on the system time. Considering
 // container restarts or pod kills, this behavior is more flexible than a regular time ticker.
 type Task struct {
-	taskExecutor taskRunner
+	taskExecuter taskRunner
 }
 
 // New creates a new instance for executing the same task. The task must be provided to its Run() function.
@@ -36,17 +36,17 @@ func New(ctx context.Context, expr string, jobClosure JobFunc) (*Task, error) {
 	taskManager := tasker.New(tasker.Option{}).WithContext(ctx)
 
 	return &Task{
-		taskExecutor: taskManager.Task(expr, tasker.TaskFunc(jobClosure), false),
+		taskExecuter: taskManager.Task(expr, tasker.TaskFunc(jobClosure), false),
 	}, nil
 }
 
 // Run executes the given function. It can be stopped with Stop(). Please note that Run() does not return an error.
 func (t *Task) Run() {
 	slog.Debug("starting a new run")
-	t.taskExecutor.Run()
+	t.taskExecuter.Run()
 }
 
 // Stop stops the looping over the provided function given to Run().
 func (t *Task) Stop() {
-	t.taskExecutor.Stop()
+	t.taskExecuter.Stop()
 }

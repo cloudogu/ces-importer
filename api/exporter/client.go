@@ -143,6 +143,6 @@ func (c *Client) DoPostRequest(ctx context.Context, path string, body io.Reader)
 			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", requestUrl, responseMsg))
+	slog.Debug(fmt.Sprintf("Successfully called %s with response %#v", requestUrl, responseMsg))
 	return responseMsg, nil
 }

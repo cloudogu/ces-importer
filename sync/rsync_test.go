@@ -14,22 +14,33 @@ import (
 
 func TestSyncData(t *testing.T) {
 	t.Run("should return with no error", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("cmd")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
 		e := strings.NewReader("error")
 		ec := io.NopCloser(e)
-		command.EXPECT().StderrPipe().Return(ec, nil)
-		command.EXPECT().Start().Return(nil)
-		command.EXPECT().Wait().Return(nil)
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StderrPipe().Return(ec, nil)
+		cmd.EXPECT().Start().Return(nil)
+		cmd.EXPECT().Wait().Return(nil)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
+
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+			excludePattern: []configuration.ExcludePattern{
+				{DoguName: "testDogu", Pattern: "*.file"},
+			},
+		}
 
 		// system info request
 		systemInfo := exporter.SystemInfo{
@@ -55,42 +66,48 @@ func TestSyncData(t *testing.T) {
 		}
 		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
 
-		config := configuration.Job{
-			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.ExcludePattern{
-					{DoguName: "testDogu", Pattern: "*.file"},
-				},
-			},
-		}
-		err := syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background())
 		require.NoError(t, err)
 	})
 
 	t.Run("should fail to fetch system info", func(t *testing.T) {
-		command := NewMockCommand(t)
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd := newMockCommand(t)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
-		config := configuration.Job{}
-		err := syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background())
 		require.EqualError(t, err, "failed to fetch exporter system info: testerror")
 	})
 
 	t.Run("should fail to set export dogu", func(t *testing.T) {
-		command := NewMockCommand(t)
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd := newMockCommand(t)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		// system info request
 		systemInfo := exporter.SystemInfo{
@@ -108,28 +125,37 @@ func TestSyncData(t *testing.T) {
 		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
-		config := configuration.Job{}
-		err := syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background())
 		require.EqualError(t, err, "failed to set dogu official/test as export dogu: testerror")
 	})
 
 	t.Run("should catch sync dogu error", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("cmd")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
 		e := strings.NewReader("error")
 		ec := io.NopCloser(e)
-		command.EXPECT().StderrPipe().Return(ec, nil)
-		command.EXPECT().Start().Return(nil)
-		command.EXPECT().Wait().Return(fmt.Errorf("testerror"))
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StderrPipe().Return(ec, nil)
+		cmd.EXPECT().Start().Return(nil)
+		cmd.EXPECT().Wait().Return(fmt.Errorf("testerror"))
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+			excludePattern: []configuration.ExcludePattern{
+				{DoguName: "testDogu", Pattern: "*.file"},
+			},
+		}
 
 		// system info request
 		systemInfo := exporter.SystemInfo{
@@ -154,36 +180,36 @@ func TestSyncData(t *testing.T) {
 		}
 		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
 
-		config := configuration.Job{
-			JobConfig: configuration.JobConfig{
-				Exclude: []configuration.ExcludePattern{
-					{DoguName: "testDogu", Pattern: "*.file"},
-				},
-			},
-		}
-		err := syncer.SyncData(context.Background(), config)
+		err := syncer.SyncData(context.Background())
 		require.EqualError(t, err, "failed to sync source /a/b to destination test: rsync exited with error: testerror")
 	})
 }
 
 func TestSyncDogu(t *testing.T) {
 	t.Run("should return with no error", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("command")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
 		e := strings.NewReader("error")
 		ec := io.NopCloser(e)
-		command.EXPECT().StderrPipe().Return(ec, nil)
-		command.EXPECT().Start().Return(nil)
-		command.EXPECT().Wait().Return(nil)
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StderrPipe().Return(ec, nil)
+		cmd.EXPECT().Start().Return(nil)
+		cmd.EXPECT().Wait().Return(nil)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		exclude := configuration.ExcludePattern{
 			DoguName: "test",
@@ -193,15 +219,22 @@ func TestSyncDogu(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run("should fail to create std out pipe", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
-		command.EXPECT().StdoutPipe().Return(nil, fmt.Errorf("testerror"))
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("command")
+		cmd.EXPECT().StdoutPipe().Return(nil, fmt.Errorf("testerror"))
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
@@ -209,19 +242,26 @@ func TestSyncDogu(t *testing.T) {
 	})
 
 	t.Run("should fail to create std err pipe", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("command")
+		cmd.EXPECT().String().Return("command")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
-		command.EXPECT().StderrPipe().Return(nil, fmt.Errorf("testerror"))
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StderrPipe().Return(nil, fmt.Errorf("testerror"))
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
@@ -229,21 +269,28 @@ func TestSyncDogu(t *testing.T) {
 	})
 
 	t.Run("should fail to start command", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("command")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
 		e := strings.NewReader("error")
 		ec := io.NopCloser(e)
-		command.EXPECT().StderrPipe().Return(ec, nil)
-		command.EXPECT().Start().Return(fmt.Errorf("testerror"))
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StderrPipe().Return(ec, nil)
+		cmd.EXPECT().Start().Return(fmt.Errorf("testerror"))
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
@@ -251,23 +298,29 @@ func TestSyncDogu(t *testing.T) {
 	})
 
 	t.Run("rsync should throw error", func(t *testing.T) {
-		command := NewMockCommand(t)
-		command.EXPECT().String().Return("command")
+		cmd := newMockCommand(t)
+		cmd.EXPECT().String().Return("command")
 		l := strings.NewReader("log")
 		lc := io.NopCloser(l)
-		command.EXPECT().StdoutPipe().Return(lc, nil)
+		cmd.EXPECT().StdoutPipe().Return(lc, nil)
 		e := strings.NewReader("error")
 		ec := io.NopCloser(e)
-		command.EXPECT().StderrPipe().Return(ec, nil)
-		command.EXPECT().Start().Return(nil)
-		command.EXPECT().Wait().Return(fmt.Errorf("testerror"))
-		commandMaker := func(name string, arg ...string) Command {
-			return command
+		cmd.EXPECT().StderrPipe().Return(ec, nil)
+		cmd.EXPECT().Start().Return(nil)
+		cmd.EXPECT().Wait().Return(fmt.Errorf("testerror"))
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
 		}
 		systemInfoProvider := newMockSystemInfoProvider(t)
 		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := NewRsyncSyncer("localhost", "user", "secret/private.key", commandMaker, exportDoguApiClient, systemInfoProvider)
-
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+		}
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "rsync exited with error: testerror")

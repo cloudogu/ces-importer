@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	path2 "path"
+	"path"
 )
 
 const exportModeEndpoint = "/export/dogu"
@@ -35,10 +35,10 @@ func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExp
 }
 
 func (emc *ExportDoguClient) SetExportDogu(ctx context.Context, doguName string) (export *DoguExport, err error) {
-	path := path2.Join(exportModeEndpoint, doguName)
-	result, err := emc.apiClient.DoPostRequest(ctx, path, nil)
+	apiPath := path.Join(exportModeEndpoint, doguName)
+	result, err := emc.apiClient.DoPostRequest(ctx, apiPath, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get export dogu: %w", err)
+		return nil, fmt.Errorf("failed to set export dogu: %w", err)
 	}
 
 	var doguExport DoguExport

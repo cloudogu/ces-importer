@@ -236,7 +236,7 @@ func Test_client_DoPostRequest(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "unsupported protocol scheme")
+		assert.ErrorContains(t, err, "failed to join url path : parse \"pc:/h\\x12\": net/url: invalid control character in URL")
 	})
 	t.Run("should error non-OK status code", func(t *testing.T) {
 		// given

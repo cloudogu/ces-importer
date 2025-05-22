@@ -40,7 +40,7 @@ func (dc *doguClient) StopAll(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to list all dogus: %w", err)
 	}
-
+	slog.Debug("Received list with dogus", "length", len(list.Items))
 	for _, dogu := range list.Items {
 		err := dc.StopDogu(ctx, dogu.Spec.Name)
 		if err != nil {
