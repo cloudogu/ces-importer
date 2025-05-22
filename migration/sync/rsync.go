@@ -10,10 +10,14 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"io"
 	"log/slog"
+	"os"
 	"os/exec"
-	path2 "path"
+	"path"
+	"slices"
 	"sync"
 )
+
+var subDirsToIgnore = []string{"lost+found", "_private"}
 
 type exportDoguApiClient interface {
 	GetExportDogu(ctx context.Context) (*exporter.DoguExport, error)
@@ -98,9 +102,22 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		excludePattern := excludeMap[dogu.Name]
 		// default is /data/{doguName}
 
-		importerDestination := path2.Join(rs.doguVolumeBasePath, string(doguName.SimpleName))
-		if err := rs.SyncDogu(ctx, doguExport.ExporterPort, doguExport.VolumePath, importerDestination, excludePattern, true); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", doguExport.VolumePath, importerDestination, err))
+		doguImportDir := path.Join(rs.doguVolumeBasePath, string(doguName.SimpleName))
+		subDirs, err := getSubDirs(doguImportDir)
+		if err != nil {
+			result = errors.Join(result, fmt.Errorf("failed to get subDirs for dogu %s: %w", dogu.Name, err))
+			continue
+		}
+
+		for _, subDir := range subDirs {
+			importerDestination := path.Join(doguImportDir, subDir)
+
+			// Ensure the exporter path ends with a separator for rsync
+			exporterSourcePath := path.Clean(path.Join(doguExport.VolumePath, subDir)) + "/"
+
+			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern, true); err != nil {
+				result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSourcePath, importerDestination, err))
+			}
 		}
 
 		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
@@ -108,8 +125,8 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 	return result
 }
 
-// SyncDogu copies dogu volume data from a remote Cloudogu EcoSystem instance.
-func (rs *RsyncSyncer) SyncDogu(_ context.Context, port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) error {
+// SyncDoguDir copies dogu volume data from a remote Cloudogu EcoSystem instance.
+func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) error {
 
 	// Define the rsync command and arguments
 	args := rs.buildRSyncArgs(port, source, destination, exclude, verbose)
@@ -197,4 +214,26 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	// destination path
 	args = append(args, destination)
 	return args
+}
+
+func getSubDirs(importDestDir string) ([]string, error) {
+	result := make([]string, 0)
+
+	entries, err := os.ReadDir(importDestDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return result, nil
+		}
+		return result, fmt.Errorf("error reading dest-dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() && !slices.Contains(subDirsToIgnore, entry.Name()) {
+			result = append(result, entry.Name())
+		}
+	}
+
+	slog.Debug("found subdirs for", "dir", importDestDir, "subdirs", result)
+
+	return result, nil
 }

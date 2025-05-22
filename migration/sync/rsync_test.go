@@ -215,7 +215,7 @@ func TestSyncDogu(t *testing.T) {
 			DoguName: "test",
 			Pattern:  "*.test",
 		}
-		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.NoError(t, err)
 	})
 	t.Run("should fail to create std out pipe", func(t *testing.T) {
@@ -237,7 +237,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		exclude := configuration.ExcludePattern{}
-		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error creating stdout pipe: testerror")
 	})
 
@@ -264,7 +264,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		exclude := configuration.ExcludePattern{}
-		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "error creating stderr pipe: testerror")
 	})
 
@@ -293,7 +293,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		exclude := configuration.ExcludePattern{}
-		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error starting rsync: testerror")
 	})
 
@@ -322,7 +322,7 @@ func TestSyncDogu(t *testing.T) {
 			systemInfoProvider:  systemInfoProvider,
 		}
 		exclude := configuration.ExcludePattern{}
-		err := syncer.SyncDogu(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "rsync exited with error: testerror")
 	})
 }
