@@ -18,7 +18,6 @@ import (
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"log/slog"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sync/atomic"
 	"time"
@@ -32,8 +31,8 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	logInitializer := logging.NewLogInitializer(cfg)
-	err = logInitializer.Initialize()
+	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
+	err = logInitializer.InitializeWithLogFile()
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +61,7 @@ func main() {
 		panic(fmt.Errorf("failed to create a new job service: %v", err))
 	}
 
-	exporterApiClient := exporter.NewClient(cfg.ExporterHost, cfg.ExporterApiKey, http.DefaultClient)
+	exporterApiClient := createAPIClient(cfg.API)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
 
@@ -162,11 +161,20 @@ func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, 
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
-	httpClient := http.DefaultClient
-	exportClient := exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, httpClient)
+	exportClient := createAPIClient(apiCfg)
 	exportService := exporter.NewService(exportClient)
 
 	return exportService
+}
+
+func createAPIClient(apiCfg configuration.API) *exporter.Client {
+	var options []exporter.HTTPClientOption
+
+	if apiCfg.SkipTLSVerify {
+		options = append(options, exporter.WithInsecure())
+	}
+
+	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
 }
 
 type k8sClients struct {

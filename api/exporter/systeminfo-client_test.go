@@ -9,12 +9,12 @@ import (
 func TestNewSystemInfoClient(t *testing.T) {
 	tests := []struct {
 		name          string
-		apiClient     *client
+		apiClient     *Client
 		expectedError bool
 	}{
 		{
 			name:          "Valid inputs",
-			apiClient:     &client{},
+			apiClient:     &Client{},
 			expectedError: false,
 		},
 		{

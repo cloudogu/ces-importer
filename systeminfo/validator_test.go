@@ -309,14 +309,14 @@ func TestValidateSystemInfo(t *testing.T) {
 		imSysInfo := exporter.SystemInfo{
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "nginx-static",
+					Name:    "k8s/nginx-static",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 				{
-					Name:    "nginx-ingress",
+					Name:    "k8s/nginx-ingress",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
@@ -333,7 +333,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		exSysInfo := exporter.SystemInfo{
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "nginx",
+					Name:    "official/nginx",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
@@ -362,7 +362,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		imSysInfo := exporter.SystemInfo{
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "nginx-ingress",
+					Name:    "k8s/nginx-ingress",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
@@ -379,7 +379,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		exSysInfo := exporter.SystemInfo{
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "nginx",
+					Name:    "official/nginx",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,
@@ -401,7 +401,7 @@ func TestValidateSystemInfo(t *testing.T) {
 			systemInfoProvider: s,
 		}
 		err := v.Validate(context.Background())
-		require.ErrorContains(t, err, "dogu nginx-static is not installed")
+		require.ErrorContains(t, err, "dogu k8s/nginx-static is not installed")
 	})
 
 	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
@@ -417,7 +417,7 @@ func TestValidateSystemInfo(t *testing.T) {
 		exSysInfo := exporter.SystemInfo{
 			Dogus: []exporter.Dogu{
 				{
-					Name:    "registrator",
+					Name:    "official/registrator",
 					Version: "1.2.3",
 					Volume: exporter.DoguVolume{
 						SizeInBytes: 10,

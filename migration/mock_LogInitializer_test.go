@@ -17,12 +17,12 @@ func (_m *MockLogInitializer) EXPECT() *MockLogInitializer_Expecter {
 	return &MockLogInitializer_Expecter{mock: &_m.Mock}
 }
 
-// Initialize provides a mock function with no fields
-func (_m *MockLogInitializer) Initialize() error {
+// InitializeWithLogFile provides a mock function with no fields
+func (_m *MockLogInitializer) InitializeWithLogFile() error {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Initialize")
+		panic("no return value specified for InitializeWithLogFile")
 	}
 
 	var r0 error
@@ -35,29 +35,29 @@ func (_m *MockLogInitializer) Initialize() error {
 	return r0
 }
 
-// MockLogInitializer_Initialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Initialize'
-type MockLogInitializer_Initialize_Call struct {
+// MockLogInitializer_InitializeWithLogFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InitializeWithLogFile'
+type MockLogInitializer_InitializeWithLogFile_Call struct {
 	*mock.Call
 }
 
-// Initialize is a helper method to define mock.On call
-func (_e *MockLogInitializer_Expecter) Initialize() *MockLogInitializer_Initialize_Call {
-	return &MockLogInitializer_Initialize_Call{Call: _e.mock.On("Initialize")}
+// InitializeWithLogFile is a helper method to define mock.On call
+func (_e *MockLogInitializer_Expecter) InitializeWithLogFile() *MockLogInitializer_InitializeWithLogFile_Call {
+	return &MockLogInitializer_InitializeWithLogFile_Call{Call: _e.mock.On("InitializeWithLogFile")}
 }
 
-func (_c *MockLogInitializer_Initialize_Call) Run(run func()) *MockLogInitializer_Initialize_Call {
+func (_c *MockLogInitializer_InitializeWithLogFile_Call) Run(run func()) *MockLogInitializer_InitializeWithLogFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockLogInitializer_Initialize_Call) Return(_a0 error) *MockLogInitializer_Initialize_Call {
+func (_c *MockLogInitializer_InitializeWithLogFile_Call) Return(_a0 error) *MockLogInitializer_InitializeWithLogFile_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockLogInitializer_Initialize_Call) RunAndReturn(run func() error) *MockLogInitializer_Initialize_Call {
+func (_c *MockLogInitializer_InitializeWithLogFile_Call) RunAndReturn(run func() error) *MockLogInitializer_InitializeWithLogFile_Call {
 	_c.Call.Return(run)
 	return _c
 }

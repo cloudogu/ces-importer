@@ -29,6 +29,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 		assert.Equal(t, API{
 			ExporterHost:   "classic-ces.exporter",
 			ExporterApiKey: "testAPIKEY",
+			SkipTLSVerify:  true,
 		}, cfg.API)
 
 		// migration
@@ -346,6 +347,7 @@ func TestReadJobConfig(t *testing.T) {
 		assert.Equal(t, API{
 			ExporterHost:   "classic-ces.exporter",
 			ExporterApiKey: "testAPIKEY",
+			SkipTLSVerify:  true,
 		}, cfg.API)
 
 		// ssh
@@ -530,7 +532,7 @@ func createValidConfig(t *testing.T, dir string, filename string) {
 	case fileLoggingConfig:
 		content = "level: INFO"
 	case fileAPIConfig:
-		content = "host: test-host\napiKey: test-key"
+		content = "host: test-host\napiKey: test-key\nskipTLSVerify: true"
 	case fileMigrationConfig:
 		content = "regularSchedule: \"0 * * * *\""
 	case fileSSHConfig:

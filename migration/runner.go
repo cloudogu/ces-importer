@@ -42,7 +42,7 @@ type MailSender interface {
 }
 
 type LogInitializer interface {
-	Initialize() error
+	InitializeWithLogFile() error
 }
 
 type Migrator struct {
@@ -84,7 +84,7 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	err = m.logInitializer.Initialize()
+	err = m.logInitializer.InitializeWithLogFile()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}
@@ -121,13 +121,15 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 	}
 
 	logs, err := m.jobRunner.Run(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to run migration job: %w", err)
+	if logs != nil {
+		lerr := m.logWriter.Write(logs)
+		if lerr != nil {
+			slog.Error(fmt.Sprintf("failed to write job log file: %s", lerr.Error()))
+		}
 	}
 
-	err = m.logWriter.Write(logs)
 	if err != nil {
-		return fmt.Errorf("failed to write job log file: %w", err)
+		return fmt.Errorf("failed to run migration job: %w", err)
 	}
 
 	return
