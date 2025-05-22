@@ -284,6 +284,12 @@ func TestMatchesAnyKeyByPattern(t *testing.T) {
 			patterns: []string{"*"},
 			want:     true,
 		},
+		{
+			name:     "Key with slash prefix",
+			key:      "/key1",
+			patterns: []string{"key2", "key1"},
+			want:     true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -295,6 +301,30 @@ func TestMatchesAnyKeyByPattern(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewConfigImporter(t *testing.T) {
+	t.Run("should create a new configImporter", func(t *testing.T) {
+		basePath := "/data"
+		var mConfigGetter = newMockConfigGetter(t)
+		mGlobalRepo := newMockGlobalConfigRepo(t)
+		mDoguRepo := newMockDoguConfigRepo(t)
+		mSensitiveRepo := newMockDoguConfigRepo(t)
+		mBackupScheduleClient := newMockBackupScheduleClient(t)
+
+		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient)
+
+		require.NotNil(t, importer)
+		assert.Equal(t, mConfigGetter, importer.getter)
+		assert.NotNil(t, importer.globalConfigImporter)
+		assert.Equal(t, mGlobalRepo, importer.globalConfigImporter.(*cesGlobalConfigImporter).globalConfigRepo)
+		assert.NotNil(t, importer.doguConfigImporter)
+		assert.Equal(t, basePath, importer.doguConfigImporter.(*cesDoguConfigImporter).dataBasePath)
+		assert.Equal(t, mDoguRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).doguConfigRepo)
+		assert.Equal(t, mSensitiveRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).sensitiveDoguConfigRepo)
+		assert.NotNil(t, importer.backupScheduleImporter)
+		assert.Equal(t, mBackupScheduleClient, importer.backupScheduleImporter.(*cesBackupScheduleImporter).backupScheduleClient)
+	})
 }
 
 func TestConfigImporter_SyncCertificates(t *testing.T) {

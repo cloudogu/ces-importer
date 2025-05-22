@@ -49,9 +49,9 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
+func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
 	gci := &cesGlobalConfigImporter{globalConfigRepo}
-	dci := &cesDoguConfigImporter{doguConfigRepo, sensitiveDoguConfigRepo}
+	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
 	return &ConfigImporter{
@@ -120,9 +120,7 @@ func (ci *ConfigImporter) Backup(ctx context.Context, backupType BackupType) err
 
 func matchesAnyKeyByPattern(key string, keyPatterns []string) bool {
 	// sanitize key
-	if strings.HasPrefix(key, "/") {
-		key = key[1:]
-	}
+	key = strings.TrimPrefix(key, "/")
 
 	for _, pattern := range keyPatterns {
 		matched, err := path.Match(pattern, key)
