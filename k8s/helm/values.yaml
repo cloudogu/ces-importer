@@ -42,7 +42,7 @@ config:
     # secretDataKey contains the key name that accommodates the actual exporter API key as value.
     secretDataKey: "apiKey"
     # apiKey is the actual api key read from the specified env var.
-    apiKey: ""
+    apiKey: "${API_KEY}"
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
     # If skipTLSVerify is true, the client accepts any certificate presented by the server and any host name in that certificate.
     skipTLSVerify: false
