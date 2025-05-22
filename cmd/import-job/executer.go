@@ -7,7 +7,7 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/logging"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
-	"github.com/cloudogu/ces-importer/sync"
+	"github.com/cloudogu/ces-importer/migration/sync"
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
