@@ -44,11 +44,13 @@ type certificateChanger interface {
 	certificateUpdater
 }
 
+// Change represents a change request for fqdn and certificate.
 type Change struct {
 	ConfigChange
 	SecretChange
 }
 
+// isValid checks if the change request is valid by checking if the fqdn, certificate type, certificate and certificate key are set.
 func (c Change) isValid() error {
 	if c.FQDN == "" {
 		return fmt.Errorf("fqdn is empty")
@@ -69,6 +71,7 @@ func (c Change) isValid() error {
 	return nil
 }
 
+// createChangeRequest creates a change request from the global config of the exporter.
 func createChangeRequest(globalCfg exporter.GlobalConfig) (Change, error) {
 	var change Change
 
@@ -92,6 +95,7 @@ func createChangeRequest(globalCfg exporter.GlobalConfig) (Change, error) {
 	return change, nil
 }
 
+// restoreError is a custom error type for the restore operation that wraps the error that occurred during the update of the fqdn and certificate.
 type restoreError struct {
 	err       error
 	updateErr error
@@ -101,12 +105,14 @@ func (r restoreError) Error() string {
 	return r.updateErr.Error()
 }
 
+// Service is the service that handles the fqdn change.
 type Service struct {
 	configService configGetter
 	fqdn          fqdnChanger
 	cert          certificateChanger
 }
 
+// NewService creates a new instance of the fqdn change service.
 func NewService(configService configGetter, fqdn fqdnChanger, cert certificateChanger) *Service {
 	return &Service{
 		configService: configService,
@@ -115,6 +121,8 @@ func NewService(configService configGetter, fqdn fqdnChanger, cert certificateCh
 	}
 }
 
+// ChangeFQDN changes the fqdn and certificate of the importing system by taking over the configuration of the exporter.
+// It creates a backup of the fqdn and certificate before the change and restores it if the change fails.
 func (s *Service) ChangeFQDN(ctx context.Context) (err error) {
 	slog.Info("FQDN change started.")
 
