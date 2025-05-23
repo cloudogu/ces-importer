@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -24,7 +26,29 @@ func TestSyncData(t *testing.T) {
 		cmd.EXPECT().StderrPipe().Return(ec, nil)
 		cmd.EXPECT().Start().Return(nil)
 		cmd.EXPECT().Wait().Return(nil)
+
+		iterator := 0
 		commandMaker := func(name string, arg ...string) command {
+			subDir := ""
+			switch iterator {
+			case 0:
+				subDir = "db"
+			case 1:
+				subDir = "localConfig"
+			default:
+				t.Error("unexpected call of make command")
+			}
+			iterator++
+
+			assert.Equal(t, "rsync", name)
+			assert.Len(t, arg, 6)
+			assert.Equal(t, "-avhz", arg[0])
+			assert.Equal(t, "--delete", arg[1])
+			assert.Equal(t, "-e", arg[2])
+			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[3])
+			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[4])
+			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[5])
+
 			return cmd
 		}
 
@@ -37,6 +61,7 @@ func TestSyncData(t *testing.T) {
 			makeCommand:         commandMaker,
 			exportModeApiClient: exportDoguApiClient,
 			systemInfoProvider:  systemInfoProvider,
+			doguVolumeBasePath:  "../../testdata/sync",
 			excludePattern: []configuration.ExcludePattern{
 				{DoguName: "testDogu", Pattern: "*.file"},
 			},
@@ -139,7 +164,7 @@ func TestSyncData(t *testing.T) {
 		ec := io.NopCloser(e)
 		cmd.EXPECT().StderrPipe().Return(ec, nil)
 		cmd.EXPECT().Start().Return(nil)
-		cmd.EXPECT().Wait().Return(fmt.Errorf("testerror"))
+		cmd.EXPECT().Wait().Return(assert.AnError)
 		commandMaker := func(name string, arg ...string) command {
 			return cmd
 		}
@@ -152,6 +177,7 @@ func TestSyncData(t *testing.T) {
 			makeCommand:         commandMaker,
 			exportModeApiClient: exportDoguApiClient,
 			systemInfoProvider:  systemInfoProvider,
+			doguVolumeBasePath:  "../../testdata/sync",
 			excludePattern: []configuration.ExcludePattern{
 				{DoguName: "testDogu", Pattern: "*.file"},
 			},
@@ -181,7 +207,8 @@ func TestSyncData(t *testing.T) {
 		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
 
 		err := syncer.SyncData(context.Background())
-		require.EqualError(t, err, "failed to sync source /a/b to destination test: rsync exited with error: testerror")
+		require.ErrorIs(t, err, assert.AnError)
+		require.ErrorContains(t, err, "failed to sync source /a/b/db/ to destination ../../testdata/sync/test/db: rsync exited with error:")
 	})
 }
 
@@ -324,5 +351,49 @@ func TestSyncDogu(t *testing.T) {
 		exclude := configuration.ExcludePattern{}
 		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.EqualError(t, err, "rsync exited with error: testerror")
+	})
+}
+
+func Test_getSubDirs(t *testing.T) {
+	t.Run("should return with no error if importDir does not exists", func(t *testing.T) {
+		dirs, err := getSubDirs("/does/not/exist")
+
+		require.NoError(t, err)
+		assert.Len(t, dirs, 0)
+	})
+
+	t.Run("should ignore subDirs", func(t *testing.T) {
+		dirs, err := getSubDirs("../../testdata/sync/test")
+
+		require.NoError(t, err)
+		assert.Len(t, dirs, 2)
+		assert.Equal(t, "db", dirs[0])
+		assert.Equal(t, "localConfig", dirs[1])
+	})
+}
+
+func TestNewRsyncSyncer(t *testing.T) {
+	t.Run("should create new RsyncSyncer", func(t *testing.T) {
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+
+		host := "host"
+		user := "user"
+		privateKeyPath := "/.ssh/private"
+		doguVolumeBasePath := "/dogu/volume"
+		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: "*.test"}}
+
+		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath)
+
+		require.NotNil(t, syncer)
+		assert.Equal(t, host, syncer.host)
+		assert.Equal(t, user, syncer.user)
+		assert.Equal(t, privateKeyPath, syncer.privateKeyPath)
+		assert.Equal(t, exportDoguApiClient, syncer.exportModeApiClient)
+		assert.Equal(t, systemInfoProvider, syncer.systemInfoProvider)
+		assert.Equal(t, doguVolumeBasePath, syncer.doguVolumeBasePath)
+		assert.Equal(t, excludePattern, syncer.excludePattern)
+		assert.NotNil(t, syncer.makeCommand)
+		assert.Equal(t, exec.Command("test", "a", "b"), syncer.makeCommand("test", "a", "b"))
 	})
 }

@@ -18,7 +18,7 @@ func Test_getLocalConfigFileForDogu(t *testing.T) {
 }
 
 func Test_importLocalConfig(t *testing.T) {
-	t.Run("should import local config empty", func(t *testing.T) {
+	t.Run("should not import local config if empty", func(t *testing.T) {
 
 		tempDir := t.TempDir()
 		localConfigFile := tempDir + "/local.yaml"
@@ -34,10 +34,9 @@ func Test_importLocalConfig(t *testing.T) {
 		err := importLocalConfig("", "cas", []exporter.KeyValue{})
 		require.NoError(t, err)
 
-		file, err := os.ReadFile(localConfigFile)
-		require.NoError(t, err)
-
-		require.Equal(t, "{}\n", string(file))
+		_, err = os.ReadFile(localConfigFile)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, os.ErrNotExist)
 	})
 
 	t.Run("should import local config", func(t *testing.T) {

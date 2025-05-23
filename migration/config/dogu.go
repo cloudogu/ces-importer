@@ -107,6 +107,10 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []exporter.Ke
 }
 
 func importLocalConfig(dataBasePath string, dogu string, dc []exporter.KeyValue) error {
+	if len(dc) == 0 {
+		return nil
+	}
+
 	localConfigFile := getLocalConfigFileForDogu(dataBasePath, dogu)
 
 	file, err := os.OpenFile(localConfigFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)

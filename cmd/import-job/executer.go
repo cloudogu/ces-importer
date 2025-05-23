@@ -89,14 +89,14 @@ func createAPIClient(apiCfg configuration.API) *exporter.Client {
 }
 
 func (j ImportExecuter) Start(ctx context.Context) error {
-	err := j.configSyncer.SyncConfig(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to sync configuration: %w", err)
-	}
-
-	err = j.dataSyncer.SyncData(ctx)
+	err := j.dataSyncer.SyncData(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync data: %w", err)
+	}
+
+	err = j.configSyncer.SyncConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
 
 	return nil
