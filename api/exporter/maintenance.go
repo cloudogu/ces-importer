@@ -76,7 +76,7 @@ func (s MaintenanceModeService) setMaintenanceMode(ctx context.Context, mode Mai
 		return fmt.Errorf("failed to encode maintenance mode: %w", err)
 	}
 
-	result, err := s.DoPostRequest(ctx, endpointMaintenanceMode, &buf, nil)
+	result, err := s.DoPostRequest(ctx, endpointMaintenanceMode, &buf)
 	if err != nil {
 		return fmt.Errorf("failed to set maintenance mode: %w", err)
 	}

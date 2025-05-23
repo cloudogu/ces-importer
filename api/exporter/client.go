@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 const exporterBasePath = "/ces-exporter"
@@ -108,40 +107,42 @@ func (c *Client) DoGetRequest(ctx context.Context, path string) (result []byte, 
 			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", requestUrl, responseMsg))
+	slog.Debug(fmt.Sprintf("Successfully called %s with response %s", requestUrl, string(responseMsg)))
 	return responseMsg, nil
 }
 
 // DoPostRequest creates an HTTP POST request towards the exporter API. Path params will be appended to the given url.
 // Any unexpected HTTP codes (other than 200 OK) or errors will be returned as an error. For authentication, request
 // headers will automatically be enriched with the provided API key.
-func (c *Client) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) (result []byte, err error) {
-	if len(pathParams) > 0 {
-		exporterUrl = exporterUrl + "/" + strings.Join(pathParams, "/")
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, exporterUrl, body)
+func (c *Client) DoPostRequest(ctx context.Context, path string, body io.Reader) (result []byte, err error) {
+	requestUrl, err := url.JoinPath(c.baseUrl, path)
 	if err != nil {
-		return result, fmt.Errorf("failed to create request to %s: %w", exporterUrl, err)
+		return result, fmt.Errorf("failed to join url path %s: %w", path, err)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, requestUrl, body)
+	if err != nil {
+		return result, fmt.Errorf("failed to create request to %s: %w", requestUrl, err)
 	}
 
 	request.Header.Set(apiKeyAuthName, c.apiKey)
 
 	response, err := c.httpClient.Do(request)
 	if err != nil {
-		return result, fmt.Errorf("request to %s failed with an error: %w", exporterUrl, err)
+		return result, fmt.Errorf("request to %s failed with an error: %w", requestUrl, err)
 	}
 
 	defer func() { _ = response.Body.Close() }()
 	responseMsg, err := io.ReadAll(response.Body)
 	if err != nil {
-		return result, fmt.Errorf("failed to read response body for %s", exporterUrl)
+		return result, fmt.Errorf("failed to read response body for %s", requestUrl)
 	}
 
 	if response.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
-			exporterUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
 	}
 
-	slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Successfully called %s with response %#v", exporterUrl, responseMsg))
+	slog.Debug(fmt.Sprintf("Successfully called %s with response %#v", requestUrl, responseMsg))
 	return responseMsg, nil
 }

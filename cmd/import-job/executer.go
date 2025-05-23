@@ -7,10 +7,8 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/logging"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
-
+	"github.com/cloudogu/ces-importer/migration/sync"
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
-
-	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,12 +22,12 @@ type configSyncer interface {
 	SyncConfig(ctx context.Context) error
 }
 
-type ImportExecutor struct {
+type ImportExecuter struct {
 	configSyncer
 	dataSyncer
 }
 
-func NewImportExecutor() (*ImportExecutor, error) {
+func NewImportExecuter() (*ImportExecuter, error) {
 	jobConfig, err := configuration.ReadJobConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read job configuration: %w", err)
@@ -67,12 +65,16 @@ func NewImportExecutor() (*ImportExecutor, error) {
 	}
 	backupScheduleClient := backupClient.BackupSchedules(jobConfig.Namespace)
 
-	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
+	exportDoguApiClient := exporter.NewExportDoguClient(exporterApiClient)
+	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
+
+	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, exportDoguApiClient, systemInfoApiClient, jobConfig.Exclude, jobConfig.DoguVolumeBasePath)
 
 	cs := migrationConfig.NewConfigImporter(jobConfig.DoguVolumeBasePath, exporterService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
-	return &ImportExecutor{
+	return &ImportExecuter{
 		configSyncer: cs,
+		dataSyncer:   ds,
 	}, nil
 }
 
@@ -83,19 +85,19 @@ func createAPIClient(apiCfg configuration.API) *exporter.Client {
 		options = append(options, exporter.WithInsecure())
 	}
 
-	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
+	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterApiKey, options...)
 }
 
-func (j ImportExecutor) Start(ctx context.Context) error {
-	err := j.configSyncer.SyncConfig(ctx)
+func (j ImportExecuter) Start(ctx context.Context) error {
+	err := j.dataSyncer.SyncData(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to sync data: %w", err)
+	}
+
+	err = j.configSyncer.SyncConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
-
-	//err = j.dataSyncer.SyncData(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("failed to sync data: %w", err)
-	//}
 
 	return nil
 }
