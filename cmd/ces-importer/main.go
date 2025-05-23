@@ -103,10 +103,11 @@ func main() {
 	// validate final timestamp
 	finalTimestamp, err := time.Parse(time.RFC3339, cfg.FinalTimestamp)
 	if err != nil {
-		panic(fmt.Errorf("failed to create final migration timestamp from %q: %w", cfg.FinalTimestamp, err))
-	}
-	if time.Now().After(finalTimestamp) {
-		panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
+		slog.Warn(fmt.Sprintf("Could not parse final migration timestamp from %q: %s", cfg.FinalTimestamp, err.Error()))
+	} else {
+		if time.Now().After(finalTimestamp) {
+			panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
+		}
 	}
 
 	migrator := migration.NewMigrator(deps)
@@ -144,7 +145,7 @@ func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, 
 	<-time.After(duration)
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
-	for _ = range ticker.C {
+	for range ticker.C {
 		// do not start until the current migration is finished
 		if !migrationRunning.Load() {
 			// start final migration
