@@ -195,6 +195,7 @@ func Test_NewClient(t *testing.T) {
 }
 
 func Test_client_DoPostRequest(t *testing.T) {
+	httpClient := &http.Client{}
 	t.Run("should successfully execute POST request", func(t *testing.T) {
 		// given
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -208,10 +209,14 @@ func Test_client_DoPostRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient("test", testApiKey)
+		sut := &Client{
+			baseUrl:    server.URL,
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
-		actualBytes, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})
+		actualBytes, err := sut.DoPostRequest(testCtx, "/test", nil)
 
 		// then
 		require.NoError(t, err)
@@ -220,14 +225,18 @@ func Test_client_DoPostRequest(t *testing.T) {
 	t.Run("should error on invalid URL", func(t *testing.T) {
 		// given
 
-		sut := NewClient("test", testApiKey)
+		sut := &Client{
+			baseUrl:    "pc:/h\u0012",
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
-		_, err := sut.DoPostRequest(testCtx, "pc:/h\x12", nil, []string{})
+		_, err := sut.DoPostRequest(testCtx, "", nil)
 
 		// then
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to create request to pc:/h\x12: parse")
+		assert.ErrorContains(t, err, "failed to join url path : parse \"pc:/h\\x12\": net/url: invalid control character in URL")
 	})
 	t.Run("should error non-OK status code", func(t *testing.T) {
 		// given
@@ -242,10 +251,14 @@ func Test_client_DoPostRequest(t *testing.T) {
 			require.NoError(t, err)
 		}))
 
-		sut := NewClient("test", testApiKey)
+		sut := &Client{
+			baseUrl:    server.URL,
+			apiKey:     testApiKey,
+			httpClient: httpClient,
+		}
 
 		// when
-		_, err := sut.DoPostRequest(testCtx, server.URL, nil, []string{})
+		_, err := sut.DoPostRequest(testCtx, server.URL, nil)
 
 		// then
 		require.Error(t, err)

@@ -15,9 +15,9 @@ func run() int {
 
 	ctx := context.Background()
 
-	importJob, err := NewImportExecutor()
+	importJob, err := NewImportExecuter()
 	if err != nil {
-		slog.Error("failed to create executor for import", "cause", err)
+		slog.Error("failed to create executer for import", "cause", err)
 		return 1
 	}
 

@@ -22,9 +22,9 @@ func (_m *mockApiClient) EXPECT() *mockApiClient_Expecter {
 	return &mockApiClient_Expecter{mock: &_m.Mock}
 }
 
-// DoGetRequest provides a mock function with given fields: ctx, exporterUrl
-func (_m *mockApiClient) DoGetRequest(ctx context.Context, exporterUrl string) ([]byte, error) {
-	ret := _m.Called(ctx, exporterUrl)
+// DoGetRequest provides a mock function with given fields: ctx, path
+func (_m *mockApiClient) DoGetRequest(ctx context.Context, path string) ([]byte, error) {
+	ret := _m.Called(ctx, path)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DoGetRequest")
@@ -33,10 +33,10 @@ func (_m *mockApiClient) DoGetRequest(ctx context.Context, exporterUrl string) (
 	var r0 []byte
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) ([]byte, error)); ok {
-		return rf(ctx, exporterUrl)
+		return rf(ctx, path)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) []byte); ok {
-		r0 = rf(ctx, exporterUrl)
+		r0 = rf(ctx, path)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -44,7 +44,7 @@ func (_m *mockApiClient) DoGetRequest(ctx context.Context, exporterUrl string) (
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, exporterUrl)
+		r1 = rf(ctx, path)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,12 +59,12 @@ type mockApiClient_DoGetRequest_Call struct {
 
 // DoGetRequest is a helper method to define mock.On call
 //   - ctx context.Context
-//   - exporterUrl string
-func (_e *mockApiClient_Expecter) DoGetRequest(ctx interface{}, exporterUrl interface{}) *mockApiClient_DoGetRequest_Call {
-	return &mockApiClient_DoGetRequest_Call{Call: _e.mock.On("DoGetRequest", ctx, exporterUrl)}
+//   - path string
+func (_e *mockApiClient_Expecter) DoGetRequest(ctx interface{}, path interface{}) *mockApiClient_DoGetRequest_Call {
+	return &mockApiClient_DoGetRequest_Call{Call: _e.mock.On("DoGetRequest", ctx, path)}
 }
 
-func (_c *mockApiClient_DoGetRequest_Call) Run(run func(ctx context.Context, exporterUrl string)) *mockApiClient_DoGetRequest_Call {
+func (_c *mockApiClient_DoGetRequest_Call) Run(run func(ctx context.Context, path string)) *mockApiClient_DoGetRequest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string))
 	})
@@ -81,9 +81,9 @@ func (_c *mockApiClient_DoGetRequest_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
-// DoPostRequest provides a mock function with given fields: ctx, exporterUrl, body, pathParams
-func (_m *mockApiClient) DoPostRequest(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string) ([]byte, error) {
-	ret := _m.Called(ctx, exporterUrl, body, pathParams)
+// DoPostRequest provides a mock function with given fields: ctx, path, body
+func (_m *mockApiClient) DoPostRequest(ctx context.Context, path string, body io.Reader) ([]byte, error) {
+	ret := _m.Called(ctx, path, body)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DoPostRequest")
@@ -91,19 +91,19 @@ func (_m *mockApiClient) DoPostRequest(ctx context.Context, exporterUrl string, 
 
 	var r0 []byte
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, []string) ([]byte, error)); ok {
-		return rf(ctx, exporterUrl, body, pathParams)
+	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader) ([]byte, error)); ok {
+		return rf(ctx, path, body)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, []string) []byte); ok {
-		r0 = rf(ctx, exporterUrl, body, pathParams)
+	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader) []byte); ok {
+		r0 = rf(ctx, path, body)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, io.Reader, []string) error); ok {
-		r1 = rf(ctx, exporterUrl, body, pathParams)
+	if rf, ok := ret.Get(1).(func(context.Context, string, io.Reader) error); ok {
+		r1 = rf(ctx, path, body)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -118,16 +118,15 @@ type mockApiClient_DoPostRequest_Call struct {
 
 // DoPostRequest is a helper method to define mock.On call
 //   - ctx context.Context
-//   - exporterUrl string
+//   - path string
 //   - body io.Reader
-//   - pathParams []string
-func (_e *mockApiClient_Expecter) DoPostRequest(ctx interface{}, exporterUrl interface{}, body interface{}, pathParams interface{}) *mockApiClient_DoPostRequest_Call {
-	return &mockApiClient_DoPostRequest_Call{Call: _e.mock.On("DoPostRequest", ctx, exporterUrl, body, pathParams)}
+func (_e *mockApiClient_Expecter) DoPostRequest(ctx interface{}, path interface{}, body interface{}) *mockApiClient_DoPostRequest_Call {
+	return &mockApiClient_DoPostRequest_Call{Call: _e.mock.On("DoPostRequest", ctx, path, body)}
 }
 
-func (_c *mockApiClient_DoPostRequest_Call) Run(run func(ctx context.Context, exporterUrl string, body io.Reader, pathParams []string)) *mockApiClient_DoPostRequest_Call {
+func (_c *mockApiClient_DoPostRequest_Call) Run(run func(ctx context.Context, path string, body io.Reader)) *mockApiClient_DoPostRequest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(io.Reader), args[3].([]string))
+		run(args[0].(context.Context), args[1].(string), args[2].(io.Reader))
 	})
 	return _c
 }
@@ -137,7 +136,7 @@ func (_c *mockApiClient_DoPostRequest_Call) Return(result []byte, err error) *mo
 	return _c
 }
 
-func (_c *mockApiClient_DoPostRequest_Call) RunAndReturn(run func(context.Context, string, io.Reader, []string) ([]byte, error)) *mockApiClient_DoPostRequest_Call {
+func (_c *mockApiClient_DoPostRequest_Call) RunAndReturn(run func(context.Context, string, io.Reader) ([]byte, error)) *mockApiClient_DoPostRequest_Call {
 	_c.Call.Return(run)
 	return _c
 }

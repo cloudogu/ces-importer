@@ -35,13 +35,14 @@ func NewDoguClient(doguCli DoguInterface) *doguClient {
 
 // StopAll stopps all dogus in the importer system.
 func (dc *doguClient) StopAll(ctx context.Context) error {
+	slog.Info("Stopping all dogus")
 	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list all dogus: %w", err)
 	}
-
+	slog.Debug("Received list with dogus", "length", len(list.Items))
 	for _, dogu := range list.Items {
-		err := dc.startStop(ctx, dogu.Spec.Name, true)
+		err := dc.StopDogu(ctx, dogu.Spec.Name)
 		if err != nil {
 			return fmt.Errorf("failed to stop dogu: %w", err)
 		}
@@ -52,6 +53,7 @@ func (dc *doguClient) StopAll(ctx context.Context) error {
 
 // StopDogu stopps the given dogu in the importer system.
 func (dc *doguClient) StopDogu(ctx context.Context, doguName string) error {
+	slog.Info(fmt.Sprintf("Stopping dogu %s", doguName))
 	err := dc.startStop(ctx, doguName, true)
 	if err != nil {
 		return fmt.Errorf("failed to stop dogu: %w", err)
@@ -62,6 +64,7 @@ func (dc *doguClient) StopDogu(ctx context.Context, doguName string) error {
 
 // StartAll starts all dogus in the importer system.
 func (dc *doguClient) StartAll(ctx context.Context) error {
+	slog.Info("Starting all dogus")
 	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list all dogus: %w", err)
@@ -79,6 +82,7 @@ func (dc *doguClient) StartAll(ctx context.Context) error {
 
 // StartDogu starts the given dogu in the importer system.
 func (dc *doguClient) StartDogu(ctx context.Context, doguName string) error {
+	slog.Info(fmt.Sprintf("Starting dogu %s", doguName))
 	err := dc.startStop(ctx, doguName, false)
 	if err != nil {
 		return fmt.Errorf("failed to start dogu: %w", err)

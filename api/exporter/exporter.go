@@ -49,3 +49,9 @@ type SystemInfo struct {
 	// Components contain data on all installed components on the exporter side.
 	Components []Component `json:"components"`
 }
+
+type DoguExport struct {
+	Dogu         string `json:"dogu"`
+	VolumePath   string `json:"volumePath"`
+	ExporterPort int    `json:"exporterPort"`
+}
