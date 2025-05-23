@@ -19,13 +19,16 @@ var (
 	certificateBackupName = fmt.Sprintf("%s-backup", ecosystemCertificateName)
 )
 
+// SecretChange represents a change of the certificate and key in the ecosystem certificate secret.
 type SecretChange struct {
 	Certificate
 	CertificateKey
 }
 
+// Certificate represents the certificate in the ecosystem certificate secret.
 type Certificate []byte
 
+// CertificateKey represents the key in the ecosystem certificate secret.
 type CertificateKey []byte
 
 type ecosystemCertificate struct {
@@ -36,6 +39,7 @@ func retriable(err error) bool {
 	return !apierrors.IsNotFound(err)
 }
 
+// Backup backs up the ecosystem certificate.
 func (c *ecosystemCertificate) Backup(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return c.backup(ctx)
@@ -87,6 +91,7 @@ func (c *ecosystemCertificate) updateBackup(ctx context.Context, tlsKeyPair Secr
 	})
 }
 
+// Restore restores the ecosystem certificate from the backup.
 func (c *ecosystemCertificate) Restore(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return c.restore(ctx)
@@ -118,6 +123,7 @@ func (c *ecosystemCertificate) restore(ctx context.Context) error {
 	return nil
 }
 
+// Update updates the ecosystem certificate.
 func (c *ecosystemCertificate) Update(ctx context.Context, tlsKeyPair SecretChange) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		return c.update(ctx, ecosystemCertificateName, tlsKeyPair)
@@ -141,6 +147,7 @@ func (c *ecosystemCertificate) update(ctx context.Context, secretName string, tl
 	return nil
 }
 
+// DeleteBackup deletes the backup of the ecosystem certificate.
 func (c *ecosystemCertificate) DeleteBackup(ctx context.Context) error {
 	err := retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return c.repo.Delete(ctx, certificateBackupName, metav1.DeleteOptions{})
