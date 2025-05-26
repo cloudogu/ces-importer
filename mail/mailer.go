@@ -82,9 +82,9 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, start time.Time, end time.Time) error {
 	slog.Info("Sending migration result via mail...")
-	slog.Info(fmt.Sprintf("Mail is sent from: %s", s.config.From))
-	slog.Info(fmt.Sprintf("Mail is sent to: %v", s.config.To))
-	slog.Info(fmt.Sprintf("Mail is sent to server: %s", s.server()))
+	slog.Debug(fmt.Sprintf("Mail is sent from: %s", s.config.From))
+	slog.Debug(fmt.Sprintf("Mail is sent to: %v", s.config.To))
+	slog.Debug(fmt.Sprintf("Mail is sent to server: %s", s.server()))
 	if s.auth() != nil {
 		slog.Info("Using authentication for mail server")
 	} else {
@@ -100,7 +100,9 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 	body := s.body(migrationResult, s.sourceInstance, targetInstance, start, end, isFinal)
 	boundary := "MIME_BOUNDARY_CES_IMPORTER"
 	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
-	message := mime +
+	messageId := fmt.Sprintf("Message-ID: %d@%s\r\n", time.Now().Unix(), s.config.Server)
+	message := messageId +
+		mime +
 		"--" + boundary + "\r\n" +
 		"Content-Type: text/plain; charset=utf-8\r\n\r\n" +
 		body + "\r\n"
@@ -111,7 +113,7 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 			slog.Error(fmt.Sprintf("failed to add attachment to mail: %v", err))
 			continue
 		}
-		slog.Info(fmt.Sprintf("Added attachment to mail: %s", attachment))
+		slog.Debug(fmt.Sprintf("Added attachment to mail: %s", attachment))
 		message += attachment
 	}
 
