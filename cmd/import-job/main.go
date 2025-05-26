@@ -43,7 +43,7 @@ func run() int {
 
 	slog.Debug("Successfully created service for exporter API")
 
-	k8sClientSet, err := createK8Sclientset(jobConfig.Namespace)
+	k8sClientSet, err := createK8SClientSet(jobConfig.Namespace)
 	if err != nil {
 		slog.Error("failed to create k8s client set", "cause", err)
 		return 1
@@ -51,7 +51,7 @@ func run() int {
 
 	slog.Debug("Successfully created k8s client set")
 
-	importJob, err := NewImportExecutor(jobConfig, exporterService, k8sClientSet)
+	importJob, err := NewImportExecuter(jobConfig, exporterService, k8sClientSet)
 	if err != nil {
 		slog.Error("failed to create executer for import", "cause", err)
 		return 1
@@ -80,11 +80,24 @@ func createAPIClient(apiCfg configuration.API) *exporter.Client {
 	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
 }
 
-func createAPIService(apiCfg configuration.API) *exporter.Service {
+type apiService struct {
+	config *exporter.ConfigService
+	dogu   *exporter.ExportDoguClient
+	system *exporter.SystemInfoClient
+}
+
+func createAPIService(apiCfg configuration.API) apiService {
 	exportClient := createAPIClient(apiCfg)
 	exportService := exporter.NewService(exportClient)
 
-	return exportService
+	exportDoguApiClient := exporter.NewExportDoguClient(exportClient)
+	systemInfoApiClient := exporter.NewSystemInfoClient(exportClient)
+
+	return apiService{
+		config: exportService.ConfigService,
+		dogu:   exportDoguApiClient,
+		system: systemInfoApiClient,
+	}
 }
 
 type k8sClients struct {
@@ -93,7 +106,7 @@ type k8sClients struct {
 	backupSchedule backupEcosystem.BackupScheduleInterface
 }
 
-func createK8Sclientset(namespace string) (k8sClients, error) {
+func createK8SClientSet(namespace string) (k8sClients, error) {
 	k8sRestConfig, err := ctrl.GetConfig()
 	if err != nil {
 		return k8sClients{}, fmt.Errorf("failed to read kube config: %w", err)

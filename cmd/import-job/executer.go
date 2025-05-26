@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
-	"github.com/cloudogu/ces-importer/sync"
+	"github.com/cloudogu/ces-importer/migration/sync"
 	"github.com/cloudogu/k8s-registry-lib/repository"
+	"log/slog"
 )
 
 type dataSyncer interface {
@@ -23,14 +23,14 @@ type ImportExecuter struct {
 	dataSyncer
 }
 
-func NewImportExecutor(cfg configuration.Job, apiService *exporter.Service, k8sClientSet k8sClients) (*ImportExecutor, error) {
+func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSet k8sClients) (*ImportExecuter, error) {
 	globalConfigRepo := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
 	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.configMap)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.secret)
 
-	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, exportDoguApiClient, systemInfoApiClient, jobConfig.Exclude, jobConfig.DoguVolumeBasePath)
+	ds := sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath, apiService.dogu, apiService.system, cfg.Exclude, cfg.DoguVolumeBasePath)
 
-	cs := migrationConfig.NewConfigImporter(jobConfig.DoguVolumeBasePath, exporterService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.config, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, k8sClientSet.backupSchedule)
 
 	return &ImportExecuter{
 		configSyncer: cs,
@@ -38,16 +38,22 @@ func NewImportExecutor(cfg configuration.Job, apiService *exporter.Service, k8sC
 	}, nil
 }
 
-func (j ImportExecutor) Start(ctx context.Context) error {
+func (j ImportExecuter) Start(ctx context.Context) error {
+	slog.Info("Starting data and configuration sync.")
+
 	err := j.dataSyncer.SyncData(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync data: %w", err)
 	}
 
+	slog.Info("Dogu data has been synced.")
+
 	err = j.configSyncer.SyncConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
+
+	slog.Info("Configuration has been synced.")
 
 	return nil
 }
