@@ -106,7 +106,7 @@ func main() {
 		slog.Warn(fmt.Sprintf("Could not parse final migration timestamp from %q: %s", cfg.FinalTimestamp, err.Error()))
 	}
 	if time.Now().After(finalTimestamp) {
-		panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
+		slog.Warn(fmt.Sprintf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
 	}
 
 	migrator := migration.NewMigrator(deps)
