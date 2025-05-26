@@ -18,7 +18,7 @@ type configSyncer interface {
 	SyncConfig(ctx context.Context) error
 }
 
-type ImportExecutor struct {
+type ImportExecuter struct {
 	configSyncer
 	dataSyncer
 }
@@ -28,25 +28,26 @@ func NewImportExecutor(cfg configuration.Job, apiService *exporter.Service, k8sC
 	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.configMap)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.secret)
 
-	_ = sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath)
+	ds := sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath, exportDoguApiClient, systemInfoApiClient, jobConfig.Exclude, jobConfig.DoguVolumeBasePath)
 
-	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, k8sClientSet.backupSchedule)
+	cs := migrationConfig.NewConfigImporter(jobConfig.DoguVolumeBasePath, exporterService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
 
-	return &ImportExecutor{
+	return &ImportExecuter{
 		configSyncer: cs,
+		dataSyncer:   ds,
 	}, nil
 }
 
-func (j ImportExecutor) Start(ctx context.Context) (e error) {
-	err := j.configSyncer.SyncConfig(ctx)
+func (j ImportExecutor) Start(ctx context.Context) error {
+	err := j.dataSyncer.SyncData(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to sync data: %w", err)
+	}
+
+	err = j.configSyncer.SyncConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to sync configuration: %w", err)
 	}
-
-	//err = j.dataSyncer.SyncData(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("failed to sync data: %w", err)
-	//}
 
 	return nil
 }

@@ -130,7 +130,7 @@ func Test_maintenanceModeService_Enable(t *testing.T) {
 			ctx := context.Background()
 			// Verify that the correct maintenance mode is sent
 			apiClientMock.EXPECT().
-				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything, mock.Anything).
+				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything).
 				Return(tt.responseBody, tt.responseErr)
 
 			service := MaintenanceModeService{
@@ -196,7 +196,7 @@ func Test_maintenanceModeService_Disable(t *testing.T) {
 			ctx := context.Background()
 			// Verify that the correct maintenance mode is sent
 			apiClientMock.EXPECT().
-				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything, mock.Anything).
+				DoPostRequest(ctx, endpointMaintenanceMode, mock.Anything).
 				Return(tt.responseBody, tt.responseErr)
 
 			service := MaintenanceModeService{

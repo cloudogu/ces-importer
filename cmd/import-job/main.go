@@ -53,7 +53,7 @@ func run() int {
 
 	importJob, err := NewImportExecutor(jobConfig, exporterService, k8sClientSet)
 	if err != nil {
-		slog.Error("failed to create executor for import", "cause", err)
+		slog.Error("failed to create executer for import", "cause", err)
 		return 1
 	}
 

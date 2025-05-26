@@ -61,8 +61,8 @@ config:
     regularSchedule: "* * * * *"
     # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active
     # users.
-    # Uses RFC 3339 notation like 2025-04-03 12:34:56Z
-    finalSchedule: "2025-04-03 12:34:56Z"
+    # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
+    finalSchedule: "2025-04-03T12:34:56Z"
     # changeFQDN triggers the fqdn and certificate import.
     # This is only taken into account if it is a final migration.
     # Default: false
@@ -76,6 +76,8 @@ config:
     #   - dogu: "jenkins"
     #     pattern: "EXCLUDE_PATTERN"
     exclude: []
+    # verbose sets the migrator to verbose logging
+    verbose: true
   smtp:
     server: mailhog
     port: 1025
