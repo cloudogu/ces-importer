@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	v2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	kubv1 "k8s.io/api/core/v1"
@@ -521,7 +522,10 @@ func TestUpdatePVC(t *testing.T) {
 
 		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
 		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, dogu *v2.Dogu, options metav1.UpdateOptions) (*v2.Dogu, error) {
+			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
+			return nil, nil
+		})
 
 		c := make(chan error)
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)

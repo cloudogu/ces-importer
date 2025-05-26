@@ -7,6 +7,7 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	kubv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"math"
@@ -15,6 +16,7 @@ import (
 )
 
 const (
+	_1Gi                             = 1024 * 1024 * 1024
 	defaultWaitSecondsBetweenRetries = 10
 	defaultMaxWaitMinutes            = 10
 	doguNginx                        = "official/nginx"
@@ -203,30 +205,43 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 			c <- fmt.Errorf("panic while updating pvc: %v", err)
 		}
 	}()
-	var result error
+
 	// validate that the volume size fits the exported data
-	if exDogu.Volume.SizeInBytes > imDogu.Volume.SizeInBytes {
-		// try to resize the volume
-		dogu, err := v.doguClient.Get(ctx, imDogu.Name, metav1.GetOptions{})
-		if err != nil {
-			result = errors.Join(result, fmt.Errorf("dogu %s volume could not be found: %s \n", imDogu.Name, err.Error()))
-		} else {
-			slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
-			// use Gi and round up
-			roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(1024*1024*1024)))
-			dogu.Spec.Resources.DataVolumeSize = roundedDoguSizeGB
-			_, err = v.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
-			if err != nil {
-				result = errors.Join(result, fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %s \n", imDogu.Name, err.Error()))
-			} else {
-				err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, ctx)
-				if err != nil {
-					result = errors.Join(result, err)
-				}
-			}
-		}
+	if exDogu.Volume.SizeInBytes <= imDogu.Volume.SizeInBytes {
+		c <- nil
+		return
 	}
-	c <- result
+
+	slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
+
+	dogu, err := v.doguClient.Get(ctx, imDogu.Name, metav1.GetOptions{})
+	if err != nil {
+		c <- fmt.Errorf("dogu %s volume could not be found: %w", imDogu.Name, err)
+		return
+	}
+
+	// use Gi and round up
+	roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(1024*1024*1024)))
+	minDataVolumeSize, err := resource.ParseQuantity(roundedDoguSizeGB)
+	if err != nil {
+		c <- fmt.Errorf("could not parse minDataVolumeSize for dogu %s: %w", imDogu.Name, err)
+		return
+	}
+
+	dogu.Spec.Resources.MinDataVolumeSize = minDataVolumeSize
+	_, err = v.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
+	if err != nil {
+		c <- fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %w", imDogu.Name, err)
+		return
+	}
+
+	err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, ctx)
+	if err != nil {
+		c <- fmt.Errorf("error waiting for pvc of dogu %s to be resized: %w", imDogu.Name, err)
+		return
+	}
+
+	c <- nil
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
@@ -247,7 +262,7 @@ func (v *Validator) waitForPVCResize(expectedSize string, doguName string, ctx c
 		requestedStorage := pvc.Spec.Resources.Requests.Storage()
 		actualStorage := pvc.Status.Capacity.Storage()
 
-		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(actualStorage.AsApproximateFloat64()/(1024*1024*1024)))
+		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(actualStorage.AsApproximateFloat64()/_1Gi))
 		if requestedStorage.Equal(*actualStorage) {
 			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, roundedPVSizeGB))
 			return nil
