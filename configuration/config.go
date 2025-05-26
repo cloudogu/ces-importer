@@ -60,6 +60,16 @@ type Migration struct {
 	// This is only taken into account when the job runs as final migration.
 	// Default: False
 	ChangeFQDN bool `yaml:"changeFQDN"`
+	// MaintenanceModeMessage is the message to be shown at the source system when the maintenance mode gets activated.
+	MaintenanceModeMessage MaintenanceModeMessage `yaml:"maintenanceModeMessage"`
+}
+
+// MaintenanceModeMessage is the message to be shown at the source system when the maintenance mode gets activated.
+type MaintenanceModeMessage struct {
+	// Title to be shown in the maintenance mode message.
+	Title string `yaml:"title"`
+	// Text to be shown in the maintenance mode message.
+	Text string `yaml:"text"`
 }
 
 // SSH contains the configuration data for the SSH connection to the source system.

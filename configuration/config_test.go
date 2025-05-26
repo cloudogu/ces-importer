@@ -37,6 +37,10 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			RegularCron:    "0 4 * * *",
 			FinalTimestamp: "2025-04-03 12:34:56Z",
 			ChangeFQDN:     true,
+			MaintenanceModeMessage: MaintenanceModeMessage{
+				Title: "Migration completed.",
+				Text:  "The migration of your instance has been completed.",
+			},
 		}, cfg.Migration)
 
 		// ssh
@@ -535,7 +539,7 @@ func createValidConfig(t *testing.T, dir string, filename string) {
 	case fileAPIConfig:
 		content = "host: test-host\napiKey: test-key\nskipTLSVerify: true"
 	case fileMigrationConfig:
-		content = "regularSchedule: \"0 * * * *\""
+		content = "regularSchedule: \"0 * * * *\"\nchangeFQDN: true\nmaintenanceModeMessage:\n  title: \"Migration completed.\"\n  text: \"The migration of your instance has been completed.\""
 	case fileSSHConfig:
 		content = "user: test-user\nprivateKeyPath: /test/path"
 	case fileJobContainerConfig:

@@ -2,3 +2,6 @@
 finalSchedule: "2025-04-03 12:34:56Z"
 regularSchedule: "0 4 * * *"
 changeFQDN: true
+maintenanceModeMessage:
+  title: "Migration completed."
+  text: "The migration of your instance has been completed."

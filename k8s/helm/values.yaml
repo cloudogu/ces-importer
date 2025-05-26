@@ -67,6 +67,13 @@ config:
     # This is only taken into account if it is a final migration.
     # Default: false
     changeFQDN: false
+    # maintenanceModeMessage is the message to been shown, when the maintenance mode gets activated at the source system.
+    maintenanceModeMessage:
+      # title to be shown in the maintenance mode message.
+      title: "Migration completed."
+      # text to be shown in the maintenance mode message.
+      text: "The migration of your instance has been completed. You can reach the new instance under test.migration.com"
+
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"
