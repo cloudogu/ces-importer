@@ -17,7 +17,7 @@ const (
 	certTypeKey             = "certificate-type"
 )
 
-type fqdnManger struct {
+type fqdnManager struct {
 	repo             configMapRepository
 	globalConfigRepo globalConfigRepository
 }
@@ -56,13 +56,13 @@ func createFQDNBackupConfigMap(backup ConfigChange) *corev1.ConfigMap {
 }
 
 // Backup creates a backup of the current fqdn and certificate type from the global config.
-func (f *fqdnManger) Backup(ctx context.Context) error {
+func (f *fqdnManager) Backup(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return f.backup(ctx)
 	})
 }
 
-func (f *fqdnManger) backup(ctx context.Context) error {
+func (f *fqdnManager) backup(ctx context.Context) error {
 	slog.Debug("Backing up FQDN")
 
 	globalConfigMap, err := f.globalConfigRepo.Get(ctx)
@@ -100,7 +100,7 @@ func (f *fqdnManger) backup(ctx context.Context) error {
 	return nil
 }
 
-func (f *fqdnManger) updateBackup(ctx context.Context, b ConfigChange) error {
+func (f *fqdnManager) updateBackup(ctx context.Context, b ConfigChange) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		backupCM, err := f.repo.Get(ctx, fqdnBackupConfigMapName, metav1.GetOptions{})
 		if err != nil {
@@ -120,13 +120,13 @@ func (f *fqdnManger) updateBackup(ctx context.Context, b ConfigChange) error {
 }
 
 // Restore restores the fqdn and certificate type from the backup.
-func (f *fqdnManger) Restore(ctx context.Context) error {
+func (f *fqdnManager) Restore(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return f.restore(ctx)
 	})
 }
 
-func (f *fqdnManger) restore(ctx context.Context) error {
+func (f *fqdnManager) restore(ctx context.Context) error {
 	slog.Debug("Restoring fqdn from backup")
 
 	backup, err := f.repo.Get(ctx, fqdnBackupConfigMapName, metav1.GetOptions{})
@@ -152,7 +152,7 @@ func (f *fqdnManger) restore(ctx context.Context) error {
 }
 
 // Update updates the fqdn and certificate type in the global config.
-func (f *fqdnManger) Update(ctx context.Context, c ConfigChange) error {
+func (f *fqdnManager) Update(ctx context.Context, c ConfigChange) error {
 	slog.Debug("Updating FQDN")
 
 	globalConfig, err := f.globalConfigRepo.Get(ctx)
@@ -183,7 +183,7 @@ func (f *fqdnManger) Update(ctx context.Context, c ConfigChange) error {
 }
 
 // DeleteBackup deletes the backup of the fqdn and certificate type.
-func (f *fqdnManger) DeleteBackup(ctx context.Context) error {
+func (f *fqdnManager) DeleteBackup(ctx context.Context) error {
 	err := retry.OnError(retry.DefaultRetry, retriable, func() error {
 		return f.repo.Delete(ctx, fqdnBackupConfigMapName, metav1.DeleteOptions{})
 	})

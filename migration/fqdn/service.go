@@ -113,11 +113,14 @@ type Service struct {
 }
 
 // NewService creates a new instance of the fqdn change service.
-func NewService(configService configGetter, fqdn fqdnChanger, cert certificateChanger) *Service {
+func NewService(configService configGetter, globalConfigRepository globalConfigRepository, configMapRepository configMapRepository, secretRepository secretRepository) *Service {
 	return &Service{
 		configService: configService,
-		fqdn:          fqdn,
-		cert:          cert,
+		fqdn: &fqdnManager{
+			repo:             configMapRepository,
+			globalConfigRepo: globalConfigRepository,
+		},
+		cert: &ecosystemCertificate{repo: secretRepository},
 	}
 }
 

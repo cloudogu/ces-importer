@@ -348,7 +348,7 @@ func TestService_ChangeFQDN(t *testing.T) {
 }
 
 func TestNewService(t *testing.T) {
-	service := NewService(newMockConfigGetter(t), newMockFqdnChanger(t), newMockCertificateChanger(t))
+	service := NewService(newMockConfigGetter(t), newMockGlobalConfigRepo(t), newMockConfigMapRepository(t), newMockSecretRepository(t))
 
 	assert.NotNil(t, service)
 	assert.NotNil(t, service.fqdn)

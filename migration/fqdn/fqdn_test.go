@@ -56,14 +56,14 @@ func createTestFQDNBackup() ConfigChange {
 	}
 }
 
-// mockFQDNManager is a mock implementation of the fqdnManger that overrides the methods to return nil (success)
+// mockFQDNManager is a mock implementation of the fqdnManager that overrides the methods to return nil (success)
 type mockFQDNManager struct {
-	*fqdnManger
+	*fqdnManager
 }
 
 func newMockFQDNManager(repo *mockConfigMapRepository, configAPI *mockConfigGetter, globalConfigRepo *mockGlobalConfigRepo) *mockFQDNManager {
 	return &mockFQDNManager{
-		fqdnManger: &fqdnManger{
+		fqdnManager: &fqdnManager{
 			repo:             repo,
 			globalConfigRepo: globalConfigRepo,
 		},
@@ -213,8 +213,8 @@ func TestFQDNBackup(t *testing.T) {
 			// Setup mock expectations
 			tc.setupMock(mockRepo, mockGlobalRepo)
 
-			// Create fqdnManger with mocks
-			manager := &fqdnManger{
+			// Create fqdnManager with mocks
+			manager := &fqdnManager{
 				repo:             mockRepo,
 				globalConfigRepo: mockGlobalRepo,
 			}
@@ -301,8 +301,8 @@ func TestFQDNRestore(t *testing.T) {
 			// Setup mock expectations
 			tc.setupMock(mockRepo, mockGlobalRepo)
 
-			// Create fqdnManger with mocks
-			manager := &fqdnManger{
+			// Create fqdnManager with mocks
+			manager := &fqdnManager{
 				repo:             mockRepo,
 				globalConfigRepo: mockGlobalRepo,
 			}
@@ -395,8 +395,8 @@ func TestFQDNUpdate(t *testing.T) {
 			// Setup mock expectations
 			tc.setupMock(mockGlobalRepo)
 
-			// Create fqdnManger with mocks
-			manager := &fqdnManger{
+			// Create fqdnManager with mocks
+			manager := &fqdnManager{
 				globalConfigRepo: mockGlobalRepo,
 			}
 
@@ -461,8 +461,8 @@ func TestFQDNDeleteBackup(t *testing.T) {
 			// Setup mock expectations
 			tc.setupMock(mockRepo)
 
-			// Create fqdnManger with mocks
-			manager := fqdnManger{
+			// Create fqdnManager with mocks
+			manager := fqdnManager{
 				repo: mockRepo,
 			}
 
