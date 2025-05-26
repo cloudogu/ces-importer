@@ -73,7 +73,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
-		mMaintenanceModeHandler.EXPECT().Enable(testCtx, "", "").Return(nil)
+		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(nil)
 
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, nil, mock.Anything, mock.Anything).Return(nil)
@@ -403,7 +403,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
-		mMaintenanceModeHandler.EXPECT().Enable(testCtx, "", "").Return(assert.AnError)
+		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(assert.AnError)
 		mMaintenanceModeHandler.EXPECT().Disable(testCtx).Return(nil)
 
 		mMailSender := NewMockMailSender(t)

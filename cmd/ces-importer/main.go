@@ -87,15 +87,19 @@ func main() {
 	)
 
 	deps := migration.MigratorDependencies{
-		ExportModeValidator:    exportModeValidator,
-		SystemInfoValidator:    systemInfoValidator,
-		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		JobRunner:              jobService,
-		DoguStopper:            doguStartStopper,
-		DoguStarter:            doguStartStopper,
-		LogWriter:              logWriter,
-		LogInitializer:         logInitializer,
-		MailSender:             mailSender,
+		ExportModeValidator: exportModeValidator,
+		SystemInfoValidator: systemInfoValidator,
+		MaintenanceModeHandler: &maintenanceModeHandler{
+			service: exportAPIService.MaintenanceModeService,
+			title:   cfg.Migration.MaintenanceModeMessage.Title,
+			message: cfg.Migration.MaintenanceModeMessage.Text,
+		},
+		JobRunner:      jobService,
+		DoguStopper:    doguStartStopper,
+		DoguStarter:    doguStartStopper,
+		LogWriter:      logWriter,
+		LogInitializer: logInitializer,
+		MailSender:     mailSender,
 	}
 	migrator := migration.NewMigrator(deps)
 
@@ -181,4 +185,18 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 		doguClient:      k8sDoguClient,
 		componentClient: k8sComponentClient,
 	}, nil
+}
+
+type maintenanceModeHandler struct {
+	service *exporter.MaintenanceModeService
+	title   string
+	message string
+}
+
+func (m *maintenanceModeHandler) Enable(ctx context.Context) error {
+	return m.service.Enable(ctx, m.title, m.message)
+}
+
+func (m *maintenanceModeHandler) Disable(ctx context.Context) error {
+	return m.service.Disable(ctx)
 }

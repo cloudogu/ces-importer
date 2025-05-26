@@ -34,7 +34,7 @@ type LogWriter interface {
 }
 
 type MaintenanceModeHandler interface {
-	Enable(ctx context.Context, title string, message string) error
+	Enable(ctx context.Context) error
 	Disable(ctx context.Context) error
 }
 
@@ -115,7 +115,7 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 	}
 
 	if isFinalMigration {
-		err = m.maintenanceModeHandler.Enable(ctx, "", "")
+		err = m.maintenanceModeHandler.Enable(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to enable maintenance mode: %w", err)
 		}
