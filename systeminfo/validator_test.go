@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
-	v2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
+	v2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	kubv1 "k8s.io/api/core/v1"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
-	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
+	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

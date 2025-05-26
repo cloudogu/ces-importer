@@ -7,7 +7,7 @@ require (
 	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-backup-operator v1.4.3
 	github.com/cloudogu/k8s-component-operator v1.8.0
-	github.com/cloudogu/k8s-dogu-operator/v3 v3.5.1
+	github.com/cloudogu/k8s-dogu-lib/v2 v2.8.0
 	github.com/cloudogu/k8s-registry-lib v0.5.1
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.33.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	helm.sh/helm/v3 v3.16.4 // indirect
 	k8s.io/apiextensions-apiserver v0.32.1 // indirect
 	k8s.io/apiserver v0.32.1 // indirect

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
-	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
+	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	kubv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
