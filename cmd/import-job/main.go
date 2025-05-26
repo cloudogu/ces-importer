@@ -6,6 +6,7 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/logging"
+	"github.com/cloudogu/ces-importer/migration"
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -20,7 +21,9 @@ func main() {
 
 func run() int {
 	slog.Info("New import job started.")
+
 	ctx := context.Background()
+	ctx = migration.SetTriggerFQDNChangeFromEnv(ctx)
 
 	jobConfig, err := configuration.ReadJobConfig()
 	if err != nil {
