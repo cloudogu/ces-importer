@@ -140,13 +140,13 @@ func main() {
 	slog.Info("Starting main loop")
 	go cronLooper.Run()
 
-	err = startFinalMigrationLoop(ctx, migrator, &migrationRunning, finalTimestamp)
+	err = startFinalMigrationLoop(ctx, migrator, &migrationRunning, finalTimestamp, cronLooper)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, migrationRunning *atomic.Bool, finalTimestamp time.Time) error {
+func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, migrationRunning *atomic.Bool, finalTimestamp time.Time, cronLooper *cron.Task) error {
 	duration := time.Until(finalTimestamp)
 	<-time.After(duration)
 	ticker := time.NewTicker(time.Minute)
@@ -165,7 +165,9 @@ func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, 
 		if err != nil {
 			return fmt.Errorf("error running final migration: %w", err)
 		}
+		slog.Info("Final migration succeeded")
 
+		cronLooper.Stop()
 		return nil
 	}
 	return nil
