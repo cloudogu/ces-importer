@@ -5,14 +5,9 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/ces-importer/logging"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
-	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
-
 	"github.com/cloudogu/ces-importer/sync"
 	"github.com/cloudogu/k8s-registry-lib/repository"
-	"k8s.io/client-go/kubernetes"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type dataSyncer interface {
@@ -28,61 +23,18 @@ type ImportExecutor struct {
 	dataSyncer
 }
 
-func NewImportExecutor() (*ImportExecutor, error) {
-	jobConfig, err := configuration.ReadJobConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read job configuration: %w", err)
-	}
+func NewImportExecutor(cfg configuration.Job, apiService *exporter.Service, k8sClientSet k8sClients) (*ImportExecutor, error) {
+	globalConfigRepo := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
+	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.configMap)
+	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.secret)
 
-	logInitializer := logging.NewLogInitializer(jobConfig.Logging.Level)
-	err = logInitializer.Initialize()
-	if err != nil {
-		panic(err)
-	}
+	_ = sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath)
 
-	clusterConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get k8s cluster config: %w", err)
-	}
-
-	k8sClient, err := kubernetes.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create k8s client: %w", err)
-	}
-
-	configMaps := k8sClient.CoreV1().ConfigMaps(jobConfig.Namespace)
-	secrets := k8sClient.CoreV1().Secrets(jobConfig.Namespace)
-
-	exporterApiClient := createAPIClient(jobConfig.API)
-	exporterService := exporter.NewService(exporterApiClient)
-
-	globalConfigRepo := repository.NewGlobalConfigRepository(configMaps)
-	doguConfigRepo := repository.NewDoguConfigRepository(configMaps)
-	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(secrets)
-
-	backupClient, err := backupEcosystem.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup schedule client: %w", err)
-	}
-	backupScheduleClient := backupClient.BackupSchedules(jobConfig.Namespace)
-
-	_ = sync.NewRsyncSyncer(jobConfig.API.ExporterHost, jobConfig.SSH.User, jobConfig.SSH.PrivateSSHKeyPath)
-
-	cs := migrationConfig.NewConfigImporter(jobConfig.DoguVolumeBasePath, exporterService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, backupScheduleClient)
+	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.ConfigService, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, k8sClientSet.backupSchedule)
 
 	return &ImportExecutor{
 		configSyncer: cs,
 	}, nil
-}
-
-func createAPIClient(apiCfg configuration.API) *exporter.Client {
-	var options []exporter.HTTPClientOption
-
-	if apiCfg.SkipTLSVerify {
-		options = append(options, exporter.WithInsecure())
-	}
-
-	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
 }
 
 func (j ImportExecutor) Start(ctx context.Context) (e error) {
