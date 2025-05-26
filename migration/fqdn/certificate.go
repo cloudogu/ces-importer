@@ -58,6 +58,7 @@ func (c *ecosystemCertificate) backup(ctx context.Context) error {
 
 	backup := certificateSecret.DeepCopy()
 	backup.Name = certificateBackupName
+	backup.ResourceVersion = ""
 
 	_, err = c.repo.Create(ctx, backup, metav1.CreateOptions{})
 	if err != nil {
@@ -136,8 +137,8 @@ func (c *ecosystemCertificate) update(ctx context.Context, secretName string, tl
 		return fmt.Errorf("failed to get secret for certificate: %w", err)
 	}
 
-	certificateSecret.StringData[certFileName] = string(tlsKeyPair.Certificate)
-	certificateSecret.StringData[keyFileName] = string(tlsKeyPair.CertificateKey)
+	certificateSecret.Data[certFileName] = tlsKeyPair.Certificate
+	certificateSecret.Data[keyFileName] = tlsKeyPair.CertificateKey
 
 	_, err = c.repo.Update(ctx, certificateSecret, metav1.UpdateOptions{})
 	if err != nil {
