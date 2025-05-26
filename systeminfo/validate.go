@@ -227,7 +227,7 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 	}
 
 	// use Gi and round up
-	roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(1024*1024*1024)))
+	roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(_1Gi)))
 	minDataVolumeSize, err := resource.ParseQuantity(roundedDoguSizeGB)
 	if err != nil {
 		c <- fmt.Errorf("could not parse minDataVolumeSize for dogu %s: %w", imDogu.Name, err)
