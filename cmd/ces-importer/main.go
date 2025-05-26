@@ -104,10 +104,9 @@ func main() {
 	finalTimestamp, err := time.Parse(time.RFC3339, cfg.FinalTimestamp)
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Could not parse final migration timestamp from %q: %s", cfg.FinalTimestamp, err.Error()))
-	} else {
-		if time.Now().After(finalTimestamp) {
-			panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
-		}
+	}
+	if time.Now().After(finalTimestamp) {
+		panic(fmt.Errorf("the final migration timestamp cannot be in the past: %q", cfg.FinalTimestamp))
 	}
 
 	migrator := migration.NewMigrator(deps)
@@ -117,12 +116,19 @@ func main() {
 		migrationRunning.Store(true)
 		defer migrationRunning.Swap(false)
 
+		if time.Now().After(finalTimestamp) {
+			slog.Warn("A migration was triggered but the final migration already took place. The migration is canceled.")
+			return 0, nil
+		}
+
 		// do not run migration after the final migration took place
-		if !time.Now().After(finalTimestamp) {
-			err = migrator.RunMigration(ctx)
-			if err != nil {
-				return 1, err
-			}
+		if time.Now().After(finalTimestamp) {
+			return 1, fmt.Errorf("final migration already took place")
+		}
+
+		err = migrator.RunMigration(ctx)
+		if err != nil {
+			return 1, err
 		}
 
 		return 0, nil
@@ -147,16 +153,20 @@ func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, 
 	defer ticker.Stop()
 	for range ticker.C {
 		// do not start until the current migration is finished
-		if !migrationRunning.Load() {
-			// start final migration
-			slog.Info("Starting final migration")
-			ctx = migration.SetFinalMigration(ctx)
-			err := migrator.RunMigration(ctx)
-			if err != nil {
-				return fmt.Errorf("error running final migration: %w", err)
-			}
-			break
+		if migrationRunning.Load() {
+			// skip to next tick
+			continue
 		}
+
+		// start final migration
+		slog.Info("Starting final migration")
+		ctx = migration.SetFinalMigration(ctx)
+		err := migrator.RunMigration(ctx)
+		if err != nil {
+			return fmt.Errorf("error running final migration: %w", err)
+		}
+
+		return nil
 	}
 	return nil
 }
