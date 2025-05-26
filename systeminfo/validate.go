@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	kubv1 "k8s.io/api/core/v1"
@@ -30,7 +31,7 @@ var (
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
 	excludedDogus             = []string{
 		"official/monitoring",
-		"official/backup",
+		"premium/backup",
 		"official/registrator",
 	}
 )
@@ -199,6 +200,19 @@ func validateComponents(imInfo exporter.SystemInfo, exInfo exporter.SystemInfo) 
 
 // resize the dogus pvc if it is not large enough
 func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx context.Context, c chan error) {
+	// validate that the volume size fits the exported data
+	if exDogu.Volume.SizeInBytes <= imDogu.Volume.SizeInBytes {
+		c <- nil
+		return
+	}
+	slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
+
+	fullImportDoguName, err := cescommons.QualifiedNameFromString(imDogu.Name)
+	if err != nil {
+		c <- fmt.Errorf("dogu %s name is not a qualified dogu name: %w", imDogu.Name, err)
+		return
+	}
+
 	// prevent endless running function when a panic occurs as the result will be awaited
 	defer func() {
 		if err := recover(); err != nil {
@@ -206,15 +220,7 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 		}
 	}()
 
-	// validate that the volume size fits the exported data
-	if exDogu.Volume.SizeInBytes <= imDogu.Volume.SizeInBytes {
-		c <- nil
-		return
-	}
-
-	slog.Info(fmt.Sprintf("Resizing dogu %s volume", imDogu.Name))
-
-	dogu, err := v.doguClient.Get(ctx, imDogu.Name, metav1.GetOptions{})
+	dogu, err := v.doguClient.Get(ctx, fullImportDoguName.SimpleName.String(), metav1.GetOptions{})
 	if err != nil {
 		c <- fmt.Errorf("dogu %s volume could not be found: %w", imDogu.Name, err)
 		return
@@ -235,7 +241,7 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 		return
 	}
 
-	err = v.waitForPVCResize(roundedDoguSizeGB, imDogu.Name, ctx)
+	err = v.waitForPVCResize(roundedDoguSizeGB, fullImportDoguName.SimpleName.String(), ctx)
 	if err != nil {
 		c <- fmt.Errorf("error waiting for pvc of dogu %s to be resized: %w", imDogu.Name, err)
 		return

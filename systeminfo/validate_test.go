@@ -469,7 +469,7 @@ func TestUpdatePVC(t *testing.T) {
 			require.NoError(t, err)
 		}
 	})
-	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
+	t.Run("should fail to update pvc if doguName can not be parsed", func(t *testing.T) {
 		doguClient := newMockDoguClient(t)
 		pvcClient := newMockPvcClient(t)
 		v := Validator{
@@ -484,7 +484,41 @@ func TestUpdatePVC(t *testing.T) {
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "test",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 1073741824,
+			},
+		}
+
+		waitSecondsBetweenRetries = 1
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
+		c := make(chan error)
+		go v.updatePVC(exDogu, imDogu, context.Background(), c)
+		err := <-c
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "dogu test name is not a qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'test'")
+	})
+
+	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
+		doguClient := newMockDoguClient(t)
+		pvcClient := newMockPvcClient(t)
+		v := Validator{
+			doguClient: doguClient,
+			pvcClient:  pvcClient,
+		}
+		exDogu := exporter.Dogu{
+			Name:    "official/nexus",
+			Version: "",
+			Volume: exporter.DoguVolume{
+				SizeInBytes: 2147483648,
+			},
+		}
+		imDogu := exporter.Dogu{
+			Name:    "official/nexus",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 1073741824,
@@ -541,14 +575,14 @@ func TestUpdatePVC(t *testing.T) {
 			doguClient: doguClient,
 		}
 		exDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "testDogu",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
@@ -565,7 +599,7 @@ func TestUpdatePVC(t *testing.T) {
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)
 		err := <-c
 		if err != nil {
-			require.ErrorContains(t, err, "dogu testDogu volume could not be found")
+			require.ErrorContains(t, err, "dogu official/testDogu volume could not be found")
 		}
 	})
 
@@ -575,14 +609,14 @@ func TestUpdatePVC(t *testing.T) {
 			doguClient: doguClient,
 		}
 		exDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "testDogu",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
@@ -608,7 +642,7 @@ func TestUpdatePVC(t *testing.T) {
 		go v.updatePVC(exDogu, imDogu, context.Background(), c)
 		err := <-c
 		if err != nil {
-			require.ErrorContains(t, err, "dogu testDogu does not have enough volume capacity and the volume could not be resized")
+			require.ErrorContains(t, err, "dogu official/testDogu does not have enough volume capacity and the volume could not be resized")
 		}
 	})
 
@@ -618,14 +652,14 @@ func TestUpdatePVC(t *testing.T) {
 			doguClient: doguClient,
 		}
 		exDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "testDogu",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
@@ -665,14 +699,14 @@ func TestUpdatePVC(t *testing.T) {
 			pvcClient:  pvcClient,
 		}
 		exDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "testDogu",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
@@ -709,14 +743,14 @@ func TestUpdatePVC(t *testing.T) {
 			doguClient: doguClient,
 		}
 		exDogu := exporter.Dogu{
-			Name:    "",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 10,
 			},
 		}
 		imDogu := exporter.Dogu{
-			Name:    "testDogu",
+			Name:    "official/testDogu",
 			Version: "",
 			Volume: exporter.DoguVolume{
 				SizeInBytes: 3,
