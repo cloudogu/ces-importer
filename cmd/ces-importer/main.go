@@ -116,14 +116,10 @@ func main() {
 		migrationRunning.Store(true)
 		defer migrationRunning.Swap(false)
 
+		// do not run migration after the final migration took place
 		if time.Now().After(finalTimestamp) {
 			slog.Warn("A migration was triggered but the final migration already took place. The migration is canceled.")
 			return 0, nil
-		}
-
-		// do not run migration after the final migration took place
-		if time.Now().After(finalTimestamp) {
-			return 1, fmt.Errorf("final migration already took place")
 		}
 
 		err = migrator.RunMigration(ctx)
