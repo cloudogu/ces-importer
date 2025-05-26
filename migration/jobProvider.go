@@ -347,7 +347,7 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 func addFQDNChangeTriggerAsEnv(ctx context.Context, env []v1.EnvVar) []v1.EnvVar {
 	if TriggerFQDNChange(ctx) {
 		return append(env, v1.EnvVar{
-			Name:  "TRIGGER_FQDN_CHANGE",
+			Name:  envTriggerFQDNChange,
 			Value: "true",
 		})
 	}
