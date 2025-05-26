@@ -26,7 +26,12 @@ spec:
           emptyDir: {}
       containers:
         - env:
-            - name: API_KEY
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.smtp.secretName }}
+                  key: {{ .Values.config.smtp.secretDataKey }}
+            - name: mailPassword
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.api.secretName }}

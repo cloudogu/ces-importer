@@ -38,10 +38,11 @@ config:
     # The exporter API endpoint is fixed and will be routed on source side.
     host: classic-ces.exporter
     # secretName contains the secret with the exporter API key
-    secretName: "ces-exporter-secret"
+    secretName: "ces-importer-secret"
     # secretDataKey contains the key name that accommodates the actual exporter API key as value.
     secretDataKey: "apiKey"
-    # apiKey is the actual api key read from the specified env var.
+    # apiKey is the actual api key
+    # it is read from an env defined in deployment.yaml. Do not change!
     apiKey: "${API_KEY}"
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
     # If skipTLSVerify is true, the client accepts any certificate presented by the server and any host name in that certificate.
@@ -75,11 +76,22 @@ config:
     # verbose sets the migrator to verbose logging
     verbose: true
   smtp:
+    # mail server address
     server: mailhog
+    # mail server port
     port: 1025
+    # username for the mail server
     username:
-    password:
+    # password for the mail server
+    # it is read from an env defined in deployment.yaml. Do not change!
+    password: "${MAIL_PASSWORD}"
+    # secretName contains the name of the secret that contains the smtp mail password which the importer will to send emails.
+    secretName: "ces-importer-secret"
+    # secretDataKey contains the key name that accommodates the actual exporter smtp mail password as value.
+    secretDataKey: "mailPassword"
+    # sender mail address
     from: importer@ces.com
+    # receiver mail addresses
     to:
       - recipient1@example.com
       - recipient2@example.com
