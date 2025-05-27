@@ -52,19 +52,24 @@ func main() {
 	<-quit
 	slog.Info("Shutdown ces-importer ...")
 
-	cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	done := make(chan struct{})
 
 	if cronTask != nil {
 		go func() {
 			slog.Info("stopping cron-task ...")
 			cronTask.Stop()
 			slog.Info("cron-task stopped")
+			close(done)
 		}()
 	}
 
-	<-cancelCtx.Done()
-	slog.Info("shutdown-timeout of 5 seconds reached")
+	select {
+	case <-done:
+		slog.Info("Shutdown completed")
+	case <-time.After(5 * time.Second):
+		slog.Info("shutdown-timeout of 5 seconds reached")
+	}
+
 	slog.Info("exiting")
 }
 
