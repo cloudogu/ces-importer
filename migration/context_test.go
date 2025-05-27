@@ -54,6 +54,11 @@ func TestSetTriggerFQDNChangeFromEnv(t *testing.T) {
 			envValue: "",
 			expected: false,
 		},
+		{
+			name:     "env to trigger fqdn change is set to false",
+			envValue: "false",
+			expected: false,
+		},
 	}
 
 	for _, tc := range tests {
