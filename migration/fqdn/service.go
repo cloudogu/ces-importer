@@ -162,7 +162,7 @@ func (s *Service) ChangeFQDN(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to create change request for fqdn: %w", err)
 	}
 
-	slog.Debug("extracted relevant config parameters from exporter for fqdn change", "changeRequest", changeReq)
+	slog.Debug("extracted relevant config parameters from exporter for fqdn change")
 
 	if err = s.update(ctx, changeReq); err != nil {
 		slog.Warn("update fqdn has failed, try to restore backup")
