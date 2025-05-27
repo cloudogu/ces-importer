@@ -54,11 +54,7 @@ func run() int {
 
 	slog.Debug("Successfully created k8s client set")
 
-	importJob, err := NewImportExecuter(jobConfig, exporterService, k8sClientSet)
-	if err != nil {
-		slog.Error("failed to create executer for import", "cause", err)
-		return 1
-	}
+	importJob := NewImportExecuter(jobConfig, exporterService, k8sClientSet)
 
 	slog.Info("Import executer created, start data synchronization...")
 

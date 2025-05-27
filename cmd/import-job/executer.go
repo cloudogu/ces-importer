@@ -30,7 +30,7 @@ type ImportExecuter struct {
 	fqdnChanger
 }
 
-func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSet k8sClients) (*ImportExecuter, error) {
+func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSet k8sClients) *ImportExecuter {
 	globalConfigRepo := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
 	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.configMap)
 	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.secret)
@@ -43,7 +43,7 @@ func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSe
 		configSyncer: cs,
 		dataSyncer:   ds,
 		fqdnChanger:  fc,
-	}, nil
+	}
 }
 
 func (j ImportExecuter) Start(ctx context.Context) error {
