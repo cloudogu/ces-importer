@@ -67,7 +67,7 @@ func (j ImportExecuter) Start(ctx context.Context) error {
 	}
 
 	if err := j.ChangeFQDN(ctx); err != nil {
-		return fmt.Errorf("failoed to change fqdn: %w", err)
+		return fmt.Errorf("failed to change fqdn: %w", err)
 	}
 
 	slog.Info("FQDN has been changed.")
