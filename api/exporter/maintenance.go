@@ -5,15 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cloudogu/ces-importer/migration"
 )
 
 const (
 	// endpointMaintenanceMode contains the endpoint to set and get the maintenance mode of the exporter system.
 	endpointMaintenanceMode = "/maintenance/mode"
 )
-
-var _ migration.MaintenanceModeHandler = MaintenanceModeService{}
 
 // MaintenanceMode contains data of the current maintenance state
 type MaintenanceMode struct {
