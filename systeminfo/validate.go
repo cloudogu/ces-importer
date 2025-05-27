@@ -11,13 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
-	"math"
 	"slices"
 	"time"
 )
 
 const (
-	_1Gi                             = 1024 * 1024 * 1024
 	defaultWaitSecondsBetweenRetries = 10
 	defaultMaxWaitMinutes            = 10
 	doguNginx                        = "official/nginx"
@@ -226,22 +224,17 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 		return
 	}
 
-	// use Gi and round up
-	roundedDoguSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(float64(exDogu.Volume.SizeInBytes)/(_1Gi)))
-	minDataVolumeSize, err := resource.ParseQuantity(roundedDoguSizeGB)
-	if err != nil {
-		c <- fmt.Errorf("could not parse minDataVolumeSize for dogu %s: %w", imDogu.Name, err)
-		return
-	}
+	// convert sizeInBytes to a quantitiy
+	minDataVolumeSize := resource.NewQuantity(exDogu.Volume.SizeInBytes, resource.BinarySI)
 
-	dogu.Spec.Resources.MinDataVolumeSize = minDataVolumeSize
+	dogu.Spec.Resources.MinDataVolumeSize = *minDataVolumeSize
 	_, err = v.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
 	if err != nil {
 		c <- fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %w", imDogu.Name, err)
 		return
 	}
 
-	err = v.waitForPVCResize(roundedDoguSizeGB, fullImportDoguName.SimpleName.String(), ctx)
+	err = v.waitForPVCResize(fullImportDoguName.SimpleName.String(), ctx)
 	if err != nil {
 		c <- fmt.Errorf("error waiting for pvc of dogu %s to be resized: %w", imDogu.Name, err)
 		return
@@ -251,7 +244,7 @@ func (v *Validator) updatePVC(exDogu exporter.Dogu, imDogu exporter.Dogu, ctx co
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
-func (v *Validator) waitForPVCResize(expectedSize string, doguName string, ctx context.Context) error {
+func (v *Validator) waitForPVCResize(doguName string, ctx context.Context) error {
 	retries := 0
 	for {
 		retries++
@@ -268,12 +261,11 @@ func (v *Validator) waitForPVCResize(expectedSize string, doguName string, ctx c
 		requestedStorage := pvc.Spec.Resources.Requests.Storage()
 		actualStorage := pvc.Status.Capacity.Storage()
 
-		roundedPVSizeGB := fmt.Sprintf("%.0fGi", math.Ceil(actualStorage.AsApproximateFloat64()/_1Gi))
 		if requestedStorage.Equal(*actualStorage) {
-			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, roundedPVSizeGB))
+			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, actualStorage.String()))
 			return nil
 		}
 
-		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, roundedPVSizeGB, expectedSize))
+		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, actualStorage.String(), requestedStorage.String()))
 	}
 }

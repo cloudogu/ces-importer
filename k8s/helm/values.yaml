@@ -45,7 +45,7 @@ config:
     apiKey: "${API_KEY}"
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
     # If skipTLSVerify is true, the client accepts any certificate presented by the server and any host name in that certificate.
-    skipTLSVerify: true
+    skipTLSVerify: false
   ssh:
     # secretName contains the name of the secret that contains the SSH private key which the importer will use to access the source system.
     secretName: "ces-importer-secret"
