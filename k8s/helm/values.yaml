@@ -70,9 +70,9 @@ config:
     # maintenanceModeMessage is the message to been shown, when the maintenance mode gets activated at the source system.
     maintenanceModeMessage:
       # title to be shown in the maintenance mode message.
-      title: "Migration completed."
+      title: "Migration in progess."
       # text to be shown in the maintenance mode message.
-      text: "The migration of your instance has been completed. You can reach the new instance under test.migration.com"
+      text: "The migration of your instance is in progress."
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"
