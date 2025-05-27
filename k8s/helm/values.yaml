@@ -62,7 +62,7 @@ config:
     # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active
     # users.
     # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
-    finalSchedule: "2025-04-03T12:34:56Z"
+    finalSchedule: ""
     # changeFQDN triggers the fqdn and certificate import.
     # This is only taken into account if it is a final migration.
     # Default: false
