@@ -13,6 +13,7 @@ var globalConfigKeysToKeep = []string{
 	"k8s/*",
 	"proxy/*",
 	"fqdn",
+	"maintenance",
 }
 
 type cesGlobalConfigImporter struct {
