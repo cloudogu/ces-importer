@@ -33,7 +33,7 @@ func SetTriggerFQDNChange(ctx context.Context) context.Context {
 }
 
 func SetTriggerFQDNChangeFromEnv(ctx context.Context) context.Context {
-	if os.Getenv(envTriggerFQDNChange) != "" {
+	if os.Getenv(envTriggerFQDNChange) == "true" {
 		ctx = SetTriggerFQDNChange(ctx)
 		slog.Debug("Trigger for fqdn change has been set.")
 	}
