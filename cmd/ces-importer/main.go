@@ -12,7 +12,7 @@ import (
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
@@ -246,7 +246,7 @@ type k8sClients struct {
 	podClient       corev1.PodInterface
 	jobClient       batchv1.JobInterface
 	configMap       corev1.ConfigMapInterface
-	doguClient      ecoSystemV2.DoguInterface
+	doguClient      doguLibClient.DoguInterface
 	componentClient componentEcoClient.ComponentInterface
 }
 
@@ -268,7 +268,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
-	ecoSystemClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
+	ecoSystemClient, err := doguLibClient.NewForConfig(k8sRestConfig)
 	if err != nil {
 		return k8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
 	}

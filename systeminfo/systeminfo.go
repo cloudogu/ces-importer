@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
-	doguv2 "github.com/cloudogu/k8s-dogu-operator/v3/api/v2"
+	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,11 +42,15 @@ func (s *Provider) getImporterSystemInfo(ctx context.Context) (*exporter.SystemI
 	// collect Dogus
 	dogus, err := s.doguLister.List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("could not get systems dogus: %s", err)
+		return nil, fmt.Errorf("could not get systems dogus: %w", err)
 	}
 	var systemInfoDogus []exporter.Dogu
 	for _, d := range dogus.Items {
-		vol := d.GetDataVolumeSize()
+		vol, err := d.GetMinDataVolumeSize()
+		if err != nil {
+			return nil, fmt.Errorf("could not get minDataVolumeSize for dogu: %w", err)
+		}
+
 		systemInfoDogus = append(systemInfoDogus, exporter.Dogu{
 			Name:    d.Spec.Name,
 			Version: d.Spec.Version,
