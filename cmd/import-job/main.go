@@ -80,7 +80,7 @@ func createAPIClient(apiCfg configuration.API) *exporter.Client {
 		options = append(options, exporter.WithInsecure())
 	}
 
-	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterHost, options...)
+	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterApiKey, options...)
 }
 
 type apiService struct {
