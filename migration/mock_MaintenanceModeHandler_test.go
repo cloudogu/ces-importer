@@ -67,17 +67,17 @@ func (_c *MockMaintenanceModeHandler_Disable_Call) RunAndReturn(run func(context
 	return _c
 }
 
-// Enable provides a mock function with given fields: ctx, title, message
-func (_m *MockMaintenanceModeHandler) Enable(ctx context.Context, title string, message string) error {
-	ret := _m.Called(ctx, title, message)
+// Enable provides a mock function with given fields: ctx
+func (_m *MockMaintenanceModeHandler) Enable(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Enable")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, title, message)
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -92,15 +92,13 @@ type MockMaintenanceModeHandler_Enable_Call struct {
 
 // Enable is a helper method to define mock.On call
 //   - ctx context.Context
-//   - title string
-//   - message string
-func (_e *MockMaintenanceModeHandler_Expecter) Enable(ctx interface{}, title interface{}, message interface{}) *MockMaintenanceModeHandler_Enable_Call {
-	return &MockMaintenanceModeHandler_Enable_Call{Call: _e.mock.On("Enable", ctx, title, message)}
+func (_e *MockMaintenanceModeHandler_Expecter) Enable(ctx interface{}) *MockMaintenanceModeHandler_Enable_Call {
+	return &MockMaintenanceModeHandler_Enable_Call{Call: _e.mock.On("Enable", ctx)}
 }
 
-func (_c *MockMaintenanceModeHandler_Enable_Call) Run(run func(ctx context.Context, title string, message string)) *MockMaintenanceModeHandler_Enable_Call {
+func (_c *MockMaintenanceModeHandler_Enable_Call) Run(run func(ctx context.Context)) *MockMaintenanceModeHandler_Enable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		run(args[0].(context.Context))
 	})
 	return _c
 }
@@ -110,7 +108,7 @@ func (_c *MockMaintenanceModeHandler_Enable_Call) Return(_a0 error) *MockMainten
 	return _c
 }
 
-func (_c *MockMaintenanceModeHandler_Enable_Call) RunAndReturn(run func(context.Context, string, string) error) *MockMaintenanceModeHandler_Enable_Call {
+func (_c *MockMaintenanceModeHandler_Enable_Call) RunAndReturn(run func(context.Context) error) *MockMaintenanceModeHandler_Enable_Call {
 	_c.Call.Return(run)
 	return _c
 }

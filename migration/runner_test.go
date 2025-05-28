@@ -73,7 +73,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
-		mMaintenanceModeHandler.EXPECT().Enable(testCtx, "", "").Return(nil)
+		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(nil)
 
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, nil, mock.Anything, mock.Anything).Return(nil)
@@ -403,7 +403,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
-		mMaintenanceModeHandler.EXPECT().Enable(testCtx, "", "").Return(assert.AnError)
+		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(assert.AnError)
 		mMaintenanceModeHandler.EXPECT().Disable(testCtx).Return(nil)
 
 		mMailSender := NewMockMailSender(t)
@@ -472,7 +472,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, true, runErr)
+		m.cleanup(testCtx, startTime, true, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to disabled maintenance mode:")
 	})
@@ -505,7 +505,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, false, runErr)
+		m.cleanup(testCtx, startTime, false, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to start all dogus:")
 	})
@@ -538,7 +538,7 @@ func TestMigrator_cleanup(t *testing.T) {
 			doguStarter:            mDoguStarter,
 		}
 
-		m.cleanup(testCtx, startTime, false, runErr)
+		m.cleanup(testCtx, startTime, false, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to send mail:")
 	})

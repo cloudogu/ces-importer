@@ -86,10 +86,11 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 	}
 
 	var migrationRunning atomic.Bool
+
 	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
 		// set migration to running to prevent simultaneous migrations
 		migrationRunning.Store(true)
-		defer migrationRunning.Swap(false)
+		defer migrationRunning.Store(false)
 
 		// do not run migration after the final migration took place
 		if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
@@ -97,6 +98,7 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 			return 0, nil
 		}
 
+		// run delta migration
 		err = migrator.RunMigration(ctx)
 		if err != nil {
 			return 1, err
@@ -109,7 +111,7 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 	}
 
 	if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
-		slog.Warn(fmt.Sprintf("The final migration timestamp in in the past: %q. The migration will NOT run.", cfg.FinalTimestamp))
+		slog.Warn("The final migration timestamp in in the past. The migration will NOT run.", "timestamp", cfg.FinalTimestamp)
 		return cronLooper, nil
 	}
 
@@ -134,21 +136,23 @@ func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, 
 	for range ticker.C {
 		// do not start until the current migration is finished
 		if migrationRunning.Load() {
-			// skip to next tick
+			// skip to the next tick
 			continue
 		}
 
-		// start final migration
-		slog.Info("Starting final migration")
-		ctx = migration.SetFinalMigration(ctx)
-		err := migrator.RunMigration(ctx)
-		if err != nil {
-			slog.Error("error running final migration", "error", err)
-			return
-		}
-
-		slog.Info("Final migration succeeded")
+		break
 	}
+
+	// start final migration
+	slog.Info("Starting final migration")
+
+	ctx = migration.SetFinalMigration(ctx)
+	if err := migrator.RunMigration(ctx); err != nil {
+		slog.Error("error running final migration", "error", err)
+		return
+	}
+
+	slog.Info("Final migration succeeded")
 }
 
 func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
@@ -210,15 +214,19 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 	)
 
 	deps := migration.MigratorDependencies{
-		ExportModeValidator:    exportModeValidator,
-		SystemInfoValidator:    systemInfoValidator,
-		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		JobRunner:              jobService,
-		DoguStopper:            doguStartStopper,
-		DoguStarter:            doguStartStopper,
-		LogWriter:              logWriter,
-		LogInitializer:         logInitializer,
-		MailSender:             mailSender,
+		ExportModeValidator: exportModeValidator,
+		SystemInfoValidator: systemInfoValidator,
+		MaintenanceModeHandler: &maintenanceModeHandler{
+			service: exportAPIService.MaintenanceModeService,
+			title:   cfg.Migration.MaintenanceModeMessage.Title,
+			message: cfg.Migration.MaintenanceModeMessage.Text,
+		},
+		JobRunner:      jobService,
+		DoguStopper:    doguStartStopper,
+		DoguStarter:    doguStartStopper,
+		LogWriter:      logWriter,
+		LogInitializer: logInitializer,
+		MailSender:     mailSender,
 	}
 
 	return migration.NewMigrator(deps), nil
@@ -290,4 +298,18 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 		doguClient:      k8sDoguClient,
 		componentClient: k8sComponentClient,
 	}, nil
+}
+
+type maintenanceModeHandler struct {
+	service *exporter.MaintenanceModeService
+	title   string
+	message string
+}
+
+func (m *maintenanceModeHandler) Enable(ctx context.Context) error {
+	return m.service.Enable(ctx, m.title, m.message)
+}
+
+func (m *maintenanceModeHandler) Disable(ctx context.Context) error {
+	return m.service.Disable(ctx)
 }

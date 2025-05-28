@@ -63,6 +63,16 @@ config:
     # users.
     # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
     finalSchedule: ""
+    # changeFQDN triggers the fqdn and certificate import.
+    # This is only taken into account if it is a final migration.
+    # Default: false
+    changeFQDN: false
+    # maintenanceModeMessage is the message to been shown, when the maintenance mode gets activated at the source system.
+    maintenanceModeMessage:
+      # title to be shown in the maintenance mode message.
+      title: "Migration in progess."
+      # text to be shown in the maintenance mode message.
+      text: "The migration of your instance is in progress."
   job:
     # doguVolumeBasePath is the path to which dogu volumes are mounted.
     doguVolumeBasePath: "/data"

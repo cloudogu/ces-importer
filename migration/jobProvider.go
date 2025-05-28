@@ -308,6 +308,9 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 
 	unixTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
 
+	// Adds the trigger to change the FQDN
+	jobEnvs := addFQDNChangeTriggerAsEnv(ctx, j.env)
+
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", jobName, unixTimeStr),
@@ -327,7 +330,7 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 						{
 							Name:            fmt.Sprintf("%s-container", jobName),
 							Image:           j.imageURL,
-							Env:             j.env,
+							Env:             jobEnvs,
 							VolumeMounts:    jobVolumeMounts.mounts,
 							ImagePullPolicy: j.imagePullPolicy,
 						},
@@ -339,4 +342,15 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 			},
 		},
 	}, nil
+}
+
+func addFQDNChangeTriggerAsEnv(ctx context.Context, env []v1.EnvVar) []v1.EnvVar {
+	if IsFinalMigration(ctx) {
+		return append(env, v1.EnvVar{
+			Name:  envTriggerFQDNChange,
+			Value: "true",
+		})
+	}
+
+	return env
 }
