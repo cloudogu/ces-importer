@@ -30,37 +30,30 @@ job:
       memory: 128Mi
 config:
   logging:
-    # valid values are: DEBUG, INFO, WARN, ERROR
-    level: DEBUG
+    # level defines the log level to be used. Valid values are: DEBUG, INFO, WARN, ERROR
+    level: INFO
   api:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
-    # contact the exporter API which returns all required data like data paths etc.
-    # The exporter API endpoint is fixed and will be routed on source side.
+    # contact the exporter API, which returns all required data like data paths etc.
+    # The exporter API endpoint is fixed and will be routed on the source side.
     host: classic-ces.exporter
-    # secretName contains the secret with the exporter API key
+    # secretName is the name of the secret that contains the exporter API key.
     secretName: "ces-exporter-secret"
-    # secretDataKey contains the key name that accommodates the actual exporter API key as value.
+    # secretDataKey contains the key name within the secret that accommodates the actual exporter API key as value.
     secretDataKey: "apiKey"
-    # apiKey is the actual api key read from the specified env var.
-    apiKey: "${API_KEY}"
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
     # If skipTLSVerify is true, the client accepts any certificate presented by the server and any host name in that certificate.
     skipTLSVerify: false
   ssh:
     # secretName contains the name of the secret that contains the SSH private key which the importer will use to access the source system.
     secretName: "ces-importer-secret"
-    # secretDataKey contains the key name that accommodates the actual exporter SSH private key as value.
+    # secretDataKey contains the key name within the secret that accommodates the actual exporter SSH private key as value.
     secretDataKey: "privateKey"
-    # user is the user used for ssh login at the exporter
-    user: "root"
-    # privateKeyPath is the path to which the private key gets mounted within the container.
-    privateKeyPath: "/.ssh/privateKey"
   migration:
     # regularSchedule triggers recurring migration jobs while the whole source system is running.
-    # Uses CRON notation like "0 4 * * *"
-    regularSchedule: "0/5 * * * *"
-    # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active
-    # users.
+    # Uses CRON notation like "0 2 * * *"
+    regularSchedule: "0 2 * * *"
+    # finalSchedule triggers the finishing migration job while the source system is supposed to be void of active users.
     # Uses RFC 3339 notation like 2025-04-03T12:34:56Z
     finalSchedule: ""
     # changeFQDN triggers the fqdn and certificate import.
@@ -74,8 +67,6 @@ config:
       # text to be shown in the maintenance mode message.
       text: "The migration of your instance is in progress."
   job:
-    # doguVolumeBasePath is the path to which dogu volumes are mounted.
-    doguVolumeBasePath: "/data"
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:
@@ -85,14 +76,18 @@ config:
     # verbose sets the migrator to verbose logging
     verbose: true
   smtp:
-    server: mailhog
-    port: 1025
+    # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
+    server: smtp.mailserver.com
+    # The port the SMTP server listens on (25, 587 for TLS, 1025 for MailHog/dev)
+    port: 25
+    # Optional: username for SMTP authentication (leave empty if not required)
     username:
+    # Optional: password for SMTP authentication (leave empty if not required)
     password:
-    from: importer@ces.com
-    to:
-      - recipient1@example.com
-      - recipient2@example.com
+    # Email address that appears in the "From" field of the email
+    from: importer@cloudogu.com
+    # List of recipient email addresses
+    to: []
 controllerManager:
   image:
     tag: 0.0.1
