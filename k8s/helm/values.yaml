@@ -69,7 +69,7 @@ config:
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
     server: mailhog
     # The port the SMTP server listens on (25, 587 for TLS, 1025 for MailHog/dev)
-    port: 1025
+    port: 25
     # Optional: username for SMTP authentication (leave empty if not required)
     username:
     # Optional: password for SMTP authentication (leave empty if not required)
