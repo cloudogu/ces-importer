@@ -31,7 +31,7 @@ job:
 config:
   logging:
     # level defines the log level to be used. Valid values are: DEBUG, INFO, WARN, ERROR
-    level: DEBUG
+    level: INFO
   api:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
     # contact the exporter API, which returns all required data like data paths etc.
