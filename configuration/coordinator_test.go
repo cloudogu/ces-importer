@@ -1,10 +1,14 @@
 package configuration
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/mock"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
-	"path"
 	"testing"
 )
 
@@ -208,6 +212,22 @@ func TestReadCoordinatorConfig(t *testing.T) {
 				},
 				expectedErrMsg: "failed to read job container configuration",
 			},
+			"should fail when smtp config is missing": {
+				setupEnv: func(t *testing.T) {
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+				},
+				setupFiles: func(t *testing.T, tmpDir string) {
+					createValidConfig(t, tmpDir, fileLoggingConfig)
+					createValidConfig(t, tmpDir, fileAPIConfig)
+					createValidConfig(t, tmpDir, fileMigrationConfig)
+					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
+					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					// Don't create SMTP config'
+				},
+				expectedErrMsg: "failed to read smtp configuration",
+			},
 			"should fail when logging config has invalid yaml": {
 				setupEnv: func(t *testing.T) {
 					t.Setenv(EnvBaseConfigPathKey, "/tmp")
@@ -304,6 +324,22 @@ func TestReadCoordinatorConfig(t *testing.T) {
 				},
 				expectedErrMsg: "failed to read job container configuration: failed to unmarshal config",
 			},
+			"should fail when smtp config has invalid yaml": {
+				setupEnv: func(t *testing.T) {
+					t.Setenv(EnvBaseConfigPathKey, "/tmp")
+					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+				},
+				setupFiles: func(t *testing.T, tmpDir string) {
+					createValidConfig(t, tmpDir, fileLoggingConfig)
+					createValidConfig(t, tmpDir, fileAPIConfig)
+					createValidConfig(t, tmpDir, fileMigrationConfig)
+					createValidConfig(t, tmpDir, fileSSHConfig)
+					createValidConfig(t, tmpDir, fileJobConfig)
+					createValidConfig(t, tmpDir, fileJobContainerConfig)
+					writeInvalidYaml(t, tmpDir, fileSMTPConfig)
+				},
+				expectedErrMsg: "failed to read smtp configuration: failed to unmarshal config",
+			},
 		}
 
 		for name, tc := range tests {
@@ -331,229 +367,229 @@ func TestReadCoordinatorConfig(t *testing.T) {
 	})
 }
 
-func TestReadJobConfig(t *testing.T) {
-	t.Run("read config for job", func(t *testing.T) {
-		t.Setenv(EnvBaseConfigPathKey, "../testdata/config")
-		t.Setenv(EnvImporterNamespaceKey, "test")
-		t.Setenv("API_KEY", "testAPIKEY")
-
-		cfg, err := ReadJobConfig()
-		assert.NoError(t, err)
-
-		// namespace
-		assert.Equal(t, "test", cfg.Namespace)
-
-		// logging
-		assert.Equal(t, Logging{
-			Level: "DEBUG",
-		}, cfg.Logging)
-
-		// api
-		assert.Equal(t, API{
-			ExporterHost:   "classic-ces.exporter",
-			ExporterApiKey: "testAPIKEY",
-			SkipTLSVerify:  true,
-		}, cfg.API)
-
-		// ssh
-		assert.Equal(t, SSH{
-			User:              "root",
-			PrivateSSHKeyPath: "/.ssh/privateKey",
-			SecretName:        "ces-importer-secret",
-			SecretDataKey:     "privateKey",
-		}, cfg.SSH)
-
-		// job
-		assert.Equal(t, JobConfig{
-			DoguVolumeBasePath: "/data",
-			Exclude: []ExcludePattern{
-				{
-					DoguName: "jenkins",
-					Pattern:  "JENKINS_PATTERN",
+func TestCoordinator_ValidateSecrets(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(*mockSecretGetter)
+		inCoordinator Coordinator
+		expErr        bool
+		errorContains string
+	}{
+		{
+			name: "successful validation - API and SSH Keys in single secret",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey":     []byte("testAPIKEY"),
+						"privateKey": []byte("testPrivateKey"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
 				},
-				{
-					DoguName: "redmine",
-					Pattern:  "REDMINE_PATTERN",
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
 				},
 			},
-		}, cfg.JobConfig)
-	})
+			expErr: false,
+		},
+		{
+			name: "successful validation - API and SSH Keys in separate secrets",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-api-secret", metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-api-secret"},
+					Data: map[string][]byte{
+						"apiKey": []byte("testAPIKEY"),
+					},
+				}, nil)
 
-	t.Run("error while reading config", func(t *testing.T) {
-		tests := map[string]struct {
-			setupEnv       func(t *testing.T)
-			setupFiles     func(t *testing.T, tmpDir string)
-			expectedErrMsg string
-		}{
-			"should fail when CONFIG_PATH env var is not set": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
-				},
-				setupFiles:     func(t *testing.T, tmpDir string) {},
-				expectedErrMsg: "environment variable CONFIG_PATH is not set",
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-ssh-secret", metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-ssh-secret"},
+					Data: map[string][]byte{
+						"privateKey": []byte("testPrivateKey"),
+					},
+				}, nil)
 			},
-			"should fail when IMPORTER_NAMESPACE env var is not set": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/some/path")
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-api-secret",
+					SecretDataKey: "apiKey",
 				},
-				setupFiles:     func(t *testing.T, tmpDir string) {},
-				expectedErrMsg: "environment variable IMPORTER_NAMESPACE is not set",
+				SSH: SSH{
+					SecretName:    "valid-ssh-secret",
+					SecretDataKey: "privateKey",
+				},
 			},
-			"should fail when logging config is missing": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
-				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					// Don't create logging config
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					createValidConfig(t, tmpDir, fileJobConfig)
-				},
-				expectedErrMsg: "failed to read logging configuration",
+			expErr: false,
+		},
+		{
+			name: "Error - secret is missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-secret", metav1.GetOptions{}).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "valid-secret"))
 			},
-			"should fail when api config is missing": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
 				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					// Don't create API config
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					createValidConfig(t, tmpDir, fileJobConfig)
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
 				},
-				expectedErrMsg: "failed to read API configuration",
 			},
-			"should fail when job config is missing": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
-				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					// Don't create job config
-				},
-				expectedErrMsg: "failed to read job configuration",
+			expErr:        true,
+			errorContains: "failed to get secret valid-secret",
+		},
+		{
+			name: "Error - API data key is missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"privateKey": []byte("testPrivateKey"),
+					},
+				}, nil)
 			},
-			"should fail when ssh config is missing": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
 				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					// Don't create SSH config
-					createValidConfig(t, tmpDir, fileJobConfig)
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
 				},
-				expectedErrMsg: "failed to read ssh configuration",
 			},
-			"should fail when logging config has invalid yaml": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
-				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					writeInvalidYaml(t, tmpDir, fileLoggingConfig)
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					createValidConfig(t, tmpDir, fileJobConfig)
-				},
-				expectedErrMsg: "failed to read logging configuration: failed to unmarshal config",
+			expErr:        true,
+			errorContains: "secret valid-secret does not contain key apiKey",
+		},
+		{
+			name: "Error - SSH data key is missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey": []byte("testAPIKEY"),
+					},
+				}, nil)
 			},
-			"should fail when api config has invalid yaml": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
 				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					writeInvalidYaml(t, tmpDir, fileAPIConfig)
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					createValidConfig(t, tmpDir, fileJobConfig)
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
 				},
-				expectedErrMsg: "failed to read API configuration: failed to unmarshal config",
 			},
-			"should fail when job config has invalid yaml": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
-				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					createValidConfig(t, tmpDir, fileSSHConfig)
-					writeInvalidYaml(t, tmpDir, fileJobConfig)
-				},
-				expectedErrMsg: "failed to read job configuration: failed to unmarshal config",
+			expErr:        true,
+			errorContains: "secret valid-secret does not contain key privateKey",
+		},
+		{
+			name: "Error - SSH data key and API data key are missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data:       map[string][]byte{},
+				}, nil)
 			},
-			"should fail when ssh config has invalid yaml": {
-				setupEnv: func(t *testing.T) {
-					t.Setenv(EnvBaseConfigPathKey, "/tmp")
-					t.Setenv(EnvImporterNamespaceKey, "test-namespace")
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
 				},
-				setupFiles: func(t *testing.T, tmpDir string) {
-					createValidConfig(t, tmpDir, fileLoggingConfig)
-					createValidConfig(t, tmpDir, fileAPIConfig)
-					writeInvalidYaml(t, tmpDir, fileSSHConfig)
-					createValidConfig(t, tmpDir, fileJobConfig)
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
 				},
-				expectedErrMsg: "failed to read ssh configuration: failed to unmarshal config",
 			},
-		}
-
-		for name, tc := range tests {
-			t.Run(name, func(t *testing.T) {
-				// Setup
-				tmpDir := t.TempDir()
-				tc.setupEnv(t)
-
-				// If CONFIG_PATH is set to /tmp, update it to the actual temp directory
-				if os.Getenv(EnvBaseConfigPathKey) == "/tmp" {
-					t.Setenv(EnvBaseConfigPathKey, tmpDir)
-				}
-
-				tc.setupFiles(t, tmpDir)
-
-				// Execute
-				config, err := ReadJobConfig()
-
-				// Assert
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedErrMsg)
-				assert.Empty(t, config)
-			})
-		}
-	})
-}
-
-// Helper function to create valid config files
-func createValidConfig(t *testing.T, dir string, filename string) {
-	var content string
-	switch filename {
-	case fileLoggingConfig:
-		content = "level: INFO"
-	case fileAPIConfig:
-		content = "host: test-host\napiKey: test-key\nskipTLSVerify: true"
-	case fileMigrationConfig:
-		content = "regularSchedule: \"0 * * * *\"\nchangeFQDN: true\nmaintenanceModeMessage:\n  title: \"Migration completed.\"\n  text: \"The migration of your instance has been completed.\""
-	case fileSSHConfig:
-		content = "user: test-user\nprivateKeyPath: /test/path"
-	case fileJobContainerConfig:
-		content = "image:\n  registry: test-registry\n  repository: test-repo\n  tag: latest"
-	case fileJobConfig:
-		content = "doguVolumeBasePath: /data\nexclude:\n- dogu: jenkins\n  pattern: JENKINS_PATTERN\n- dogu: redmine\n  pattern: REDMINE_PATTERN"
+			expErr:        true,
+			errorContains: "secret valid-secret does not contain key apiKey\nsecret valid-secret does not contain key privateKey",
+		},
+		{
+			name:      "Error - API secretName is empty",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+			},
+			expErr:        true,
+			errorContains: "API secret name is not set",
+		},
+		{
+			name:      "Error - API secretDataKey is empty",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+			},
+			expErr:        true,
+			errorContains: "API secret data key is not set",
+		},
+		{
+			name:      "Error - SSH secretName is empty",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "",
+					SecretDataKey: "privateKey",
+				},
+			},
+			expErr:        true,
+			errorContains: "SSH secret name is not set",
+		},
+		{
+			name:      "Error - SSH secretDataKey is empty",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "",
+				},
+			},
+			expErr:        true,
+			errorContains: "SSH secret data key is not set",
+		},
 	}
 
-	err := os.WriteFile(path.Join(dir, filename), []byte(content), 0600)
-	require.NoError(t, err)
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secretGetterMock := newMockSecretGetter(t)
+			tt.setupMock(secretGetterMock)
 
-// Helper function to write invalid YAML
-func writeInvalidYaml(t *testing.T, dir string, filename string) {
-	err := os.WriteFile(path.Join(dir, filename), []byte("invalid: yaml: }{"), 0600)
-	require.NoError(t, err)
+			err := tt.inCoordinator.ValidateSecrets(context.TODO(), secretGetterMock)
+			if tt.expErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

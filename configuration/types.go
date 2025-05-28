@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path"
 )
 
 const (
@@ -42,6 +41,10 @@ type API struct {
 	ExporterApiKey string `yaml:"apiKey"`
 	// SkipTLSVerify controls whether to skip check the server's certificate
 	SkipTLSVerify bool `yaml:"skipTLSVerify"`
+	// SecretName specifies the Kubernetes secret name containing the exporter API key for authentication.
+	SecretName string `yaml:"secretName"`
+	// SecretDataKey specifies the key inside the secret containing the exporter API key.
+	SecretDataKey string `yaml:"secretDataKey"`
 }
 
 // Migration contains the configuration data for the migration schedule.
@@ -162,138 +165,11 @@ type Smtp struct {
 	To       []string `yaml:"to"`       // List of recipient email addresses
 }
 
-// Coordinator consists of configuration data. The most fields are obtained from the Helm chart
-// values file through a configmap, while others are hardcoded or obtained from secrets.
-type Coordinator struct {
-	Logging
-	API
-	Migration
-	SSH
-	JobConfig
-	JobContainer
-	Smtp
-
-	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
-	// "ecosystem". This value is required but inferred from the used Helm chart.
-	Namespace string
-}
-
-func ReadCoordinatorConfig() (Coordinator, error) {
-	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
-	if configBaseDir == "" {
-		return Coordinator{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)
-	}
-
-	namespace := os.Getenv(EnvImporterNamespaceKey)
-	if namespace == "" {
-		return Coordinator{}, fmt.Errorf(errorFormat, EnvImporterNamespaceKey)
-	}
-
-	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read logging configuration: %w", err)
-	}
-
-	apiConfig, err := readConfigYAML[API](path.Join(configBaseDir, fileAPIConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read API configuration: %w", err)
-	}
-
-	migrationConfig, err := readConfigYAML[Migration](path.Join(configBaseDir, fileMigrationConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read migration configuration: %w", err)
-	}
-
-	sshConfig, err := readConfigYAML[SSH](path.Join(configBaseDir, fileSSHConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read ssh configuration: %w", err)
-	}
-
-	jobConfig, err := readConfigYAML[JobConfig](path.Join(configBaseDir, fileJobConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read job configuration: %w", err)
-	}
-
-	jobContainerConfig, err := readConfigYAML[JobContainer](path.Join(configBaseDir, fileJobContainerConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read job container configuration: %w", err)
-	}
-
-	smtpConfig, err := readConfigYAML[Smtp](path.Join(configBaseDir, fileSMTPConfig))
-	if err != nil {
-		return Coordinator{}, fmt.Errorf("failed to read smtp configuration: %w", err)
-	}
-
-	return Coordinator{
-		Logging:      loggingConfig,
-		API:          apiConfig,
-		Migration:    migrationConfig,
-		SSH:          sshConfig,
-		JobConfig:    jobConfig,
-		JobContainer: jobContainerConfig,
-		Smtp:         smtpConfig,
-		Namespace:    namespace,
-	}, nil
-}
-
-// Job consists of configuration data. The most fields are obtained from the Helm chart
-// values file through the YAML files.
-type Job struct {
-	Logging
-	API
-	SSH
-	JobConfig
-
-	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
-	// "ecosystem". This value is required but inferred from the used Helm chart.
-	Namespace string
-}
-
-func ReadJobConfig() (Job, error) {
-	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
-	if configBaseDir == "" {
-		return Job{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)
-	}
-
-	namespace := os.Getenv(EnvImporterNamespaceKey)
-	if namespace == "" {
-		return Job{}, fmt.Errorf(errorFormat, EnvImporterNamespaceKey)
-	}
-
-	loggingConfig, err := readConfigYAML[Logging](path.Join(configBaseDir, fileLoggingConfig))
-	if err != nil {
-		return Job{}, fmt.Errorf("failed to read logging configuration: %w", err)
-	}
-
-	apiConfig, err := readConfigYAML[API](path.Join(configBaseDir, fileAPIConfig))
-	if err != nil {
-		return Job{}, fmt.Errorf("failed to read API configuration: %w", err)
-	}
-
-	sshConfig, err := readConfigYAML[SSH](path.Join(configBaseDir, fileSSHConfig))
-	if err != nil {
-		return Job{}, fmt.Errorf("failed to read ssh configuration: %w", err)
-	}
-
-	jobConfig, err := readConfigYAML[JobConfig](path.Join(configBaseDir, fileJobConfig))
-	if err != nil {
-		return Job{}, fmt.Errorf("failed to read job configuration: %w", err)
-	}
-
-	return Job{
-		Logging:   loggingConfig,
-		API:       apiConfig,
-		SSH:       sshConfig,
-		JobConfig: jobConfig,
-		Namespace: namespace,
-	}, nil
-}
-
-type ConfigTypes interface {
+type Types interface {
 	API | Logging | Migration | JobContainer | JobConfig | SSH | Smtp
 }
 
-func readConfigYAML[T ConfigTypes](configPath string) (T, error) {
+func readConfigYAML[T Types](configPath string) (T, error) {
 	var config T
 
 	content, err := os.ReadFile(configPath)
