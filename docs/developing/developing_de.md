@@ -1,35 +1,20 @@
 # `ces-importer` entwickeln
 
-## Container bauen & pushen
-
-```Shell
-docker build -t registry.cloudogu.com/testing/ces-importer:0.0.1 .
-
-docker push registry.cloudogu.com/testing/ces-importer:0.0.1
-```
-
-## Helm-Chart erstellen & pushen
-
-```shell
-make helm-package
-
-helm push target/k8s/helm/ces-importer-0.0.1.tgz oci://registry.cloudogu.com/testing/ces-importer-helm
-```
-
 ## Lokales Helm-Chart installieren
 
-```shell
-make helm-package
+### Secrets anlegen
+Sofern nicht auf andere Art bereits angelegt, müssen vor der Installation des ces-importers noch secrets angelegt 
+werden.
+Das kann für die Lokale Entwicklung durch das Ausführen von `make apikey-secret` erfolgen.
+Gegebenenfalls müssen vorher noch die Werte `IMPORTER_SSH_KEY_FILE` und `EXPORTER_API_KEY` in der .env-Datei auf die 
+gewünschten Werte angepasst werden.
 
-# Example secrets
-# kubectl -n ecosystem create secret generic ces-importer-secret --from-file=privateKey=yourPrivateKeyHere
-# kubectl -n ecosystem create secret generic ces-exporter-secret --from-literal=apiKey=ApiKey-example-123
+### Installation
+Um den ces-importer im lokalen k8s-ecosystem zu installieren, kann der Befehl `make helm-apply` ausgeführt 
+werden.
+Um ihn wieder zu deinstallieren, kann der Befehl `make helm-delete` verwendet werden.
 
-helm install -n ecosystem -f myvalues.yaml ces-importer target/k8s/helm/ces-importer-0.0.1.tgz --version 0.0.1
-```
-
-## Helm Chart wieder komplett deinstallieren
-
-```shell
-helm uninstall -n ecosystem ces-importer
-```
+### Mails versenden
+Der Importer versendet nach jeder Migration automatisch Benachrichtigungsmails. Das Ziel davon wird über die values.yaml gesteuert.
+Standardmäßig ist es so konfiguriert, dass es auf einen Mailhog auf dem Host versendet wird. Dafür muss nichts konfiguriert werden.
+Um den Mailhog zu starten, muss auf dem Host `docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog` ausgeführt werden.

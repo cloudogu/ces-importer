@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "job-config.name" . }}
+  labels:
+    {{- include "ces-importer.labels" . | nindent 4 }}
+data:
+  logging.yaml: |
+  {{- toYaml .Values.config.logging | nindent 4 }}
+
+  api.yaml: |
+  {{- toYaml .Values.config.api | nindent 4 }}
+
+  ssh.yaml: |
+  {{- toYaml .Values.config.ssh | nindent 4 }}
+
+  job.yaml: |
+  {{- toYaml .Values.config.job | nindent 4 }}
