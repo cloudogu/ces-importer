@@ -74,35 +74,31 @@ func main() {
 }
 
 func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) (*cron.Task, error) {
-	var finalTimestamp time.Time
-	var err error
-
-	// validate final timestamp
-	if cfg.FinalTimestamp != "" {
-		finalTimestamp, err = time.Parse(time.RFC3339, cfg.FinalTimestamp)
-		if err != nil {
-			slog.Warn(fmt.Sprintf("Could not parse final migration timestamp from %q: %s", cfg.FinalTimestamp, err.Error()))
-		}
-	}
-
 	var migrationRunning atomic.Bool
+
+	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse final timestamp: %w", err)
+	}
 
 	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
 		// set migration to running to prevent simultaneous migrations
 		migrationRunning.Store(true)
 		defer migrationRunning.Store(false)
 
-		// do not run migration after the final migration took place
-		if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
-			slog.Warn("A migration was triggered but the final migration already took place. The migration is canceled.")
+		if finalTimestamp.Expired() {
+			slog.Warn("Final migration timestamp is expired. Skipping delta migration.")
 			return 0, nil
 		}
 
 		// run delta migration
-		err = migrator.RunMigration(ctx)
-		if err != nil {
-			return 1, err
+		slog.Info("Start delta migration", "startTime", migration.Now().String())
+
+		if dErr := migrator.RunMigration(ctx); dErr != nil {
+			return 1, fmt.Errorf("failed to run delta migration: %w", dErr)
 		}
+
+		slog.Info("Delta migration succeeded", "endTime", migration.Now().String())
 
 		return 0, nil
 	})
@@ -110,49 +106,36 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 		return nil, fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
 	}
 
-	if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
-		slog.Warn("The final migration timestamp in in the past. The migration will NOT run.", "timestamp", cfg.FinalTimestamp)
+	slog.Info("Starting main delta migration loop")
+	go cronLooper.Run()
+
+	if finalTimestamp.IsZero() {
+		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
 		return cronLooper, nil
 	}
 
-	slog.Info("Starting main migration loop")
-	go cronLooper.Run()
+	slog.Info(fmt.Sprintf("Starting final migration loop at %q", finalTimestamp.String()))
 
-	if !finalTimestamp.IsZero() {
-		slog.Info(fmt.Sprintf("Starting final migration loop at %q", cfg.FinalTimestamp))
-		go startFinalMigrationLoop(ctx, migrator, &migrationRunning, finalTimestamp)
-	} else {
-		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
-	}
+	go func() {
+		finalTimestamp.WaitUntilReady(ctx, func() bool {
+			return !migrationRunning.Load()
+		})
+
+		if fErr := runFinalMigrationLoop(ctx, migrator); fErr != nil {
+			slog.Error("failed to run final migration: ", "error", fErr.Error())
+		}
+
+		slog.Info("Final migration succeeded")
+	}()
 
 	return cronLooper, nil
 }
 
-func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, migrationRunning *atomic.Bool, finalTimestamp time.Time) {
-	duration := time.Until(finalTimestamp)
-	<-time.After(duration)
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		// do not start until the current migration is finished
-		if migrationRunning.Load() {
-			// skip to the next tick
-			continue
-		}
-
-		break
-	}
-
-	// start final migration
+func runFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator) error {
 	slog.Info("Starting final migration")
 
 	ctx = migration.SetFinalMigration(ctx)
-	if err := migrator.RunMigration(ctx); err != nil {
-		slog.Error("error running final migration", "error", err)
-		return
-	}
-
-	slog.Info("Final migration succeeded")
+	return migrator.RunMigration(ctx)
 }
 
 func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
