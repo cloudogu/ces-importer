@@ -199,6 +199,12 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	// delete extraneous files from dest dirs
 	args = append(args, "--delete")
 
+	// turn sequences of nulls into sparse blocks
+	args = append(args, "--sparse")
+
+	// print some file-transfer stats
+	args = append(args, "--stats")
+
 	// exclude pattern
 	if exclude.Pattern != "" {
 		args = append(args, "--exclude="+exclude.Pattern)
