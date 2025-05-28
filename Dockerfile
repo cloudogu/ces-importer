@@ -18,7 +18,6 @@ ARG BINARY=ces-importer
 # BUILD_PATH specifies the path to application to be build. Default: ./
 ARG BUILD_PATH="./cmd/${BINARY}"
 
-ARG APP_VERSION=0.0.1
 ARG GO_VERSION=1.24
 ARG ALPINE_VERSION=3.21.3
 
@@ -82,14 +81,13 @@ FROM gcr.io/distroless/static:nonroot AS base-ces-importer
 FROM base-${BINARY} AS final
 
 ARG BINARY
-ARG APP_VERSION
 ARG UID
 ARG GID
 
 LABEL \
     maintainer="hello@cloudogu.com" \
     NAME="${BINARY}" \
-    VERSION="${APP_VERSION}"
+    VERSION="0.0.0"
 
 WORKDIR /
 

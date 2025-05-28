@@ -16,7 +16,7 @@ main:
 job:
   image:
     registry: docker.io
-    repository: cloudogu/ces-importer
+    repository: cloudogu/ces-importer-migration-job
     tag: 0.0.1
   imagePullSecrets:
     - name: "ces-container-registries"

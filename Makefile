@@ -1,5 +1,5 @@
 ARTIFACT_ID_IMPORTER=ces-importer
-ARTIFACT_ID_JOB=migration-job
+ARTIFACT_ID_JOB=${ARTIFACT_ID_IMPORTER}-migration-job
 
 # set default to main application
 ARTIFACT_ID=${ARTIFACT_ID_IMPORTER}
@@ -126,4 +126,7 @@ images-import: ## import images from ces-importer and
 		IMAGE_DEV_VERSION=$(CES_REGISTRY_HOST)$(CES_REGISTRY_NAMESPACE)/$(ARTIFACT_ID_JOB)/$(GIT_BRANCH):${VERSION} \
 		BUILD_ARGS="--build-arg BINARY=import-job --build-arg UID=0 --build-arg GID=0"
 
-
+.PHONY: ces-importer-release
+ces-importer-release: ${BINARY_YQ} ## Interactively starts the release workflow for the ces-importer
+	@echo "Starting git flow release..."
+	@build/make/release.sh ces-importer
