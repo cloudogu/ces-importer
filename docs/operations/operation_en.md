@@ -20,44 +20,32 @@ There are some requirements before the deployment:
      - that one must also be referenced in the respective field in the `values.yaml` file
 - a Helm Chart `values.yaml` file filled-in with the relevant configuration data 
 
-## Deploying the application with Helm
+## Installation als CES-Komponente
 
-```shell
-# template only
-helm template -n ecosystem -f myvalues.yaml ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-# install
-helm install -n ecosystem -f myvalues.yaml ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-helm uninstall -n ecosystem ces-importer
-```
-
-## Example `values.yaml`
-
-The following is an abridged version of a possible `values.yaml`. Please see a full YAML file along with comments in the
-path `k8s/helm/values.yaml`.
+Der ces-importer kann als CES-Komponente installiert und konfiguriert werden.
+Ein Beispiel ist hier zu sehen:
 
 ```yaml
-main:
-  image: registry.cloudogu.com/testing/ces-importer:0.0.1
-  imagePullSecrets:
-    - name: "ces-exporter-registries"
-  imagePullPolicy: IfNotPresent
-job:
-  image: registry.cloudogu.com/testing/ces-importer:0.0.1
-  imagePullSecrets:
-    - name: "ces-exporter-registries"
-config:
-  exporter:
-    host: my.classic.ces.exporter.net
-    apiSecretName: "ces-exporter-secret"
-    apiSecretDataKey: "apiKey"
-  importer:
-    sshSecretName: "ces-importer-secret"
-    sshSecretDataKey: "privateKey"
-  migration:
-    regularSchedule: "0 4 * * *"
-    finalSchedule: "2025-04-03 12:34:56Z"
+apiVersion: k8s.cloudogu.com/v1
+kind: Component
+metadata:
+  name: ces-importer
+  namespace: ecosystem
+spec:
+  name: ces-importer
+  namespace: k8s
+  version: 0.0.1
+  valuesYamlOverwrite: |
+    config:
+      logging:
+        level: DEBUG
+      api:
+        host: classic-ces.exporter
+        skipTLSVerify: false
+      migration:
+        regularSchedule: "0/5 * * * *"
+        finalSchedule: ""
+        changeFQDN: false
 ```
 
 The following image describes `ces-importer`:
