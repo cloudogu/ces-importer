@@ -41,13 +41,15 @@ func TestSyncData(t *testing.T) {
 			iterator++
 
 			assert.Equal(t, "rsync", name)
-			assert.Len(t, arg, 6)
+			assert.Len(t, arg, 8)
 			assert.Equal(t, "-avhz", arg[0])
 			assert.Equal(t, "--delete", arg[1])
-			assert.Equal(t, "-e", arg[2])
-			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[3])
-			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[4])
-			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[5])
+			assert.Equal(t, "--sparse", arg[2])
+			assert.Equal(t, "--stats", arg[3])
+			assert.Equal(t, "-e", arg[4])
+			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[5])
+			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[6])
+			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[7])
 
 			return cmd
 		}
