@@ -96,8 +96,8 @@ template-migration-config: $(BINARY_YQ)
 	@if [[ "${STAGE}" == "development" ]]; then \
 		echo "Setting migration.regularSchedule from environment-variable 'MIGRATION_REGULAR_SCHEDULE'" ; \
 		$(BINARY_YQ) -i e ".config.migration.regularSchedule=\"${MIGRATION_REGULAR_SCHEDULE}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
-		echo "Setting migration.finalSchedule from environment-variable 'MIGRATION_FINAL_SCHEDULE'" ; \
-        $(BINARY_YQ) -i e ".config.migration.finalSchedule=\"${MIGRATION_FINAL_SCHEDULE}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		echo "Setting migration.finalSchedule from environment-variable 'MIGRATION_FINAL_TIMESTAMP'" ; \
+        $(BINARY_YQ) -i e ".config.migration.finalSchedule=\"${MIGRATION_FINAL_TIMESTAMP}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
 	fi
 
 .PHONY: template-smtp-config
