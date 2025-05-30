@@ -28,6 +28,8 @@ func TestReadJobConfig(t *testing.T) {
 			ExporterHost:   "classic-ces.exporter",
 			ExporterApiKey: "testAPIKEY",
 			SkipTLSVerify:  true,
+			SecretName:     "ces-exporter-secret",
+			SecretDataKey:  "apiKey",
 		}, cfg.API)
 
 		// ssh
@@ -51,6 +53,7 @@ func TestReadJobConfig(t *testing.T) {
 					Pattern:  "REDMINE_PATTERN",
 				},
 			},
+			Verbose: true,
 		}, cfg.JobConfig)
 	})
 

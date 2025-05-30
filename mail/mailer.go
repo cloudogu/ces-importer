@@ -137,7 +137,7 @@ func (s *Sender) auth() smtp.Auth {
 }
 
 func (s *Sender) server() string {
-	return fmt.Sprintf("%s:%s", s.config.Server, s.config.Port)
+	return fmt.Sprintf("%s:%d", s.config.Server, s.config.Port)
 }
 
 func (s *Sender) subject(success bool) string {

@@ -34,14 +34,16 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			ExporterHost:   "classic-ces.exporter",
 			ExporterApiKey: "testAPIKEY",
 			SkipTLSVerify:  true,
+			SecretName:     "ces-exporter-secret",
+			SecretDataKey:  "apiKey",
 		}, cfg.API)
 
 		// migration
 		assert.Equal(t, Migration{
 			RegularCron:    "0 4 * * *",
-			FinalTimestamp: "2025-04-03 12:34:56Z",
+			FinalTimestamp: "2025-04-03T12:34:56Z",
 			ChangeFQDN:     true,
-			MaintenanceModeMessage: MaintenanceModeMessage{
+			MaintenanceModeMessage: &MaintenanceModeMessage{
 				Title: "Migration completed.",
 				Text:  "The migration of your instance has been completed.",
 			},
@@ -68,6 +70,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					Pattern:  "REDMINE_PATTERN",
 				},
 			},
+			Verbose: true,
 		}, cfg.JobConfig)
 
 		// job-container
@@ -224,7 +227,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 					createValidConfig(t, tmpDir, fileSSHConfig)
 					createValidConfig(t, tmpDir, fileJobConfig)
 					createValidConfig(t, tmpDir, fileJobContainerConfig)
-					// Don't create SMTP config'
+					// Don't create SMTP config
 				},
 				expectedErrMsg: "failed to read smtp configuration",
 			},

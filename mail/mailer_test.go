@@ -40,7 +40,7 @@ func TestSender(t *testing.T) {
 
 	t.Run("will create server address", func(t *testing.T) {
 		config := configuration.Smtp{
-			Port:   "123",
+			Port:   123,
 			Server: "server",
 		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
@@ -88,7 +88,7 @@ func TestSendMigrationResult(t *testing.T) {
 	t.Run("send migration result", func(t *testing.T) {
 		config := configuration.Smtp{
 			Server:   "server",
-			Port:     "port",
+			Port:     25,
 			Username: "username",
 			Password: "password",
 			From:     "from",
@@ -98,7 +98,7 @@ func TestSendMigrationResult(t *testing.T) {
 			},
 		}
 		senderFunc := NewMockSenderService(t)
-		senderFunc.EXPECT().Execute("server:port", mock.Anything, "from", []string{"a@test.de", "b@test.de"}, mock.Anything).Run(func(addr string, a smtp.Auth, from string, to []string, msg []byte) {
+		senderFunc.EXPECT().Execute("server:25", mock.Anything, "from", []string{"a@test.de", "b@test.de"}, mock.Anything).Run(func(addr string, a smtp.Auth, from string, to []string, msg []byte) {
 			body := string(msg)
 			assert.Contains(t, body, "From: from\r\nSubject: Migration war erfolgreich.\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=MIME_BOUNDARY_CES_IMPORTER\r\n\r\n--MIME_BOUNDARY_CES_IMPORTER\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n")
 			assert.Contains(t, body, "Die finale Migration von der Instanz source zu der Instanz target war erfolgreich.\n\nStartzeitpunkt: 13:01\nEndzeitpunkt: 13:06\n\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.\r\n\r\n")
