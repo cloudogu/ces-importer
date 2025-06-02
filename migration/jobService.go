@@ -24,7 +24,7 @@ type getStreamerFunc func(jobName string, options *corev1.PodLogOptions) (stream
 
 // getWatcherFunc is a function type that creates a watcher for monitoring job status changes
 // It takes a context and resource version and returns a watch interface for receiving events
-type getWatcherFunc func(ctx context.Context, resourceVersion string) (watchAPI.Interface, error)
+type getWatcherFunc func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error)
 
 // JobServiceDependencies contains all the dependencies required to create a JobService
 // It includes dependencies for job creation, job client for interacting with Kubernetes jobs,
@@ -80,15 +80,8 @@ func NewJobService(deps JobServiceDependencies) (*JobService, error) {
 // 3. Returns a log streamer for that pod
 func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 	return func(jobName string, options *corev1.PodLogOptions) (streamer, error) {
-		// Create a label selector to find pods belonging to the specified job
-		jobLabelSelector := &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				batchv1.JobNameLabel: jobName,
-			},
-		}
-
 		// List all pods with the job label
-		pods, err := podClient.List(context.Background(), metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(jobLabelSelector)})
+		pods, err := podClient.List(context.Background(), metav1.ListOptions{LabelSelector: buildJobLabelSelector(jobName)})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list pods for job %s: %w", jobName, err)
 		}
@@ -114,15 +107,28 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 // It returns a getWatcherFunc that creates a RetryWatcher, which automatically reconnects
 // if the watch connection is lost
 func createGetWatcherFunc(jobClient jobClient) getWatcherFunc {
-	return func(ctx context.Context, resourceVersion string) (watchAPI.Interface, error) {
+	return func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error) {
 		// Create an adapter to make jobClient.Watch compatible with RetryWatcher
 		wrapper := watchAdapter{
-			watchFunc: jobClient.Watch,
+			watchFunc: func(ctx context.Context, opts metav1.ListOptions) (watchAPI.Interface, error) {
+				opts.LabelSelector = buildJobLabelSelector(jobName)
+				return jobClient.Watch(ctx, opts)
+			},
 		}
 
 		// Create a RetryWatcher that will automatically reconnect if the watch connection is lost
 		return watch.NewRetryWatcherWithContext(ctx, resourceVersion, wrapper)
 	}
+}
+
+// Create a label selector to find resources belonging to the specified job
+func buildJobLabelSelector(jobName string) string {
+	jobLabelSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			batchv1.JobNameLabel: jobName,
+		},
+	}
+	return metav1.FormatLabelSelector(jobLabelSelector)
 }
 
 // Run creates and executes a Kubernetes job, watches for its completion, and returns its logs
@@ -167,7 +173,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	}()
 
 	// Create a watcher to monitor the job's status
-	watcher, err := j.getWatcher(ctx, jobResource.GetResourceVersion())
+	watcher, err := j.getWatcher(ctx, jobResource.GetResourceVersion(), jobResource.GetName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher for job %s: %w", jobResource.GetName(), err)
 	}
@@ -180,7 +186,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	slog.Debug("Starting to wait for job to complete or fail")
 
 	// Process events from the watcher until the job completes, fails, or an error occurs
-	errWatch := watchEvents(watcher.ResultChan())
+	errWatch := watchEvents(watcher.ResultChan(), jobResource.GetName())
 	if errWatch != nil {
 		return nil, fmt.Errorf("received error while watching job: %w", errWatch)
 	}
@@ -191,7 +197,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 
 // watchEvents processes events from a watcher until the job completes, fails, or an error occurs.
 // It logs the event type and returns an error if the job fails, or an error occurs during processing
-func watchEvents(resultChan <-chan watchAPI.Event) (errWatch error) {
+func watchEvents(resultChan <-chan watchAPI.Event, jobName string) (errWatch error) {
 	for event := range resultChan {
 		slog.Debug("Received event from watcher for import job", "type", event.Type)
 
@@ -205,6 +211,12 @@ func watchEvents(resultChan <-chan watchAPI.Event) (errWatch error) {
 		jobChange, ok := event.Object.(*batchv1.Job)
 		if !ok {
 			errWatch = fmt.Errorf("received unexpected event type during watch of job: %T", event.Object)
+			break
+		}
+
+		// ignore events from other jobs
+		// this is just a failsafe and should never happen
+		if !(jobChange.GetName() == jobName) {
 			break
 		}
 
