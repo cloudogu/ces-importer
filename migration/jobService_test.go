@@ -101,7 +101,7 @@ func TestJobService_Run(t *testing.T) {
 		}()
 
 		getWatcherMock := newMockGetWatcherFunc(t)
-		getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion).Return(watcherMock, nil)
+		getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion, job.Name).Return(watcherMock, nil)
 
 		readCloserMock := mockReadCloser{Reader: bytes.NewBufferString(expLogs)}
 
@@ -196,7 +196,7 @@ func TestJobService_Run(t *testing.T) {
 		jobClientMock.EXPECT().Create(ctx, job, metav1.CreateOptions{}).Return(job, nil)
 
 		getWatcherMock := newMockGetWatcherFunc(t)
-		getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion).Return(nil, assert.AnError)
+		getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion, job.Name).Return(nil, assert.AnError)
 
 		readCloserMock := mockReadCloser{Reader: bytes.NewBufferString(expLogs)}
 
@@ -293,7 +293,7 @@ func TestJobService_Run(t *testing.T) {
 				watcherMock := watch.NewFake()
 
 				getWatcherMock := newMockGetWatcherFunc(t)
-				getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion).Return(watcherMock, nil)
+				getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion, job.Name).Return(watcherMock, nil)
 
 				expLogs := "test-Log"
 
@@ -360,7 +360,7 @@ func TestJobService_Run(t *testing.T) {
 			}()
 
 			getWatcherMock := newMockGetWatcherFunc(t)
-			getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion).Return(watcherMock, nil)
+			getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion, job.Name).Return(watcherMock, nil)
 
 			getStreamerMock := newMockGetStreamerFunc(t)
 			getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(nil, assert.AnError)
@@ -396,7 +396,7 @@ func TestJobService_Run(t *testing.T) {
 			}()
 
 			getWatcherMock := newMockGetWatcherFunc(t)
-			getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion).Return(watcherMock, nil)
+			getWatcherMock.EXPECT().Execute(ctx, job.ResourceVersion, job.Name).Return(watcherMock, nil)
 
 			streamerMock := newMockStreamer(t)
 			streamerMock.EXPECT().Stream(ctx).Return(nil, assert.AnError)
@@ -480,7 +480,7 @@ func Test_createGetWatcherFunc(t *testing.T) {
 		jobClientMock := newMockJobClient(t)
 		getWatcher := createGetWatcherFunc(jobClientMock)
 
-		watcher, err := getWatcher(context.TODO(), "1")
+		watcher, err := getWatcher(context.TODO(), "1", "")
 
 		defer watcher.Stop()
 
@@ -492,7 +492,7 @@ func Test_createGetWatcherFunc(t *testing.T) {
 		jobClientMock := newMockJobClient(t)
 		getWatcher := createGetWatcherFunc(jobClientMock)
 
-		watcher, err := getWatcher(context.TODO(), "")
+		watcher, err := getWatcher(context.TODO(), "", "")
 		assert.Error(t, err)
 		assert.Nil(t, watcher)
 	})
