@@ -19,15 +19,17 @@ var (
 const (
 	errMsgK8sSecretName    = "only allows the characters: a-z, 0-9, \".\", \"-\", starts and ends with alphanumeric character and has a maximum length of 253"
 	errMsgK8sSecretDataKey = "only allows the characters: a-z, 0-9, \".\", \"-\", \"_\", starts and ends with alphanumeric character and has a maximum length of 253"
+	errMsgHostname         = "must be a valid RFC 1123 hostname with an optional port"
 )
 
 var customTranslations = map[string]string{
-	"hostname_rfc1123":       "must be a valid RFC 1123 hostname",
-	"k8sSecretName":          errMsgK8sSecretName,
-	"k8sSecretDataKey":       errMsgK8sSecretDataKey,
-	"len=0|k8sSecretName":    errMsgK8sSecretName,
-	"len=0|k8sSecretDataKey": errMsgK8sSecretDataKey,
-	"len=0|email":            "must be a valid email address",
+	"hostname_rfc1123":               errMsgHostname,
+	"hostname_rfc1123|hostname_port": errMsgHostname,
+	"k8sSecretName":                  errMsgK8sSecretName,
+	"k8sSecretDataKey":               errMsgK8sSecretDataKey,
+	"len=0|k8sSecretName":            errMsgK8sSecretName,
+	"len=0|k8sSecretDataKey":         errMsgK8sSecretDataKey,
+	"len=0|email":                    "must be a valid email address",
 }
 
 func newValidator() error {

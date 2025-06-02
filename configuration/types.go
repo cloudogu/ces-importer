@@ -94,7 +94,7 @@ type SSH struct {
 // ContainerImage contains the container image information
 type ContainerImage struct {
 	// Registry specifies the container registry to pull the image from
-	Registry string `yaml:"registry" validate:"required,hostname_rfc1123"`
+	Registry string `yaml:"registry" validate:"required,hostname_rfc1123|hostname_port"`
 	// Repository specifies the image repository
 	Repository string `yaml:"repository" validate:"required"`
 	// Tag specifies the image version tag
