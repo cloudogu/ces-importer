@@ -37,25 +37,9 @@ func (c Coordinator) ValidateSecrets(ctx context.Context, sg secretGetter) error
 	secretMap := make(map[string][]string)
 
 	apiConfig := c.API
-	if apiConfig.SecretName == "" {
-		return fmt.Errorf("API secret name is not set")
-	}
-
-	if apiConfig.SecretDataKey == "" {
-		return fmt.Errorf("API secret data key is not set")
-	}
-
 	secretMap[apiConfig.SecretName] = append(secretMap[apiConfig.SecretName], apiConfig.SecretDataKey)
 
 	sshConfig := c.SSH
-	if sshConfig.SecretName == "" {
-		return fmt.Errorf("SSH secret name is not set")
-	}
-
-	if sshConfig.SecretDataKey == "" {
-		return fmt.Errorf("SSH secret data key is not set")
-	}
-
 	secretMap[sshConfig.SecretName] = append(secretMap[sshConfig.SecretName], sshConfig.SecretDataKey)
 
 	// retry when the error is other than NotFound
