@@ -186,6 +186,11 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 		return nil, fmt.Errorf("failed to create a new job service: %v", err)
 	}
 
+	// Validate Secrets
+	if vErr := cfg.ValidateSecrets(context.Background(), k8sClientSet.secret); vErr != nil {
+		return nil, fmt.Errorf("found invalid secrets in configuration: %w", vErr)
+	}
+
 	exporterApiClient := createAPIClient(cfg.API)
 	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
@@ -254,6 +259,7 @@ type k8sClients struct {
 	podClient       corev1.PodInterface
 	jobClient       batchv1.JobInterface
 	configMap       corev1.ConfigMapInterface
+	secret          corev1.SecretInterface
 	doguClient      doguLibClient.DoguInterface
 	componentClient componentEcoClient.ComponentInterface
 }
@@ -273,6 +279,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(namespace)
 	k8sPodClient := k8sCoreClient.Pods(namespace)
 	k8sConfigMapClient := k8sCoreClient.ConfigMaps(namespace)
+	k8sSecretClient := k8sCoreClient.Secrets(namespace)
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
@@ -295,6 +302,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 		podClient:       k8sPodClient,
 		jobClient:       k8sJobClient,
 		configMap:       k8sConfigMapClient,
+		secret:          k8sSecretClient,
 		doguClient:      k8sDoguClient,
 		componentClient: k8sComponentClient,
 	}, nil
