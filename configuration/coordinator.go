@@ -76,6 +76,10 @@ func (c Coordinator) ValidateSecrets(ctx context.Context, sg secretGetter) error
 }
 
 func ReadCoordinatorConfig() (Coordinator, error) {
+	if err := newValidator(); err != nil {
+		return Coordinator{}, fmt.Errorf("failed to initialize validator: %w", err)
+	}
+
 	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
 	if configBaseDir == "" {
 		return Coordinator{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)

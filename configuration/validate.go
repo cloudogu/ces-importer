@@ -30,31 +30,32 @@ var customTranslations = map[string]string{
 	"len=0|email":            "must be a valid email address",
 }
 
-func init() {
-	en := en.New()
-	uni = ut.New(en, en)
+func newValidator() error {
+	lEn := en.New()
+	uni = ut.New(lEn, lEn)
 
 	trans, _ = uni.GetTranslator("en")
 
 	err := entranslations.RegisterDefaultTranslations(validate, trans)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to register custom translations: %w", err)
 	}
 
 	err = validate.RegisterValidation("k8sSecretName", k8sSecretName)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to register custom validation k8sSecretName: %w", err)
 	}
 
 	err = validate.RegisterValidation("k8sSecretDataKey", k8sSecretDataKey)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to register custom validation k8sSecretDataKey: %w", err)
 	}
 
 	for tag, errMessage := range customTranslations {
 		addTranslation(tag, errMessage)
 	}
 
+	return nil
 }
 
 // k8sSecretName validates the string against:

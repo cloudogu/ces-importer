@@ -20,6 +20,10 @@ type Job struct {
 }
 
 func ReadJobConfig() (Job, error) {
+	if err := newValidator(); err != nil {
+		return Job{}, fmt.Errorf("failed to initialize validator: %w", err)
+	}
+
 	configBaseDir := os.Getenv(EnvBaseConfigPathKey)
 	if configBaseDir == "" {
 		return Job{}, fmt.Errorf(errorFormat, EnvBaseConfigPathKey)
