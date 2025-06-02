@@ -416,6 +416,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -457,6 +458,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-smtp-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -490,6 +492,32 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 			expErr: false,
 		},
 		{
+			name: "successful validation - SMTP when Server is set but no user",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey":     []byte("testAPIKEY"),
+						"privateKey": []byte("testPrivateKey"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+				Smtp: Smtp{
+					Server: "testSMTPServer",
+				},
+			},
+			expErr: false,
+		},
+		{
 			name: "Error - secret is missing",
 			setupMock: func(mockSecretGetter *mockSecretGetter) {
 				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-secret", metav1.GetOptions{}).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "valid-secret"))
@@ -505,6 +533,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -534,6 +563,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -563,6 +593,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -592,6 +623,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
@@ -618,6 +650,7 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				},
 				Smtp: Smtp{
 					Server:        "testSMTPServer",
+					Username:      "testUser",
 					SecretName:    "valid-secret",
 					SecretDataKey: "mailPassword",
 				},
