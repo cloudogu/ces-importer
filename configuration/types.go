@@ -171,6 +171,10 @@ type Smtp struct {
 	From string `yaml:"from" validate:"required_with=Server,len=0|email"`
 	// List of recipient email addresses
 	To []string `yaml:"to" validate:"required_with=Server,dive,email"`
+	// SecretName specifies the Kubernetes secret name containing the SMTP password for authentication.
+	SecretName string `yaml:"secretName" validate:"required_with=Server,len=0|k8sSecretName"`
+	// SecretDataKey specifies the key inside the secret containing the SMTP password.
+	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
 }
 
 type Types interface {

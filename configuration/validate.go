@@ -16,11 +16,18 @@ var (
 	trans    ut.Translator
 )
 
+const (
+	errMsgK8sSecretName    = "only allows the characters: a-z, 0-9, \".\", \"-\", starts and ends with alphanumeric character and has a maximum length of 253"
+	errMsgK8sSecretDataKey = "only allows the characters: a-z, 0-9, \".\", \"-\", \"_\", starts and ends with alphanumeric character and has a maximum length of 253"
+)
+
 var customTranslations = map[string]string{
-	"hostname_rfc1123": "must be a valid RFC 1123 hostname",
-	"k8sSecretName":    "only allows the characters: a-z, 0-9, \".\", \"-\", starts and ends with alphanumeric character and has a maximum length of 253",
-	"k8sSecretDataKey": "only allows the characters: a-z, 0-9, \".\", \"-\", \"_\", starts and ends with alphanumeric character and has a maximum length of 253",
-	"len=0|email":      "must be a valid email address",
+	"hostname_rfc1123":       "must be a valid RFC 1123 hostname",
+	"k8sSecretName":          errMsgK8sSecretName,
+	"k8sSecretDataKey":       errMsgK8sSecretDataKey,
+	"len=0|k8sSecretName":    errMsgK8sSecretName,
+	"len=0|k8sSecretDataKey": errMsgK8sSecretDataKey,
+	"len=0|email":            "must be a valid email address",
 }
 
 func init() {
@@ -118,7 +125,7 @@ func addTranslation(tag string, errMessage string) {
 	transFn := func(ut ut.Translator, fe validator.FieldError) string {
 		t, err := ut.T(tag, fe.Field())
 		if err != nil {
-			return fe.(error).Error()
+			return fe.Error()
 		}
 
 		return t

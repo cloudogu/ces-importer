@@ -97,6 +97,21 @@ func TestReadCoordinatorConfig(t *testing.T) {
 			JobConfigMap:      "ces-importer-job-config",
 			JobServiceAccount: "ces-importer-main-manager",
 		}, cfg.JobContainer)
+
+		// smtp
+		assert.Equal(t, Smtp{
+			Server:   "192.168.56.1",
+			Port:     1025,
+			Username: "",
+			Password: "",
+			From:     "importer@ces.com",
+			To: []string{
+				"recipient1@example.com",
+				"recipient2@example.com",
+			},
+			SecretName:    "ces-importer-secret",
+			SecretDataKey: "mailPassword",
+		}, cfg.Smtp)
 	})
 
 	t.Run("error while reading config", func(t *testing.T) {
@@ -379,7 +394,77 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 		errorContains string
 	}{
 		{
-			name: "successful validation - API and SSH Keys in single secret",
+			name: "successful validation - API, SSH and SMTP Keys in single secret",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey":       []byte("testAPIKEY"),
+						"privateKey":   []byte("testPrivateKey"),
+						"mailPassword": []byte("testMailPassword"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-secret",
+					SecretDataKey: "mailPassword",
+				},
+			},
+			expErr: false,
+		},
+		{
+			name: "successful validation - API, SSH and SMTP Keys in separate secrets",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-api-secret", metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-api-secret"},
+					Data: map[string][]byte{
+						"apiKey": []byte("testAPIKEY"),
+					},
+				}, nil)
+
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-ssh-secret", metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-ssh-secret"},
+					Data: map[string][]byte{
+						"privateKey": []byte("testPrivateKey"),
+					},
+				}, nil)
+
+				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-smtp-secret", metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-ssh-secret"},
+					Data: map[string][]byte{
+						"mailPassword": []byte("testMailPassword"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-api-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-ssh-secret",
+					SecretDataKey: "privateKey",
+				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-smtp-secret",
+					SecretDataKey: "mailPassword",
+				},
+			},
+			expErr: false,
+		},
+		{
+			name: "successful validation - SMTP Key when Server is not set",
 			setupMock: func(mockSecretGetter *mockSecretGetter) {
 				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
@@ -398,34 +483,8 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 					SecretName:    "valid-secret",
 					SecretDataKey: "privateKey",
 				},
-			},
-			expErr: false,
-		},
-		{
-			name: "successful validation - API and SSH Keys in separate secrets",
-			setupMock: func(mockSecretGetter *mockSecretGetter) {
-				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-api-secret", metav1.GetOptions{}).Return(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "valid-api-secret"},
-					Data: map[string][]byte{
-						"apiKey": []byte("testAPIKEY"),
-					},
-				}, nil)
-
-				mockSecretGetter.EXPECT().Get(mock.Anything, "valid-ssh-secret", metav1.GetOptions{}).Return(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "valid-ssh-secret"},
-					Data: map[string][]byte{
-						"privateKey": []byte("testPrivateKey"),
-					},
-				}, nil)
-			},
-			inCoordinator: Coordinator{
-				API: API{
-					SecretName:    "valid-api-secret",
-					SecretDataKey: "apiKey",
-				},
-				SSH: SSH{
-					SecretName:    "valid-ssh-secret",
-					SecretDataKey: "privateKey",
+				Smtp: Smtp{
+					Server: "",
 				},
 			},
 			expErr: false,
@@ -444,6 +503,11 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 					SecretName:    "valid-secret",
 					SecretDataKey: "privateKey",
 				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-secret",
+					SecretDataKey: "mailPassword",
+				},
 			},
 			expErr:        true,
 			errorContains: "failed to get secret valid-secret",
@@ -454,6 +518,65 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
 					Data: map[string][]byte{
+						"privateKey":   []byte("testPrivateKey"),
+						"mailPassword": []byte("testMailPassword"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-secret",
+					SecretDataKey: "mailPassword",
+				},
+			},
+			expErr:        true,
+			errorContains: "secret valid-secret does not contain key apiKey",
+		},
+		{
+			name: "Error - SSH data key is missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey":       []byte("testAPIKEY"),
+						"mailPassword": []byte("testMailPassword"),
+					},
+				}, nil)
+			},
+			inCoordinator: Coordinator{
+				API: API{
+					SecretName:    "valid-secret",
+					SecretDataKey: "apiKey",
+				},
+				SSH: SSH{
+					SecretName:    "valid-secret",
+					SecretDataKey: "privateKey",
+				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-secret",
+					SecretDataKey: "mailPassword",
+				},
+			},
+			expErr:        true,
+			errorContains: "secret valid-secret does not contain key privateKey",
+		},
+		{
+			name: "Error - MailPassword data key is missing",
+			setupMock: func(mockSecretGetter *mockSecretGetter) {
+				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
+					Data: map[string][]byte{
+						"apiKey":     []byte("testAPIKEY"),
 						"privateKey": []byte("testPrivateKey"),
 					},
 				}, nil)
@@ -467,35 +590,17 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 					SecretName:    "valid-secret",
 					SecretDataKey: "privateKey",
 				},
-			},
-			expErr:        true,
-			errorContains: "secret valid-secret does not contain key apiKey",
-		},
-		{
-			name: "Error - SSH data key is missing",
-			setupMock: func(mockSecretGetter *mockSecretGetter) {
-				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
-					Data: map[string][]byte{
-						"apiKey": []byte("testAPIKEY"),
-					},
-				}, nil)
-			},
-			inCoordinator: Coordinator{
-				API: API{
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
 					SecretName:    "valid-secret",
-					SecretDataKey: "apiKey",
-				},
-				SSH: SSH{
-					SecretName:    "valid-secret",
-					SecretDataKey: "privateKey",
+					SecretDataKey: "mailPassword",
 				},
 			},
 			expErr:        true,
-			errorContains: "secret valid-secret does not contain key privateKey",
+			errorContains: "secret valid-secret does not contain key mailPassword",
 		},
 		{
-			name: "Error - SSH data key and API data key are missing",
+			name: "Error - SSH data key, API data key and SMTP data key are missing",
 			setupMock: func(mockSecretGetter *mockSecretGetter) {
 				mockSecretGetter.EXPECT().Get(mock.Anything, mock.Anything, metav1.GetOptions{}).Return(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "valid-secret"},
@@ -511,9 +616,14 @@ func TestCoordinator_ValidateSecrets(t *testing.T) {
 					SecretName:    "valid-secret",
 					SecretDataKey: "privateKey",
 				},
+				Smtp: Smtp{
+					Server:        "testSMTPServer",
+					SecretName:    "valid-secret",
+					SecretDataKey: "mailPassword",
+				},
 			},
 			expErr:        true,
-			errorContains: "secret valid-secret does not contain key apiKey\nsecret valid-secret does not contain key privateKey",
+			errorContains: "secret valid-secret does not contain key apiKey\nsecret valid-secret does not contain key privateKey\nsecret valid-secret does not contain key mailPassword",
 		},
 	}
 

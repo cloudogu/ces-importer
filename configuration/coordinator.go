@@ -42,6 +42,11 @@ func (c Coordinator) ValidateSecrets(ctx context.Context, sg secretGetter) error
 	sshConfig := c.SSH
 	secretMap[sshConfig.SecretName] = append(secretMap[sshConfig.SecretName], sshConfig.SecretDataKey)
 
+	smtpConfig := c.Smtp
+	if smtpConfig.Server != "" {
+		secretMap[smtpConfig.SecretName] = append(secretMap[smtpConfig.SecretName], smtpConfig.SecretDataKey)
+	}
+
 	// retry when the error is other than NotFound
 	retriable := func(err error) bool {
 		return !apierrors.IsNotFound(err)

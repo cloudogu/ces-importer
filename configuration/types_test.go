@@ -77,6 +77,8 @@ username:
 password:
 from: importer@ces.com
 to: []
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `
 	}
 
@@ -1163,6 +1165,8 @@ from: importer@ces.com
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: false,
 		},
@@ -1175,6 +1179,8 @@ username:
 password:
 from:
 to:
+secretName:
+secretDataKey:
 `,
 			expectErr: false,
 		},
@@ -1189,6 +1195,8 @@ from: importer@ces.com
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1203,6 +1211,8 @@ from: importer@ces.com
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1217,6 +1227,8 @@ from:
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1231,6 +1243,8 @@ from: invalid
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1243,6 +1257,8 @@ username:
 password:
 from: importer@ces.com
 to:
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1256,7 +1272,9 @@ password:
 from: importer@ces.com
 to:
   - invalidMailAddress
-  - recipient2@example.com 
+  - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
 `,
 			expectErr: true,
 		},
@@ -1271,6 +1289,72 @@ from: importer@ces.com
 to:
   - recipient2@example.com 
   - invalidMailAddress
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - empty secretName when server is set",
+			inConfig: `---
+server: 192.168.56.1
+port: 1025
+username:
+password:
+from: importer@ces.com
+to:
+  - recipient1@example.com 
+  - recipient2@example.com
+secretName: ""
+secretDataKey: "mailPassword"
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - invalid secretName when server is set",
+			inConfig: `---
+server: 192.168.56.1
+port: 1025
+username:
+password:
+from: importer@ces.com
+to:
+  - recipient1@example.com 
+  - recipient2@example.com
+secretName: "ces/importer/secret!!!!"
+secretDataKey: "mailPassword"
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - empty secretDataKey when server is set",
+			inConfig: `---
+server: 192.168.56.1
+port: 1025
+username:
+password:
+from: importer@ces.com
+to:
+  - recipient1@example.com 
+  - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: ""
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - invalid secretDataKey when server is set",
+			inConfig: `---
+server: 192.168.56.1
+port: 1025
+username:
+password:
+from: importer@ces.com
+to:
+  - recipient1@example.com 
+  - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "ces/mailPassword/secret!!!!"
 `,
 			expectErr: true,
 		},
