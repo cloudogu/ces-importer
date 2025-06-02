@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - [#32] copy sparse files with rsync
 
+### Changed
+- [#26] retrieve mail server password from a secret
+- [#26] include a Message-ID in emails
+
 ## [v0.0.1] - 2025-05-28
 ### Added
 - Initial release

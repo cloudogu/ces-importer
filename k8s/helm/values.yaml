@@ -38,7 +38,7 @@ config:
     # The exporter API endpoint is fixed and will be routed on the source side.
     host: classic-ces.exporter
     # secretName is the name of the secret that contains the exporter API key.
-    secretName: "ces-exporter-secret"
+    secretName: "ces-importer-secret"
     # secretDataKey contains the key name within the secret that accommodates the actual exporter API key as value.
     secretDataKey: "apiKey"
     # skipTLSVerify controls whether a client verifies the server's certificate chain and host name.
@@ -82,8 +82,11 @@ config:
     port: 25
     # Optional: username for SMTP authentication (leave empty if not required)
     username:
-    # Optional: password for SMTP authentication (leave empty if not required)
-    password:
+    # secretName contains the name of the secret that contains the smtp mail password which the importer will to send emails.
+    secretName: "ces-importer-secret"
+    # secretDataKey contains the key name that accommodates the actual exporter smtp mail password as value.
+    secretDataKey: "mailPassword"
+    # sender mail address
     # Email address that appears in the "From" field of the email
     from: importer@cloudogu.com
     # List of recipient email addresses

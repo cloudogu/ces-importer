@@ -154,12 +154,18 @@ type JobConfig struct {
 
 // Smtp holds SMTP server configuration details required for sending emails.
 type Smtp struct {
-	Server   string   `yaml:"server"`   // SMTP server address (e.g., smtp.example.com)
-	Port     string   `yaml:"port"`     // SMTP server port (default is "25" if not specified)
-	Username string   `yaml:"username"` // Username for SMTP authentication
-	Password string   `yaml:"password"` // Password for SMTP authentication
-	From     string   `yaml:"from"`     // Sender's email address
-	To       []string `yaml:"to"`       // List of recipient email addresses
+	// SMTP server address (e.g., smtp.example.com)
+	Server string `yaml:"server"`
+	// SMTP server port (default is "25" if not specified)
+	Port string `yaml:"port"`
+	// Username for SMTP authentication
+	Username string `yaml:"username"`
+	// Password for smtp authentication
+	Password string `yaml:"password"`
+	// Sender's email address
+	From string `yaml:"from"`
+	// List of recipient email addresses
+	To []string `yaml:"to"`
 }
 
 // Coordinator consists of configuration data. The most fields are obtained from the Helm chart

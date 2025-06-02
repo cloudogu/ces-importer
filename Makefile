@@ -113,10 +113,8 @@ template-smtp-config: $(BINARY_YQ)
 
 .PHONY: apikey-secret
 apikey-secret: $(BINARY_YQ) ## generates a K8s secret for the API key from an environment variable
-	@kubectl delete secret ces-exporter-secret || true
 	@kubectl delete secret ces-importer-secret || true
-	@kubectl create secret generic ces-exporter-secret --from-literal=apiKey=${EXPORTER_API_KEY} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
-	@kubectl create secret generic ces-importer-secret --from-file=privateKey=${IMPORTER_SSH_KEY_FILE} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
+	@kubectl create secret generic ces-importer-secret --from-literal=apiKey=${EXPORTER_API_KEY} --from-file=privateKey=${IMPORTER_SSH_KEY_FILE} --from-literal=mailPassword=${IMPORTER_MAIL_PASSWORD} --namespace="${NAMESPACE}" --context="${KUBE_CONTEXT_NAME}"
 
 .PHONY: helm-apply-dev
 helm-apply-dev:
