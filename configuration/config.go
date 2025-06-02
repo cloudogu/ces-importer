@@ -160,10 +160,6 @@ type Smtp struct {
 	Port string `yaml:"port"`
 	// Username for SMTP authentication
 	Username string `yaml:"username"`
-	// SecretName specifies the Kubernetes secret name containing the smtp mail password.
-	SecretName string `yaml:"secretName"`
-	// SecretDataKey specifies the key inside the secret containing the smtp mail password.
-	SecretDataKey string `yaml:"secretDataKey"`
 	// Password for smtp authentication
 	Password string `yaml:"password"`
 	// Sender's email address

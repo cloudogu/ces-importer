@@ -31,7 +31,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.config.smtp.secretName }}
                   key: {{ .Values.config.smtp.secretDataKey }}
-            - name: mailPassword
+                  optional: true
+            - name: API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.api.secretName }}

@@ -6,14 +6,14 @@ metadata:
     {{- include "ces-importer.labels" . | nindent 4 }}
 data:
   logging.yaml: |
-  {{- toYaml .Values.config.logging | nindent 4 }}
+    {{- toYaml .Values.config.logging | nindent 4 }}
 
   api.yaml: |
     apiKey: "${API_KEY}"
     {{- toYaml .Values.config.api | nindent 4 }}
 
   migration.yaml: |
-  {{- toYaml .Values.config.migration | nindent 4 }}
+    {{- toYaml .Values.config.migration | nindent 4 }}
 
   ssh.yaml: |
     user: "root"
@@ -30,4 +30,5 @@ data:
     {{- toYaml .Values.job | nindent 4 }}
 
   smtp.yaml: |
-  {{- toYaml .Values.config.smtp | nindent 4 }}
+    password: "${MAIL_PASSWORD}"
+    {{- toYaml .Values.config.smtp | nindent 4 }}
