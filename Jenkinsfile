@@ -12,10 +12,16 @@ changelog = new Changelog(this)
 goVersion = "1.24.2"
 
 // Configuration of repository
-String doguName = "ces-importer"
+String repositoryName = "ces-importer"
 
 // Configuration of branches
 productionReleaseBranch = "main"
+
+registryNamespace = "k8s"
+registryUrl = "registry.cloudogu.com"
+
+helmTargetDir = "target/k8s"
+helmChartDir = "${helmTargetDir}/helm"
 
 parallel(
     "source code": {
@@ -57,7 +63,7 @@ parallel(
                         withCredentials([
                                 [$class: 'UsernamePasswordMultiBinding', credentialsId: 'sonarqube-gh', usernameVariable: 'USERNAME', passwordVariable: 'REVIEWDOG_GITHUB_API_TOKEN']
                         ]) {
-                            withEnv(["CI_PULL_REQUEST=${env.CHANGE_ID}", "CI_COMMIT=${commitSha}", "CI_REPO_OWNER=cloudogu", "CI_REPO_NAME=${doguName}"]) {
+                            withEnv(["CI_PULL_REQUEST=${env.CHANGE_ID}", "CI_COMMIT=${commitSha}", "CI_REPO_OWNER=cloudogu", "CI_REPO_NAME=${repositoryName}"]) {
                                 sh "make static-analysis-ci"
                             }
                         }
@@ -100,20 +106,50 @@ parallel(
                     }
                 }
 
-                if (gitflow.isPreReleaseBranch()) {
-                    stage("Pre-release") {
-                        error("pre-release is not yet supported")
-                    }
-                }
                 if (gitflow.isReleaseBranch()) {
-                    String releaseVersion = git.getSimpleBranchName()
+                    Makefile makefile = new Makefile(this)
+                    String releaseVersion = makefile.getVersion()
+                    String changelogVersion = git.getSimpleBranchName()
+
+                    stage('Build & Push Image') {
+                        def coordinatorImageName = "cloudogu/ces-importer:${releaseVersion}"
+                        def coordinatorImage = docker.build("${coordinatorImageName}", "--progress=plain .")
+                        docker.withRegistry('https://registry.hub.docker.com/', 'dockerHubCredentials') {
+                            coordinatorImage.push()
+                        }
+
+                        def jobImageName = "cloudogu/ces-importer-migration-job:${releaseVersion}"
+                        def jobImage = docker.build("${jobImageName}", "--progress=plain \
+                                    --build-arg BINARY=import-job \
+                                    --build-arg UID=0 \
+                                    --build-arg GID=0 .")
+                        docker.withRegistry('https://registry.hub.docker.com/', 'dockerHubCredentials') {
+                            jobImage.push()
+                        }
+                    }
+
+                    stage('Push Helm chart to Harbor') {
+                        new Docker(this)
+                            .image("golang:${goVersion}")
+                            .mountJenkinsUser()
+                            .inside("--volume ${WORKSPACE}:/${repositoryName} -w /${repositoryName}")
+                                {
+                                    sh "make helm-package"
+                                    archiveArtifacts "${helmTargetDir}/**/*"
+
+                                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'harborhelmchartpush', usernameVariable: 'HARBOR_USERNAME', passwordVariable: 'HARBOR_PASSWORD']]) {
+                                        sh ".bin/helm registry login ${registryUrl} --username '${HARBOR_USERNAME}' --password '${HARBOR_PASSWORD}'"
+                                        sh ".bin/helm push ${helmChartDir}/${repositoryName}-${releaseVersion}.tgz oci://${registryUrl}/${registryNamespace}"
+                                    }
+                                }
+                    }
 
                     stage('Finish Release') {
-                        gitflow.finishRelease(releaseVersion, productionReleaseBranch)
+                        gitflow.finishRelease(changelogVersion, productionReleaseBranch)
                     }
 
                     stage('Add Github-Release') {
-                        github.createReleaseWithChangelog(releaseVersion, changelog, productionReleaseBranch)
+                        github.createReleaseWithChangelog(changelogVersion, changelog, productionReleaseBranch)
                     }
                 }
             }
