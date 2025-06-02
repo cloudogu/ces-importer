@@ -1,5 +1,5 @@
 ARTIFACT_ID_IMPORTER=ces-importer
-ARTIFACT_ID_JOB=migration-job
+ARTIFACT_ID_JOB=${ARTIFACT_ID_IMPORTER}-migration-job
 
 # set default to main application
 ARTIFACT_ID=${ARTIFACT_ID_IMPORTER}
@@ -17,7 +17,7 @@ K8S_RESOURCE_DIR=${WORKDIR}/k8s
 K8S_COMPONENT_SOURCE_VALUES = ${HELM_SOURCE_DIR}/values.yaml
 K8S_COMPONENT_TARGET_VALUES = ${HELM_TARGET_DIR}/values.yaml
 HELM_PRE_GENERATE_TARGETS = helm-values-update-image-version
-HELM_POST_GENERATE_TARGETS = helm-values-replace-image-repo template-stage template-log-level template-image-pull-policy template-importer-public-key
+HELM_POST_GENERATE_TARGETS = helm-values-replace-image-repo template-log-level template-image-pull-policy template-api-config template-migration-config template-smtp-config
 CHECK_VAR_TARGETS=check-all-vars
 IMAGE_IMPORT_TARGET=images-import
 
@@ -67,18 +67,11 @@ helm-values-replace-image-repo: $(BINARY_YQ)
 		$(BINARY_YQ) -i e ".job.image.repository=\"$$JOB_REPOSITORY\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
 	fi
 
-.PHONY: template-stage
-template-stage: $(BINARY_YQ)
-	@if [[ ${STAGE} == "development" ]]; then \
-		echo "Setting STAGE env in deployment to ${STAGE}!" ;\
-		$(BINARY_YQ) -i e ".env.stage=\"${STAGE}\"" ${K8S_COMPONENT_TARGET_VALUES} ;\
-	fi
-
 .PHONY: template-log-level
 template-log-level: ${BINARY_YQ}
 	@if [[ "${STAGE}" == "development" ]]; then \
 		echo "Setting LOG_LEVEL env in deployment to ${LOG_LEVEL}!" ; \
-		$(BINARY_YQ) -i e ".env.logLevel=\"${LOG_LEVEL}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		$(BINARY_YQ) -i e ".config.logging.level=\"${LOG_LEVEL}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
 	fi
 
 .PHONY: template-image-pull-policy
@@ -89,11 +82,33 @@ template-image-pull-policy: $(BINARY_YQ)
 		$(BINARY_YQ) -i e ".job.imagePullPolicy=\"Always\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
 	fi
 
-.PHONY: template-importer-public-key
-template-importer-public-key: $(BINARY_YQ)
+.PHONY: template-api-config
+template-api-config: $(BINARY_YQ)
 	@if [[ "${STAGE}" == "development" ]]; then \
-		echo "Setting importer-public-key from environment-variable 'IMPORTER_PUBLIC_KEY'" ; \
-		$(BINARY_YQ) -i e ".publicKey.data=\"${IMPORTER_PUBLIC_KEY}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		echo "Setting api.host from environment-variable 'EXPORTER_HOST'" ; \
+		$(BINARY_YQ) -i e ".config.api.host=\"${EXPORTER_HOST}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		echo "Setting api.skipTLSVerify from environment-variable 'EXPORTER_SKIP_VERIFY_TLS'" ; \
+        $(BINARY_YQ) -i e ".config.api.skipTLSVerify=${EXPORTER_SKIP_VERIFY_TLS}" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+	fi
+
+.PHONY: template-migration-config
+template-migration-config: $(BINARY_YQ)
+	@if [[ "${STAGE}" == "development" ]]; then \
+		echo "Setting migration.regularSchedule from environment-variable 'MIGRATION_REGULAR_SCHEDULE'" ; \
+		$(BINARY_YQ) -i e ".config.migration.regularSchedule=\"${MIGRATION_REGULAR_SCHEDULE}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		echo "Setting migration.finalSchedule from environment-variable 'MIGRATION_FINAL_TIMESTAMP'" ; \
+        $(BINARY_YQ) -i e ".config.migration.finalSchedule=\"${MIGRATION_FINAL_TIMESTAMP}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+	fi
+
+.PHONY: template-smtp-config
+template-smtp-config: $(BINARY_YQ)
+	@if [[ "${STAGE}" == "development" ]]; then \
+		echo "Setting smtp.server from environment-variable 'SMTP_SERVER'" ; \
+		$(BINARY_YQ) -i e ".config.smtp.server=\"${SMTP_SERVER}\"" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+		echo "Setting smtp.port from environment-variable 'SMTP_PORT'" ; \
+        $(BINARY_YQ) -i e ".config.smtp.port=${SMTP_PORT}" "${K8S_COMPONENT_TARGET_VALUES}" ; \
+        echo "Setting smtp.to from environment-variable 'SMTP_TO'" ; \
+        $(BINARY_YQ) -i e ".config.smtp.to=[\"${SMTP_TO}\"]" "${K8S_COMPONENT_TARGET_VALUES}" ; \
 	fi
 
 .PHONY: apikey-secret
@@ -124,4 +139,7 @@ images-import: ## import images from ces-importer and
 		IMAGE_DEV_VERSION=$(CES_REGISTRY_HOST)$(CES_REGISTRY_NAMESPACE)/$(ARTIFACT_ID_JOB)/$(GIT_BRANCH):${VERSION} \
 		BUILD_ARGS="--build-arg BINARY=import-job --build-arg UID=0 --build-arg GID=0"
 
-
+.PHONY: ces-importer-release
+ces-importer-release: ${BINARY_YQ} ## Interactively starts the release workflow for the ces-importer
+	@echo "Starting git flow release..."
+	@build/make/release.sh ces-importer

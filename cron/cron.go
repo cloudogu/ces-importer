@@ -3,8 +3,6 @@ package cron
 import (
 	"context"
 	"fmt"
-	"log/slog"
-
 	"github.com/adhocore/gronx"
 	"github.com/adhocore/gronx/pkg/tasker"
 )
@@ -42,7 +40,6 @@ func New(ctx context.Context, expr string, jobClosure JobFunc) (*Task, error) {
 
 // Run executes the given function. It can be stopped with Stop(). Please note that Run() does not return an error.
 func (t *Task) Run() {
-	slog.Debug("starting a new run")
 	t.taskExecuter.Run()
 }
 

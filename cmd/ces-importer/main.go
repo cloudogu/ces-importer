@@ -12,13 +12,18 @@ import (
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
-	ecoSystemV2 "github.com/cloudogu/k8s-dogu-operator/v3/api/ecoSystem"
+	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"github.com/cloudogu/k8s-registry-lib/repository"
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"log/slog"
+	"os"
+	"os/signal"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sync/atomic"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -29,10 +34,132 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
-	err = logInitializer.InitializeWithLogFile()
+	migrator, err := createMigrator(cfg)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to create migrator: %w", err))
+	}
+
+	// start migration-loops
+	cronTask, err := runMigration(ctx, cfg, migrator)
+	if err != nil {
+		panic(fmt.Errorf("failed to run migration: %w", err))
+	}
+
+	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
+	<-quit
+	slog.Info("Shutdown ces-importer ...")
+
+	done := make(chan struct{})
+
+	if cronTask != nil {
+		go func() {
+			slog.Info("stopping cron-task ...")
+			cronTask.Stop()
+			slog.Info("cron-task stopped")
+			close(done)
+		}()
+	}
+
+	select {
+	case <-done:
+		slog.Info("Shutdown completed")
+	case <-time.After(5 * time.Second):
+		slog.Info("shutdown-timeout of 5 seconds reached")
+	}
+
+	slog.Info("exiting")
+}
+
+func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) (*cron.Task, error) {
+	var finalTimestamp time.Time
+	var err error
+
+	// validate final timestamp
+	if cfg.FinalTimestamp != "" {
+		finalTimestamp, err = time.Parse(time.RFC3339, cfg.FinalTimestamp)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("Could not parse final migration timestamp from %q: %s", cfg.FinalTimestamp, err.Error()))
+		}
+	}
+
+	var migrationRunning atomic.Bool
+
+	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
+		// set migration to running to prevent simultaneous migrations
+		migrationRunning.Store(true)
+		defer migrationRunning.Store(false)
+
+		// do not run migration after the final migration took place
+		if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
+			slog.Warn("A migration was triggered but the final migration already took place. The migration is canceled.")
+			return 0, nil
+		}
+
+		// run delta migration
+		err = migrator.RunMigration(ctx)
+		if err != nil {
+			return 1, err
+		}
+
+		return 0, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
+	}
+
+	if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {
+		slog.Warn("The final migration timestamp in in the past. The migration will NOT run.", "timestamp", cfg.FinalTimestamp)
+		return cronLooper, nil
+	}
+
+	slog.Info("Starting main migration loop")
+	go cronLooper.Run()
+
+	if !finalTimestamp.IsZero() {
+		slog.Info(fmt.Sprintf("Starting final migration loop at %q", cfg.FinalTimestamp))
+		go startFinalMigrationLoop(ctx, migrator, &migrationRunning, finalTimestamp)
+	} else {
+		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
+	}
+
+	return cronLooper, nil
+}
+
+func startFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator, migrationRunning *atomic.Bool, finalTimestamp time.Time) {
+	duration := time.Until(finalTimestamp)
+	<-time.After(duration)
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		// do not start until the current migration is finished
+		if migrationRunning.Load() {
+			// skip to the next tick
+			continue
+		}
+
+		break
+	}
+
+	// start final migration
+	slog.Info("Starting final migration")
+
+	ctx = migration.SetFinalMigration(ctx)
+	if err := migrator.RunMigration(ctx); err != nil {
+		slog.Error("error running final migration", "error", err)
+		return
+	}
+
+	slog.Info("Final migration succeeded")
+}
+
+func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
+	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
+	err := logInitializer.InitializeWithLogFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initilize log: %w", err)
 	}
 
 	logWriter := logging.NewWriter(logging.PathJobLogFile)
@@ -41,7 +168,7 @@ func main() {
 
 	k8sClientSet, err := createK8Sclientset(cfg.Namespace)
 	if err != nil {
-		panic(fmt.Errorf("failed to create clients for kubernetes: %v", err))
+		return nil, fmt.Errorf("failed to create clients for kubernetes: %v", err)
 	}
 
 	jobService, err := migration.NewJobService(migration.JobServiceDependencies{
@@ -56,7 +183,7 @@ func main() {
 		PodClient: k8sClientSet.podClient,
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to create a new job service: %v", err))
+		return nil, fmt.Errorf("failed to create a new job service: %v", err)
 	}
 
 	exporterApiClient := createAPIClient(cfg.API)
@@ -69,12 +196,12 @@ func main() {
 
 	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.componentClient, k8sClientSet.doguClient, systemInfoApiClient)
 	if err != nil {
-		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
+		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
 
 	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient)
 	if err != nil {
-		panic(fmt.Errorf("failed to create systeminfo validator: %w", err))
+		return nil, fmt.Errorf("failed to create systeminfo validator: %w", err)
 	}
 
 	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
@@ -87,32 +214,22 @@ func main() {
 	)
 
 	deps := migration.MigratorDependencies{
-		ExportModeValidator:    exportModeValidator,
-		SystemInfoValidator:    systemInfoValidator,
-		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
-		JobRunner:              jobService,
-		DoguStopper:            doguStartStopper,
-		DoguStarter:            doguStartStopper,
-		LogWriter:              logWriter,
-		LogInitializer:         logInitializer,
-		MailSender:             mailSender,
-	}
-	migrator := migration.NewMigrator(deps)
-
-	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
-		err = migrator.RunMigration(ctx)
-		if err != nil {
-			return 1, err
-		}
-
-		return 0, nil
-	})
-	if err != nil {
-		panic(fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err))
+		ExportModeValidator: exportModeValidator,
+		SystemInfoValidator: systemInfoValidator,
+		MaintenanceModeHandler: &maintenanceModeHandler{
+			service: exportAPIService.MaintenanceModeService,
+			title:   cfg.Migration.MaintenanceModeMessage.Title,
+			message: cfg.Migration.MaintenanceModeMessage.Text,
+		},
+		JobRunner:      jobService,
+		DoguStopper:    doguStartStopper,
+		DoguStarter:    doguStartStopper,
+		LogWriter:      logWriter,
+		LogInitializer: logInitializer,
+		MailSender:     mailSender,
 	}
 
-	slog.Info("Starting main loop")
-	cronLooper.Run()
+	return migration.NewMigrator(deps), nil
 }
 
 func createAPIService(apiCfg configuration.API) *exporter.Service {
@@ -137,7 +254,7 @@ type k8sClients struct {
 	podClient       corev1.PodInterface
 	jobClient       batchv1.JobInterface
 	configMap       corev1.ConfigMapInterface
-	doguClient      ecoSystemV2.DoguInterface
+	doguClient      doguLibClient.DoguInterface
 	componentClient componentEcoClient.ComponentInterface
 }
 
@@ -159,7 +276,7 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
-	ecoSystemClient, err := ecoSystemV2.NewForConfig(k8sRestConfig)
+	ecoSystemClient, err := doguLibClient.NewForConfig(k8sRestConfig)
 	if err != nil {
 		return k8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
 	}
@@ -181,4 +298,18 @@ func createK8Sclientset(namespace string) (k8sClients, error) {
 		doguClient:      k8sDoguClient,
 		componentClient: k8sComponentClient,
 	}, nil
+}
+
+type maintenanceModeHandler struct {
+	service *exporter.MaintenanceModeService
+	title   string
+	message string
+}
+
+func (m *maintenanceModeHandler) Enable(ctx context.Context) error {
+	return m.service.Enable(ctx, m.title, m.message)
+}
+
+func (m *maintenanceModeHandler) Disable(ctx context.Context) error {
+	return m.service.Disable(ctx)
 }

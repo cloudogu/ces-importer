@@ -27,44 +27,32 @@ Vor dem Einsatz sind einige Voraussetzungen zu erfüllen:
     - dieses muss dann auch in der `values.yaml` angegeben werden
 - eine Helm Chart `values.yaml` mit den relevanten Konfigurationspunkten befüllen 
 
-## Bereitstellung der Anwendung mit Helm
+## Installation as a CES component
 
-
-```shell
-# template only
-helm template -n ecosystem -f myvalues.yaml ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-# install
-helm install -n ecosystem -f myvalues.yaml ces-importer oci://registry.cloudogu.com/testing/ces-importer-helm/ces-importer --version 0.0.1
-
-helm uninstall -n ecosystem ces-importer
-```
-
-## Example `values.yaml`
-
-Das folgende Snippet ist ein abgekürzter Ausschnitt einer möglichen `values.yaml`. Für eine vollständige Version konsultieren Sie bitte die vollständige YAML-Datei (diese enthält auch Kommentare) im Dateipfad `k8s/helm/values.yaml`.
+The ces-importer can be installed and configured as a CES component.
+An example can be seen here:
 
 ```yaml
-main:
-  image: registry.cloudogu.com/testing/ces-importer:0.0.1
-  imagePullSecrets:
-    - name: "ces-exporter-registries"
-  imagePullPolicy: IfNotPresent
-job:
-  image: registry.cloudogu.com/testing/ces-importer:0.0.1
-  imagePullSecrets:
-    - name: "ces-exporter-registries"
-config:
-  exporter:
-    host: my.classic.ces.exporter.net
-    apiSecretName: "ces-exporter-secret"
-    apiSecretDataKey: "apiKey"
-  importer:
-    sshSecretName: "ces-importer-secret"
-    sshSecretDataKey: "privateKey"
-  migration:
-    regularSchedule: "0 4 * * *"
-    finalSchedule: "2025-04-03 12:34:56Z"
+apiVersion: k8s.cloudogu.com/v1
+kind: Component
+metadata:
+  name: ces-importer
+  namespace: ecosystem
+spec:
+  name: ces-importer
+  namespace: k8s
+  version: 0.0.1
+  valuesYamlOverwrite: |
+    config:
+      logging:
+        level: DEBUG
+      api:
+        host: classic-ces.exporter
+        skipTLSVerify: false
+      migration:
+        regularSchedule: "0/5 * * * *"
+        finalSchedule: ""
+        changeFQDN: false
 ```
 
 Im Kontext der Konfiguration ergibt sich in etwa ein solches Zielbild von `ces-importer`:
