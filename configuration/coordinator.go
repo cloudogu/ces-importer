@@ -43,7 +43,7 @@ func (c Coordinator) ValidateSecrets(ctx context.Context, sg secretGetter) error
 	secretMap[sshConfig.SecretName] = append(secretMap[sshConfig.SecretName], sshConfig.SecretDataKey)
 
 	smtpConfig := c.Smtp
-	if smtpConfig.Server != "" {
+	if smtpConfig.Server != "" && smtpConfig.Username != "" {
 		secretMap[smtpConfig.SecretName] = append(secretMap[smtpConfig.SecretName], smtpConfig.SecretDataKey)
 	}
 
