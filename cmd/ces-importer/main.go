@@ -74,7 +74,7 @@ func main() {
 }
 
 func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) (*cron.Task, error) {
-	var migrationRunning atomic.Bool
+	var migrationRunning *atomic.Bool
 
 	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
 	if err != nil {
@@ -82,7 +82,28 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 		finalTimestamp = migration.FinalTimestamp{}
 	}
 
-	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
+	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, runDeltaMigration(finalTimestamp, migrator, migrationRunning))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
+	}
+
+	slog.Info("Starting main delta migration loop")
+	go cronLooper.Run()
+
+	if finalTimestamp.IsZero() {
+		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
+		return cronLooper, nil
+	}
+
+	slog.Info(fmt.Sprintf("Starting final migration loop at %q", finalTimestamp.String()))
+
+	go runFinalMigration(ctx, finalTimestamp, migrator, migrationRunning)
+
+	return cronLooper, nil
+}
+
+func runDeltaMigration(finalTimestamp migration.FinalTimestamp, migrator *migration.Migrator, migrationRunning *atomic.Bool) cron.JobFunc {
+	return func(ctx context.Context) (int, error) {
 		// set migration to running to prevent simultaneous migrations
 		migrationRunning.Store(true)
 		defer migrationRunning.Store(false)
@@ -102,41 +123,23 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 		slog.Info("Delta migration succeeded", "endTime", migration.Now().String())
 
 		return 0, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
 	}
-
-	slog.Info("Starting main delta migration loop")
-	go cronLooper.Run()
-
-	if finalTimestamp.IsZero() {
-		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
-		return cronLooper, nil
-	}
-
-	slog.Info(fmt.Sprintf("Starting final migration loop at %q", finalTimestamp.String()))
-
-	go func() {
-		finalTimestamp.WaitUntilReady(ctx, func() bool {
-			return !migrationRunning.Load()
-		})
-
-		if fErr := runFinalMigrationLoop(ctx, migrator); fErr != nil {
-			slog.Error("failed to run final migration: ", "error", fErr.Error())
-		}
-
-		slog.Info("Final migration succeeded")
-	}()
-
-	return cronLooper, nil
 }
 
-func runFinalMigrationLoop(ctx context.Context, migrator *migration.Migrator) error {
+func runFinalMigration(ctx context.Context, finalTimestamp migration.FinalTimestamp, migrator *migration.Migrator, migrationRunning *atomic.Bool) {
+	finalTimestamp.WaitUntilReady(ctx, func() bool {
+		return !migrationRunning.Load()
+	})
+
 	slog.Info("Starting final migration")
 
-	ctx = migration.SetFinalMigration(ctx)
-	return migrator.RunMigration(ctx)
+	finalContext := migration.SetFinalMigration(ctx)
+
+	if fErr := migrator.RunMigration(finalContext); fErr != nil {
+		slog.Error("failed to run final migration: ", "error", fErr.Error())
+	}
+
+	slog.Info("Final migration succeeded")
 }
 
 func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
