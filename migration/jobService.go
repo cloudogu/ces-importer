@@ -25,7 +25,7 @@ type getStreamerFunc func(jobName string, options *corev1.PodLogOptions) (stream
 
 // getWatcherFunc is a function type that creates a watcher for monitoring job status changes
 // It takes a context and resource version and returns a watch interface for receiving events
-type getWatcherFunc func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error)
+type getWatcherFunc func(ctx context.Context, jobName string) (watchAPI.Interface, error)
 
 // JobServiceDependencies contains all the dependencies required to create a JobService
 // It includes dependencies for job creation, job client for interacting with Kubernetes jobs,
@@ -108,20 +108,20 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 // It returns a getWatcherFunc that creates a RetryWatcher, which automatically reconnects
 // if the watch connection is lost
 func createGetWatcherFunc(jobClient jobClient) getWatcherFunc {
-	return func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error) {
+	return func(ctx context.Context, jobName string) (watchAPI.Interface, error) {
 		nameSelector := fields.OneTermEqualSelector("metadata.name", jobName).String()
 		jobList, err := jobClient.List(ctx, metav1.ListOptions{
 			FieldSelector: nameSelector,
 		})
 		if err != nil {
-			slog.Error(fmt.Sprintf("error getting migration job: %v", err))
+			return nil, fmt.Errorf("error getting migration job while trying to create job watcher: %v", err)
 		}
 		if len(jobList.Items) == 0 {
-			slog.Error(fmt.Sprintf("Job %s not found", jobName))
+			return nil, fmt.Errorf("migration job %s not found while trying to create job watcher", jobName)
 		}
 		rv := jobList.ResourceVersion
 
-		slog.Info(fmt.Sprintf("get watcher func job name: %s, resource version: %s", jobName, resourceVersion))
+		slog.Info(fmt.Sprintf("get watcher func job name: %s, job list resource version: %s", jobName, rv))
 		// Create an adapter to make jobClient.Watch compatible with RetryWatcher
 		wrapper := watchAdapter{
 			watchFunc: func(ctx context.Context, opts metav1.ListOptions) (watchAPI.Interface, error) {
@@ -187,7 +187,7 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	}()
 
 	// Create a watcher to monitor the job's status
-	watcher, err := j.getWatcher(ctx, jobResource.GetResourceVersion(), jobResource.GetName())
+	watcher, err := j.getWatcher(ctx, jobResource.GetName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher for job %s: %w", jobResource.GetName(), err)
 	}
