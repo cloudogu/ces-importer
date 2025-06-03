@@ -478,9 +478,29 @@ func Test_createGetStreamerFunc(t *testing.T) {
 func Test_createGetWatcherFunc(t *testing.T) {
 	t.Run("should create get watcher function successfully", func(t *testing.T) {
 		jobClientMock := newMockJobClient(t)
-		getWatcher := createGetWatcherFunc(jobClientMock)
+		jobList := &batchv1.JobList{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "",
+				APIVersion: "1",
+			},
+			ListMeta: metav1.ListMeta{
+				ResourceVersion:    "1",
+				Continue:           "",
+				RemainingItemCount: nil,
+			},
+			Items: []batchv1.Job{{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec:   batchv1.JobSpec{},
+				Status: batchv1.JobStatus{},
+			}},
+		}
+		jobClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(jobList, nil)
+		getWatcher := createGetWatcherFunc(context.Background(), jobClientMock)
 
-		watcher, err := getWatcher(context.TODO(), "1", "")
+		watcher, err := getWatcher(context.TODO(), "1", "test")
 
 		defer watcher.Stop()
 
@@ -490,7 +510,8 @@ func Test_createGetWatcherFunc(t *testing.T) {
 
 	t.Run("fail to get watcher", func(t *testing.T) {
 		jobClientMock := newMockJobClient(t)
-		getWatcher := createGetWatcherFunc(jobClientMock)
+		jobClientMock.EXPECT().List(mock.Anything, mock.Anything).Return(&batchv1.JobList{}, nil)
+		getWatcher := createGetWatcherFunc(context.Background(), jobClientMock)
 
 		watcher, err := getWatcher(context.TODO(), "", "")
 		assert.Error(t, err)
