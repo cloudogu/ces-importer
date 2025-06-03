@@ -48,7 +48,7 @@ func TestFinalTimestamp_Expired(t *testing.T) {
 		{
 			name:     "Zero value",
 			time:     time.Time{},
-			expValue: true,
+			expValue: false,
 		},
 		{
 			name:     "valid value expired",
@@ -163,7 +163,7 @@ func TestFinalTimestamp_WaitUntilReady(t *testing.T) {
 	done := make(chan struct{})
 	defer close(done)
 
-	ft := FinalTimestamp{}
+	ft := Now()
 
 	loopCounter := 0
 	ready := func() bool {

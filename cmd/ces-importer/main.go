@@ -78,7 +78,8 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 
 	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse final timestamp: %w", err)
+		slog.Warn("failed to parse final timestamp, use zero value", "cause", err)
+		finalTimestamp = migration.FinalTimestamp{}
 	}
 
 	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, func(ctx context.Context) (int, error) {
