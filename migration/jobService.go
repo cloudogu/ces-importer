@@ -69,7 +69,7 @@ func NewJobService(deps JobServiceDependencies) (*JobService, error) {
 	return &JobService{
 		jobClient:   deps.JobClient,
 		jobCreator:  provider,
-		getWatcher:  createGetWatcherFunc(context.Background(), deps.JobClient),
+		getWatcher:  createGetWatcherFunc(deps.JobClient),
 		getStreamer: createGetStreamerFunc(deps.PodClient),
 	}, nil
 }
@@ -107,7 +107,7 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 // createGetWatcherFunc creates a function that can create watchers for monitoring job status
 // It returns a getWatcherFunc that creates a RetryWatcher, which automatically reconnects
 // if the watch connection is lost
-func createGetWatcherFunc(ctx context.Context, jobClient jobClient) getWatcherFunc {
+func createGetWatcherFunc(jobClient jobClient) getWatcherFunc {
 	return func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error) {
 		nameSelector := fields.OneTermEqualSelector("metadata.name", jobName).String()
 		jobList, err := jobClient.List(ctx, metav1.ListOptions{
