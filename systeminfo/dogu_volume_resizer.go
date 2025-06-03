@@ -1,0 +1,123 @@
+package systeminfo
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/ces-importer/api/exporter"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log/slog"
+	"slices"
+	"sync"
+	"time"
+)
+
+const (
+	defaultWaitSecondsBetweenRetries = 10
+	defaultMaxWaitMinutes            = 10
+)
+
+var (
+	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+	maxWaitMinutes            = defaultMaxWaitMinutes
+	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
+)
+
+type doguVolumeResizer interface {
+	ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error
+}
+
+type defaultDoguVolumeResizer struct {
+	doguClient doguClient
+	pvcClient  pvcClient
+}
+
+func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
+	var wg sync.WaitGroup
+	var err error
+
+	for _, exporterDogu := range exporterDogus {
+		importerDoguIndex := slices.IndexFunc(importerDogus, func(dogu exporter.Dogu) bool { return dogu.Name == exporterDogu.Name })
+		if importerDoguIndex < 0 {
+			err = errors.Join(err, fmt.Errorf("failed to find dogu %s in the importing system", exporterDogu.Name))
+			continue
+		}
+
+		importerDogu := importerDogus[importerDoguIndex]
+
+		if exporterDogu.Volume.SizeInBytes > importerDogu.Volume.SizeInBytes {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err = d.resize(ctx, importerDogu.Name, exporterDogu.Volume.SizeInBytes)
+				if err != nil {
+					err = errors.Join(err, fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, err))
+				}
+			}()
+		}
+	}
+
+	wg.Wait()
+
+	return err
+}
+
+func (d *defaultDoguVolumeResizer) resize(ctx context.Context, fullDoguName string, newSizeInBytes int64) error {
+	fullImportDoguName, err := cescommons.QualifiedNameFromString(fullDoguName)
+	if err != nil {
+		return fmt.Errorf("dogu %s name is not a qualified dogu name: %w", fullDoguName, err)
+	}
+	doguName := fullImportDoguName.SimpleName.String()
+
+	dogu, err := d.doguClient.Get(ctx, doguName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("dogu %q could not be found: %w", dogu, err)
+	}
+
+	// convert sizeInBytes to a quantitiy
+	minDataVolumeSize := resource.NewQuantity(newSizeInBytes, resource.BinarySI)
+
+	slog.Info(fmt.Sprintf("Resizing dogu %s volume to %s", fullDoguName, minDataVolumeSize.String()))
+
+	dogu.Spec.Resources.MinDataVolumeSize = *minDataVolumeSize
+	_, err = d.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %w", doguName, err)
+	}
+
+	err = d.waitForPVCResize(ctx, doguName)
+	if err != nil {
+		return fmt.Errorf("error waiting for pvc of dogu %s to be resized: %w", doguName, err)
+	}
+
+	return nil
+}
+
+// waitForPVCResize waits until the pvc of the dogu has the expected size
+func (d *defaultDoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName string) error {
+	retries := 0
+	for {
+		retries++
+		if retries > maxRetries {
+			return fmt.Errorf("maximum amount of retries reached for the resize of Dogu %s volume", doguName)
+		}
+		// repeat every 10 seconds
+		time.Sleep(time.Duration(waitSecondsBetweenRetries) * time.Second)
+
+		pvc, err := d.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("could not get dogu %s pvc: %w", doguName, err)
+		}
+		requestedStorage := pvc.Spec.Resources.Requests.Storage()
+		actualStorage := pvc.Status.Capacity.Storage()
+
+		if requestedStorage.Equal(*actualStorage) {
+			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, actualStorage.String()))
+			return nil
+		}
+
+		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, actualStorage.String(), requestedStorage.String()))
+	}
+}
