@@ -103,15 +103,15 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to validate export mode: %w", err)
 	}
 
-	err = m.doguStopper.StopAll(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to stop all dogus: %w", err)
-	}
-
 	// TODO: Do not resize inside validate function, create a new interface
 	err = m.systemInfoValidator.Validate(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to validate system info: %w", err)
+	}
+
+	err = m.doguStopper.StopAll(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to stop all dogus: %w", err)
 	}
 
 	if isFinalMigration {
