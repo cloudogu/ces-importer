@@ -86,6 +86,65 @@ func (_c *mockJobClient_Create_Call) RunAndReturn(run func(context.Context, *v1.
 	return _c
 }
 
+// List provides a mock function with given fields: ctx, opts
+func (_m *mockJobClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.JobList, error) {
+	ret := _m.Called(ctx, opts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 *v1.JobList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) (*v1.JobList, error)); ok {
+		return rf(ctx, opts)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, metav1.ListOptions) *v1.JobList); ok {
+		r0 = rf(ctx, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1.JobList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, metav1.ListOptions) error); ok {
+		r1 = rf(ctx, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// mockJobClient_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type mockJobClient_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - opts metav1.ListOptions
+func (_e *mockJobClient_Expecter) List(ctx interface{}, opts interface{}) *mockJobClient_List_Call {
+	return &mockJobClient_List_Call{Call: _e.mock.On("List", ctx, opts)}
+}
+
+func (_c *mockJobClient_List_Call) Run(run func(ctx context.Context, opts metav1.ListOptions)) *mockJobClient_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(metav1.ListOptions))
+	})
+	return _c
+}
+
+func (_c *mockJobClient_List_Call) Return(_a0 *v1.JobList, _a1 error) *mockJobClient_List_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *mockJobClient_List_Call) RunAndReturn(run func(context.Context, metav1.ListOptions) (*v1.JobList, error)) *mockJobClient_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Watch provides a mock function with given fields: ctx, opts
 func (_m *mockJobClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	ret := _m.Called(ctx, opts)
