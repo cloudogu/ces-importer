@@ -17,6 +17,7 @@ type pvcClient interface {
 type jobClient interface {
 	Create(ctx context.Context, job *batchv1.Job, opts metav1.CreateOptions) (*batchv1.Job, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*batchv1.JobList, error)
 }
 
 type jobCreator interface {

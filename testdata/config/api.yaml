@@ -2,3 +2,5 @@
 apiKey: "${API_KEY}"
 host: "classic-ces.exporter"
 skipTLSVerify: true
+secretName: "ces-exporter-secret"
+secretDataKey: "apiKey"

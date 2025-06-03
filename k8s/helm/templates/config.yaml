@@ -6,19 +6,23 @@ metadata:
     {{- include "ces-importer.labels" . | nindent 4 }}
 data:
   logging.yaml: |
-  {{- toYaml .Values.config.logging | nindent 4 }}
+    {{- toYaml .Values.config.logging | nindent 4 }}
 
   api.yaml: |
-  {{- toYaml .Values.config.api | nindent 4 }}
+    apiKey: "${API_KEY}"
+    {{- toYaml .Values.config.api | nindent 4 }}
 
   migration.yaml: |
-  {{- toYaml .Values.config.migration | nindent 4 }}
+    {{- toYaml .Values.config.migration | nindent 4 }}
 
   ssh.yaml: |
-  {{- toYaml .Values.config.ssh | nindent 4 }}  
+    user: "root"
+    privateKeyPath: "/.ssh/privateKey"
+    {{- toYaml .Values.config.ssh | nindent 4 }}
 
   job.yaml: |
-  {{- toYaml .Values.config.job | nindent 4 }}
+    doguVolumeBasePath: "/data"
+    {{- toYaml .Values.config.job | nindent 4 }}
 
   job-container.yaml: |
     jobConfigMap: {{ include "job-config.name" . | quote }}
@@ -26,4 +30,5 @@ data:
     {{- toYaml .Values.job | nindent 4 }}
 
   smtp.yaml: |
-  {{- toYaml .Values.config.smtp | nindent 4 }}
+    password: "${MAIL_PASSWORD}"
+    {{- toYaml .Values.config.smtp | nindent 4 }}
