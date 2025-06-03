@@ -10,6 +10,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	watchAPI "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/watch"
 	"log/slog"
@@ -68,7 +69,7 @@ func NewJobService(deps JobServiceDependencies) (*JobService, error) {
 	return &JobService{
 		jobClient:   deps.JobClient,
 		jobCreator:  provider,
-		getWatcher:  createGetWatcherFunc(deps.JobClient),
+		getWatcher:  createGetWatcherFunc(context.Background(), deps.JobClient),
 		getStreamer: createGetStreamerFunc(deps.PodClient),
 	}, nil
 }
@@ -106,18 +107,31 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 // createGetWatcherFunc creates a function that can create watchers for monitoring job status
 // It returns a getWatcherFunc that creates a RetryWatcher, which automatically reconnects
 // if the watch connection is lost
-func createGetWatcherFunc(jobClient jobClient) getWatcherFunc {
+func createGetWatcherFunc(ctx context.Context, jobClient jobClient) getWatcherFunc {
 	return func(ctx context.Context, resourceVersion, jobName string) (watchAPI.Interface, error) {
+		nameSelector := fields.OneTermEqualSelector("metadata.name", jobName).String()
+		jobList, err := jobClient.List(ctx, metav1.ListOptions{
+			FieldSelector: nameSelector,
+		})
+		if err != nil {
+			slog.Error(fmt.Sprintf("error getting migration job: %v", err))
+		}
+		if len(jobList.Items) == 0 {
+			slog.Error(fmt.Sprintf("Job %s not found", jobName))
+		}
+		rv := jobList.ResourceVersion
+
+		slog.Info(fmt.Sprintf("get watcher func job name: %s, resource version: %s", jobName, resourceVersion))
 		// Create an adapter to make jobClient.Watch compatible with RetryWatcher
 		wrapper := watchAdapter{
 			watchFunc: func(ctx context.Context, opts metav1.ListOptions) (watchAPI.Interface, error) {
-				opts.LabelSelector = buildJobLabelSelector(jobName)
+				opts.FieldSelector = nameSelector
 				return jobClient.Watch(ctx, opts)
 			},
 		}
 
 		// Create a RetryWatcher that will automatically reconnect if the watch connection is lost
-		return watch.NewRetryWatcherWithContext(ctx, resourceVersion, wrapper)
+		return watch.NewRetryWatcherWithContext(ctx, rv, wrapper)
 	}
 }
 
