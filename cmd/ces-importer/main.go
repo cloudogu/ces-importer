@@ -27,7 +27,8 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	cfg, err := configuration.ReadCoordinatorConfig()
 	if err != nil {
@@ -40,10 +41,16 @@ func main() {
 	}
 
 	// start migration-loops
-	cronTask, err := runMigration(ctx, cfg, migrator)
-	if err != nil {
-		panic(fmt.Errorf("failed to run migration: %w", err))
-	}
+	migrationDone := make(chan struct{})
+	defer close(migrationDone)
+
+	go func() {
+		if mErr := runMigration(ctx, cfg, migrator); mErr != nil {
+			slog.Error("failed to run migration", "cause", mErr.Error())
+		}
+
+		migrationDone <- struct{}{}
+	}()
 
 	// Wait for interrupt signals to gracefully shut down the server with a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
@@ -52,28 +59,23 @@ func main() {
 	<-quit
 	slog.Info("Shutdown ces-importer ...")
 
-	done := make(chan struct{})
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer shutdownCancel()
 
-	if cronTask != nil {
-		go func() {
-			slog.Info("stopping cron-task ...")
-			cronTask.Stop()
-			slog.Info("cron-task stopped")
-			close(done)
-		}()
-	}
+	// Cancel main context
+	cancel()
 
 	select {
-	case <-done:
-		slog.Info("Shutdown completed")
-	case <-time.After(5 * time.Second):
-		slog.Info("shutdown-timeout of 5 seconds reached")
+	case <-shutdownCtx.Done():
+		slog.Info("graceful shutdown-timeout of 5 seconds reached, forcing exit")
+	case <-migrationDone:
+		slog.Info("Migration has been stopped.")
 	}
 
 	slog.Info("exiting")
 }
 
-func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) (*cron.Task, error) {
+func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) error {
 	var migrationRunning *atomic.Bool
 
 	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
@@ -84,22 +86,49 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 
 	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, runDeltaMigration(finalTimestamp, migrator, migrationRunning))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
+		return fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
 	}
 
 	slog.Info("Starting main delta migration loop")
 	go cronLooper.Run()
+	defer func() {
+		if cronLooper.Running() {
+			cronLooper.Stop()
+			slog.Info("stopped delta migration loop")
+		}
+	}()
 
 	if finalTimestamp.IsZero() {
 		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
-		return cronLooper, nil
+		// Wait for context to be done
+		<-ctx.Done()
+
+		slog.Info("Received shutdown signal, stopping infinite delta migration loop.")
+
+		return nil
 	}
 
-	slog.Info(fmt.Sprintf("Starting final migration loop at %q", finalTimestamp.String()))
+	slog.Info(fmt.Sprintf("Starting final migration at %q", finalTimestamp.String()))
 
-	go runFinalMigration(ctx, finalTimestamp, migrator, migrationRunning)
+	doneFinalMigration := make(chan error)
+	defer close(doneFinalMigration)
 
-	return cronLooper, nil
+	go func() {
+		doneFinalMigration <- runFinalMigration(ctx, finalTimestamp, migrator, migrationRunning)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("received shutdown signal before final migration has been completed: %w", ctx.Err())
+	case err = <-doneFinalMigration:
+		if err != nil {
+			return fmt.Errorf("failed to run final migration: %w", err)
+		}
+	}
+
+	slog.Info("Successfully finished final migration")
+
+	return nil
 }
 
 func runDeltaMigration(finalTimestamp migration.FinalTimestamp, migrator *migration.Migrator, migrationRunning *atomic.Bool) cron.JobFunc {
@@ -126,7 +155,7 @@ func runDeltaMigration(finalTimestamp migration.FinalTimestamp, migrator *migrat
 	}
 }
 
-func runFinalMigration(ctx context.Context, finalTimestamp migration.FinalTimestamp, migrator *migration.Migrator, migrationRunning *atomic.Bool) {
+func runFinalMigration(ctx context.Context, finalTimestamp migration.FinalTimestamp, migrator *migration.Migrator, migrationRunning *atomic.Bool) error {
 	finalTimestamp.WaitUntilReady(ctx, func() bool {
 		return !migrationRunning.Load()
 	})
@@ -135,11 +164,7 @@ func runFinalMigration(ctx context.Context, finalTimestamp migration.FinalTimest
 
 	finalContext := migration.SetFinalMigration(ctx)
 
-	if fErr := migrator.RunMigration(finalContext); fErr != nil {
-		slog.Error("failed to run final migration: ", "error", fErr.Error())
-	}
-
-	slog.Info("Final migration succeeded")
+	return migrator.RunMigration(finalContext)
 }
 
 func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
