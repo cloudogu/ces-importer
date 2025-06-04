@@ -51,9 +51,8 @@ func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, expo
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err = d.resize(ctx, importerDogu.Name, exporterDogu.Volume.SizeInBytes)
-				if err != nil {
-					err = errors.Join(err, fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, err))
+				if resizeErr := d.resize(ctx, importerDogu.Name, exporterDogu.Volume.SizeInBytes); resizeErr != nil {
+					err = errors.Join(err, fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, resizeErr))
 				}
 			}()
 		}
@@ -73,7 +72,7 @@ func (d *defaultDoguVolumeResizer) resize(ctx context.Context, fullDoguName stri
 
 	dogu, err := d.doguClient.Get(ctx, doguName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("dogu %q could not be found: %w", dogu, err)
+		return fmt.Errorf("dogu %q could not be found: %w", doguName, err)
 	}
 
 	// convert sizeInBytes to a quantitiy
@@ -84,7 +83,7 @@ func (d *defaultDoguVolumeResizer) resize(ctx context.Context, fullDoguName stri
 	dogu.Spec.Resources.MinDataVolumeSize = *minDataVolumeSize
 	_, err = d.doguClient.Update(ctx, dogu, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("dogu %s does not have enough volume capacity and the volume could not be resized: %w", doguName, err)
+		return fmt.Errorf("dogu %q does not have enough volume capacity and the volume could not be resized: %w", doguName, err)
 	}
 
 	err = d.waitForPVCResize(ctx, doguName)
@@ -101,14 +100,14 @@ func (d *defaultDoguVolumeResizer) waitForPVCResize(ctx context.Context, doguNam
 	for {
 		retries++
 		if retries > maxRetries {
-			return fmt.Errorf("maximum amount of retries reached for the resize of Dogu %s volume", doguName)
+			return fmt.Errorf("maximum amount of retries reached for the resize of dogu %q volume", doguName)
 		}
 		// repeat every 10 seconds
 		time.Sleep(time.Duration(waitSecondsBetweenRetries) * time.Second)
 
 		pvc, err := d.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("could not get dogu %s pvc: %w", doguName, err)
+			return fmt.Errorf("could not get pvc for dogu %q: %w", doguName, err)
 		}
 		requestedStorage := pvc.Spec.Resources.Requests.Storage()
 		actualStorage := pvc.Status.Capacity.Storage()

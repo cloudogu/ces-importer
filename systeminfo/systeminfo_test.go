@@ -6,6 +6,7 @@ import (
 	"github.com/cloudogu/ces-importer/api/exporter"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,6 +114,37 @@ func TestGetSystemInfo(t *testing.T) {
 		_, err := mockProvider.getImporterSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems components: error")
+	})
+	t.Run("should fail getting minDataVolumeSize", func(t *testing.T) {
+		// dogus
+		dogus := newMockDoguLister(t)
+		doguList := doguv2.DoguList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items: []doguv2.Dogu{{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testDogu",
+				},
+				Spec: doguv2.DoguSpec{
+					Name:    "",
+					Version: "",
+					Resources: doguv2.DoguResources{
+						DataVolumeSize: "1.2.3Gi",
+					},
+				},
+				Status: doguv2.DoguStatus{},
+			}},
+		}
+		dogus.EXPECT().List(mock.Anything, mock.Anything).Return(&doguList, nil)
+
+		mockProvider := Provider{
+			doguLister: dogus,
+		}
+		_, err := mockProvider.getImporterSystemInfo(context.Background())
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "ould not get minDataVolumeSize for dogu: quantities must match the regular expression")
 	})
 }
 

@@ -219,7 +219,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mJobRunner := NewMockJobRunner(t)
 
 		mDoguStopper := NewMockDoguStopper(t)
-		mDoguStopper.EXPECT().StopAll(testCtx).Return(nil)
 
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
@@ -250,6 +249,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 

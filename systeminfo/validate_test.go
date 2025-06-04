@@ -4,13 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
-	v2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	kubv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
@@ -22,8 +17,8 @@ func TestNewValidator(t *testing.T) {
 		v, err := NewValidator(p, dc, pc)
 		require.NoError(t, err)
 		require.Equal(t, v.systemInfoProvider, p)
-		require.Equal(t, v.doguClient, dc)
-		require.Equal(t, v.pvcClient, pc)
+		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).doguClient, dc)
+		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).pvcClient, pc)
 	})
 }
 
@@ -50,11 +45,15 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&sysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, sysInfo.Dogus, sysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("should return error mismatching dogu versions", func(t *testing.T) {
@@ -96,8 +95,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
@@ -134,8 +137,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
@@ -175,8 +182,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
@@ -221,8 +232,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
@@ -246,8 +261,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&exporter.SystemInfo{}, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		//mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, nil, nil).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "could not get exporter system info: testerror")
@@ -299,8 +318,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
@@ -352,8 +375,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.NoError(t, err)
@@ -398,8 +425,12 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.ErrorContains(t, err, "dogu k8s/nginx-static is not installed")
@@ -436,341 +467,14 @@ func TestValidateSystemInfo(t *testing.T) {
 		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
 		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
+		mVolumeResizer := newMockDoguVolumeResizer(t)
+		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
+
 		v := Validator{
 			systemInfoProvider: s,
+			doguVolumeResizer:  mVolumeResizer,
 		}
 		err := v.Validate(context.Background())
 		require.NoError(t, err)
 	})
-
-}
-
-func TestUpdatePVC(t *testing.T) {
-	t.Run("importing dogu pvc size is large enough", func(t *testing.T) {
-		v := Validator{}
-		exDogu := exporter.Dogu{
-			Name:    "",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.NoError(t, err)
-		}
-	})
-	t.Run("should fail to update pvc if doguName can not be parsed", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		pvcClient := newMockPvcClient(t)
-		v := Validator{
-			doguClient: doguClient,
-			pvcClient:  pvcClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2147483648,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "test",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 1073741824,
-			},
-		}
-
-		waitSecondsBetweenRetries = 1
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "dogu test name is not a qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'test'")
-	})
-
-	t.Run("importing dogu pvc size is not large enough", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		pvcClient := newMockPvcClient(t)
-		v := Validator{
-			doguClient: doguClient,
-			pvcClient:  pvcClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/nexus",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2147483648,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/nexus",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 1073741824,
-			},
-		}
-		pvc := &kubv1.PersistentVolumeClaim{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: kubv1.PersistentVolumeClaimSpec{
-				Resources: kubv1.VolumeResourceRequirements{
-					Requests: kubv1.ResourceList{
-						kubv1.ResourceStorage: resource.MustParse("2Gi"),
-					},
-				},
-			},
-			Status: kubv1.PersistentVolumeClaimStatus{
-				Capacity: kubv1.ResourceList{
-					kubv1.ResourceStorage: resource.MustParse("2Gi"),
-				},
-			},
-		}
-		dogu := v2.Dogu{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: v2.DoguSpec{
-				Resources: v2.DoguResources{},
-			},
-			Status: v2.DoguStatus{},
-		}
-
-		waitSecondsBetweenRetries = 1
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-		}()
-
-		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(pvc, nil)
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, dogu *v2.Dogu, options metav1.UpdateOptions) (*v2.Dogu, error) {
-			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
-			return nil, nil
-		})
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.NoError(t, err)
-		}
-	})
-
-	t.Run("can not find dogus volume", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		v := Validator{
-			doguClient: doguClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 3,
-			},
-		}
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
-
-		waitSecondsBetweenRetries = 1
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.ErrorContains(t, err, "dogu official/testDogu volume could not be found")
-		}
-	})
-
-	t.Run("can not update dogus volume", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		v := Validator{
-			doguClient: doguClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 3,
-			},
-		}
-		dogu := v2.Dogu{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: v2.DoguSpec{
-				Resources: v2.DoguResources{},
-			},
-			Status: v2.DoguStatus{},
-		}
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
-
-		waitSecondsBetweenRetries = 1
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.ErrorContains(t, err, "dogu official/testDogu does not have enough volume capacity and the volume could not be resized")
-		}
-	})
-
-	t.Run("should fail on maximum amount of retries reached", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		v := Validator{
-			doguClient: doguClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 3,
-			},
-		}
-		dogu := v2.Dogu{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: v2.DoguSpec{
-				Resources: v2.DoguResources{},
-			},
-			Status: v2.DoguStatus{},
-		}
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-
-		waitSecondsBetweenRetries = 1
-		maxRetries = 0
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.ErrorContains(t, err, "maximum amount of retries reached for the resize of Dogu testDogu volume")
-		}
-	})
-
-	t.Run("should fail on getting dogus pvc", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		pvcClient := newMockPvcClient(t)
-		v := Validator{
-			doguClient: doguClient,
-			pvcClient:  pvcClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 3,
-			},
-		}
-		dogu := v2.Dogu{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
-			Spec: v2.DoguSpec{
-				Resources: v2.DoguResources{},
-			},
-			Status: v2.DoguStatus{},
-		}
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		doguClient.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&dogu, nil)
-		pvcClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("testerror"))
-
-		waitSecondsBetweenRetries = 1
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.ErrorContains(t, err, "could not get dogu testDogu pvc")
-		}
-	})
-
-	t.Run("should catch panic", func(t *testing.T) {
-		doguClient := newMockDoguClient(t)
-		v := Validator{
-			doguClient: doguClient,
-		}
-		exDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 10,
-			},
-		}
-		imDogu := exporter.Dogu{
-			Name:    "official/testDogu",
-			Version: "",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 3,
-			},
-		}
-		doguClient.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Run(func(ctx context.Context, name string, opts metav1.GetOptions) { panic("panic!") }).Return(nil, nil)
-
-		waitSecondsBetweenRetries = 1
-		maxRetries = 0
-		defer func() {
-			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
-			maxRetries = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
-		}()
-
-		c := make(chan error)
-		go v.updatePVC(exDogu, imDogu, context.Background(), c)
-		err := <-c
-		if err != nil {
-			require.ErrorContains(t, err, "panic while updating pvc:")
-		}
-	})
-
 }
