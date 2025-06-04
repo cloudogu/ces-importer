@@ -59,7 +59,7 @@ func main() {
 	<-quit
 	slog.Info("Shutdown ces-importer ...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 
 	// Cancel main context
@@ -76,15 +76,15 @@ func main() {
 }
 
 func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *migration.Migrator) error {
-	var migrationRunning *atomic.Bool
+	var migrationRunning atomic.Bool
 
 	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
 	if err != nil {
-		slog.Warn("failed to parse final timestamp, use zero value", "cause", err)
+		slog.Warn("failed to parse final timestamp, fallback to zero value", "cause", err)
 		finalTimestamp = migration.FinalTimestamp{}
 	}
 
-	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, runDeltaMigration(finalTimestamp, migrator, migrationRunning))
+	cronLooper, err := cron.New(ctx, cfg.Migration.RegularCron, runDeltaMigration(finalTimestamp, migrator, &migrationRunning))
 	if err != nil {
 		return fmt.Errorf("failed to create cron looper for expression %q: %w", cfg.Migration.RegularCron, err)
 	}
@@ -92,14 +92,12 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 	slog.Info("Starting main delta migration loop")
 	go cronLooper.Run()
 	defer func() {
-		if cronLooper.Running() {
-			cronLooper.Stop()
-			slog.Info("stopped delta migration loop")
-		}
+		cronLooper.Stop()
+		slog.Info("stopped delta migration loop")
 	}()
 
 	if finalTimestamp.IsZero() {
-		slog.Info("No final migration timestamp configured. Final migration will NOT run.")
+		slog.Info("No valid final migration timestamp configured. Final migration will NOT run.")
 		// Wait for context to be done
 		<-ctx.Done()
 
@@ -108,13 +106,13 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 		return nil
 	}
 
-	slog.Info(fmt.Sprintf("Starting final migration at %q", finalTimestamp.String()))
+	slog.Info("Scheduled final migration", "startTime", finalTimestamp.String())
 
 	doneFinalMigration := make(chan error)
 	defer close(doneFinalMigration)
 
 	go func() {
-		doneFinalMigration <- runFinalMigration(ctx, finalTimestamp, migrator, migrationRunning)
+		doneFinalMigration <- runFinalMigration(ctx, finalTimestamp, migrator, &migrationRunning)
 	}()
 
 	select {
@@ -137,7 +135,7 @@ func runDeltaMigration(finalTimestamp migration.FinalTimestamp, migrator *migrat
 		migrationRunning.Store(true)
 		defer migrationRunning.Store(false)
 
-		if finalTimestamp.Expired() {
+		if !finalTimestamp.IsZero() && finalTimestamp.Expired() {
 			slog.Warn("Final migration timestamp is expired. Skipping delta migration.")
 			return 0, nil
 		}
@@ -161,7 +159,6 @@ func runFinalMigration(ctx context.Context, finalTimestamp migration.FinalTimest
 	})
 
 	slog.Info("Starting final migration")
-
 	finalContext := migration.SetFinalMigration(ctx)
 
 	return migrator.RunMigration(finalContext)
