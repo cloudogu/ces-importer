@@ -50,8 +50,9 @@ func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClie
 	return &Validator{
 		systemInfoProvider: p,
 		doguVolumeResizer: &defaultDoguVolumeResizer{
-			doguClient: doguClient,
-			pvcClient:  pvcClient,
+			doguClient:    doguClient,
+			pvcClient:     pvcClient,
+			excludedDogus: append(excludedDogus, doguNginx),
 		},
 	}, nil
 }

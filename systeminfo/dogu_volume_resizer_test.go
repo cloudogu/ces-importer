@@ -290,8 +290,9 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 		}, nil)
 
 		resizer := &defaultDoguVolumeResizer{
-			doguClient: mDoguClient,
-			pvcClient:  mPvcClient,
+			doguClient:    mDoguClient,
+			pvcClient:     mPvcClient,
+			excludedDogus: []string{"excluded/dogu"},
 		}
 
 		waitSecondsBetweenRetries = 0
@@ -317,6 +318,11 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 			},
 			{
 				Name:    "simpleName",
+				Version: "1.2.3",
+				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+			},
+			{
+				Name:    "excluded/dogu",
 				Version: "1.2.3",
 				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},

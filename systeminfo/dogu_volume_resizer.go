@@ -30,8 +30,9 @@ type doguVolumeResizer interface {
 }
 
 type defaultDoguVolumeResizer struct {
-	doguClient doguClient
-	pvcClient  pvcClient
+	doguClient    doguClient
+	pvcClient     pvcClient
+	excludedDogus []string
 }
 
 func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
@@ -39,6 +40,10 @@ func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, expo
 	var err error
 
 	for _, exporterDogu := range exporterDogus {
+		if slices.Contains(d.excludedDogus, exporterDogu.Name) {
+			continue
+		}
+
 		importerDoguIndex := slices.IndexFunc(importerDogus, func(dogu exporter.Dogu) bool { return dogu.Name == exporterDogu.Name })
 		if importerDoguIndex < 0 {
 			err = errors.Join(err, fmt.Errorf("failed to find dogu %s in the importing system", exporterDogu.Name))

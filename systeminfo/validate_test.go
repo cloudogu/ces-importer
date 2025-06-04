@@ -19,6 +19,7 @@ func TestNewValidator(t *testing.T) {
 		require.Equal(t, v.systemInfoProvider, p)
 		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).doguClient, dc)
 		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).pvcClient, pc)
+		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).excludedDogus, append(excludedDogus, doguNginx))
 	})
 }
 

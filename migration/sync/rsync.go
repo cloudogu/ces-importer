@@ -85,7 +85,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 
 	// sync data for every dogu
 	for _, dogu := range systemInfo.Dogus {
-		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
+		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
 		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
 		if err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))
