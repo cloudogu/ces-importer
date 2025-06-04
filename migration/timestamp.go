@@ -13,7 +13,7 @@ var (
 	tickDuration = 1 * time.Minute
 )
 
-// FinalTimestamp is the timestamp
+// FinalTimestamp is the timestamp of the final migration.
 type FinalTimestamp time.Time
 
 func (ft FinalTimestamp) time() time.Time {
