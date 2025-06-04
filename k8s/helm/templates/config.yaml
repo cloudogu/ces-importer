@@ -11,9 +11,11 @@ data:
   api.yaml: |
     apiKey: "${API_KEY}"
     {{- toYaml .Values.config.api | nindent 4 }}
+    {{- required "A valid host is required" .Values.config.api.host }}
 
   migration.yaml: |
     {{- toYaml .Values.config.migration | nindent 4 }}
+    {{- required "A valid regularSchedule is required" .Values.config.migration.regularSchedule }}
 
   ssh.yaml: |
     user: "root"
