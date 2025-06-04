@@ -26,10 +26,10 @@ func (ft FinalTimestamp) String() string {
 }
 
 // Expired return the status whether the final timestamp is expired meaning the time now is bigger than the time of
-// the final timestamp. By convention, the zero value for the timestamp can never expire.
+// the final timestamp. When FinalTimeStamp is the zero value the timestamp expires immediately.
 func (ft FinalTimestamp) Expired() bool {
 	if ft.time().IsZero() {
-		return false
+		return true
 	}
 
 	return time.Now().After(ft.time())

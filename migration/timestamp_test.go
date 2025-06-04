@@ -48,7 +48,7 @@ func TestFinalTimestamp_Expired(t *testing.T) {
 		{
 			name:     "Zero value",
 			time:     time.Time{},
-			expValue: false,
+			expValue: true,
 		},
 		{
 			name:     "valid value expired",
