@@ -107,7 +107,7 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 		return 0, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cron looper for expression %q (set as regularSchedule in values.yaml): %w", cfg.Migration.RegularCron, err)
+		return nil, fmt.Errorf("failed to create cron looper for expression %q (set as regularSchedule): %w", cfg.Migration.RegularCron, err)
 	}
 
 	if !finalTimestamp.IsZero() && time.Now().After(finalTimestamp) {

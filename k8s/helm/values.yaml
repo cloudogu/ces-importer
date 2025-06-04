@@ -36,7 +36,7 @@ config:
     # host configures the FQDN under which the exporter will be available for CES data export. The importer will
     # contact the exporter API, which returns all required data like data paths etc.
     # The exporter API endpoint is fixed and will be routed on the source side.
-    host: classic-ces.exporter
+    host: ""
     # secretName is the name of the secret that contains the exporter API key.
     secretName: "ces-importer-secret"
     # secretDataKey contains the key name within the secret that accommodates the actual exporter API key as value.
