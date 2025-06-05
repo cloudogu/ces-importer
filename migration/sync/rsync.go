@@ -17,7 +17,9 @@ import (
 	"sync"
 )
 
-var subDirsToIgnore = []string{"lost+found", "_private"}
+var (
+	subDirsToIgnore = []string{"lost+found", "_private"}
+)
 
 type exportDoguApiClient interface {
 	GetExportDogu(ctx context.Context) (*exporter.DoguExport, error)
@@ -38,10 +40,11 @@ type RsyncSyncer struct {
 	systemInfoProvider  systemInfoProvider
 	excludePattern      []configuration.ExcludePattern
 	doguVolumeBasePath  string
+	excludedDogus       []string
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string, excludedDogus []string) *RsyncSyncer {
 	commandMaker := func(name string, arg ...string) command {
 		return exec.Command(name, arg...)
 	}
@@ -54,6 +57,7 @@ func NewRsyncSyncer(host string, user string, privateKeyPath string, client expo
 		systemInfoProvider:  provider,
 		excludePattern:      excludePattern,
 		doguVolumeBasePath:  doguVolumeBasePath,
+		excludedDogus:       excludedDogus,
 	}
 }
 
@@ -85,7 +89,12 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 
 	// sync data for every dogu
 	for _, dogu := range systemInfo.Dogus {
-		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
+		isExcluded := slices.Contains(rs.excludedDogus, dogu.Name)
+		if isExcluded {
+			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s", dogu.Name))
+			continue
+		}
+		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
 		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
 		if err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))
@@ -198,6 +207,12 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 
 	// delete extraneous files from dest dirs
 	args = append(args, "--delete")
+
+	// turn sequences of nulls into sparse blocks
+	args = append(args, "--sparse")
+
+	// print some file-transfer stats
+	args = append(args, "--stats")
 
 	// exclude pattern
 	if exclude.Pattern != "" {

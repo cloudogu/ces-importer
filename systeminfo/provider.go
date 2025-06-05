@@ -35,10 +35,8 @@ func NewSystemInfoProvider(componentLister componentLister, doguLister doguListe
 	}, nil
 }
 
-// getImporterSystemInfo
-//
-// gets the current systems system info about dogus and components
-func (s *Provider) getImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+// GetImporterSystemInfo gets the current systems system info about dogus and components
+func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
 	// collect Dogus
 	dogus, err := s.doguLister.List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -75,6 +73,6 @@ func (s *Provider) getImporterSystemInfo(ctx context.Context) (*exporter.SystemI
 }
 
 // GetExporterSystemInfo gets the exporters system info via get request
-func (s *Provider) getExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (s *Provider) GetExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
 	return s.systemInfoApiClient.GetSystemInfo(ctx)
 }

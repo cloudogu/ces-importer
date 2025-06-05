@@ -22,9 +22,9 @@ func (_m *mockGetWatcherFunc) EXPECT() *mockGetWatcherFunc_Expecter {
 	return &mockGetWatcherFunc_Expecter{mock: &_m.Mock}
 }
 
-// Execute provides a mock function with given fields: ctx, resourceVersion
-func (_m *mockGetWatcherFunc) Execute(ctx context.Context, resourceVersion string) (watch.Interface, error) {
-	ret := _m.Called(ctx, resourceVersion)
+// Execute provides a mock function with given fields: ctx, jobName
+func (_m *mockGetWatcherFunc) Execute(ctx context.Context, jobName string) (watch.Interface, error) {
+	ret := _m.Called(ctx, jobName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
@@ -33,10 +33,10 @@ func (_m *mockGetWatcherFunc) Execute(ctx context.Context, resourceVersion strin
 	var r0 watch.Interface
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) (watch.Interface, error)); ok {
-		return rf(ctx, resourceVersion)
+		return rf(ctx, jobName)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) watch.Interface); ok {
-		r0 = rf(ctx, resourceVersion)
+		r0 = rf(ctx, jobName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(watch.Interface)
@@ -44,7 +44,7 @@ func (_m *mockGetWatcherFunc) Execute(ctx context.Context, resourceVersion strin
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, resourceVersion)
+		r1 = rf(ctx, jobName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,12 +59,12 @@ type mockGetWatcherFunc_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx context.Context
-//   - resourceVersion string
-func (_e *mockGetWatcherFunc_Expecter) Execute(ctx interface{}, resourceVersion interface{}) *mockGetWatcherFunc_Execute_Call {
-	return &mockGetWatcherFunc_Execute_Call{Call: _e.mock.On("Execute", ctx, resourceVersion)}
+//   - jobName string
+func (_e *mockGetWatcherFunc_Expecter) Execute(ctx interface{}, jobName interface{}) *mockGetWatcherFunc_Execute_Call {
+	return &mockGetWatcherFunc_Execute_Call{Call: _e.mock.On("Execute", ctx, jobName)}
 }
 
-func (_c *mockGetWatcherFunc_Execute_Call) Run(run func(ctx context.Context, resourceVersion string)) *mockGetWatcherFunc_Execute_Call {
+func (_c *mockGetWatcherFunc_Execute_Call) Run(run func(ctx context.Context, jobName string)) *mockGetWatcherFunc_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string))
 	})

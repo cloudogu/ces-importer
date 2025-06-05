@@ -7,3 +7,5 @@ from: importer@ces.com
 to:
   - recipient1@example.com
   - recipient2@example.com
+secretName: "ces-importer-secret"
+secretDataKey: "mailPassword"

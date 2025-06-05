@@ -9,6 +9,7 @@ require (
 	github.com/cloudogu/k8s-component-operator v1.8.0
 	github.com/cloudogu/k8s-dogu-lib/v2 v2.8.0
 	github.com/cloudogu/k8s-registry-lib v0.5.1
+	github.com/go-playground/validator/v10 v10.26.0
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.33.0
@@ -148,7 +149,11 @@ require (
 )
 
 require (
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.33.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect

@@ -5,3 +5,4 @@ exclude:
     pattern: "JENKINS_PATTERN"
   - dogu: "redmine"
     pattern: "REDMINE_PATTERN"
+verbose: true

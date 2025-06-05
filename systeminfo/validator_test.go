@@ -1,0 +1,366 @@
+package systeminfo
+
+import (
+	"context"
+	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+func TestNewValidator(t *testing.T) {
+	t.Run("should return new validator", func(t *testing.T) {
+		v := NewValidator([]string{"test1", "test2"})
+		require.NotNil(t, v)
+		assert.Equal(t, []string{"test1", "test2"}, v.excludedDogus)
+	})
+}
+
+func TestValidateSystemInfo(t *testing.T) {
+	t.Run("should return with no error", func(t *testing.T) {
+		sysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &sysInfo, &sysInfo)
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error mismatching dogu versions", func(t *testing.T) {
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "9.9.9",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
+	})
+
+	t.Run("should return error dogu not installed", func(t *testing.T) {
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
+	})
+
+	t.Run("should return error component not installed", func(t *testing.T) {
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
+	})
+
+	t.Run("should return error component mismatching component version", func(t *testing.T) {
+		exsysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "9.9.9",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
+	})
+
+	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "onlyPresentHere",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "testdogu",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
+	})
+
+	t.Run("should validate special nginx case", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "k8s/nginx-static",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+				{
+					Name:    "k8s/nginx-ingress",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "official/nginx",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.NoError(t, err)
+	})
+
+	t.Run("should throw error on nginx-static missing when validating nginx dogu", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "k8s/nginx-ingress",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "official/nginx",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.ErrorContains(t, err, "dogu k8s/nginx-static is not installed")
+	})
+
+	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
+		imSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := exporter.SystemInfo{
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "official/registrator",
+					Version: "1.2.3",
+					Volume: exporter.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []exporter.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{
+			excludedDogus: []string{"official/registrator", "test2"},
+		}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.NoError(t, err)
+	})
+}

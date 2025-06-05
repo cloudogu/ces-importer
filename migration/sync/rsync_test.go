@@ -41,13 +41,15 @@ func TestSyncData(t *testing.T) {
 			iterator++
 
 			assert.Equal(t, "rsync", name)
-			assert.Len(t, arg, 6)
+			assert.Len(t, arg, 8)
 			assert.Equal(t, "-avhz", arg[0])
 			assert.Equal(t, "--delete", arg[1])
-			assert.Equal(t, "-e", arg[2])
-			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[3])
-			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[4])
-			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[5])
+			assert.Equal(t, "--sparse", arg[2])
+			assert.Equal(t, "--stats", arg[3])
+			assert.Equal(t, "-e", arg[4])
+			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[5])
+			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[6])
+			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[7])
 
 			return cmd
 		}
@@ -209,6 +211,44 @@ func TestSyncData(t *testing.T) {
 		err := syncer.SyncData(context.Background())
 		require.ErrorIs(t, err, assert.AnError)
 		require.ErrorContains(t, err, "failed to sync source /a/b/db/ to destination ../../testdata/sync/test/db: rsync exited with error:")
+	})
+
+	t.Run("should not sync excluded dogu", func(t *testing.T) {
+		cmd := newMockCommand(t)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
+		}
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+			doguVolumeBasePath:  "../../testdata/sync",
+			excludedDogus:       []string{"official/test"},
+		}
+
+		// system info request
+		systemInfo := exporter.SystemInfo{
+			FQDN:        "",
+			IsMultinode: false,
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "official/test",
+					Version: "",
+					Volume:  exporter.DoguVolume{},
+				},
+			},
+			Components: nil,
+		}
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
+
+		err := syncer.SyncData(context.Background())
+		// this test is verified by there being no error and no calls to the cmd
+		require.NoError(t, err)
 	})
 }
 
@@ -382,8 +422,9 @@ func TestNewRsyncSyncer(t *testing.T) {
 		privateKeyPath := "/.ssh/private"
 		doguVolumeBasePath := "/dogu/volume"
 		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: "*.test"}}
+		excludedDogus := make([]string, 0)
 
-		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath)
+		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath, excludedDogus)
 
 		require.NotNil(t, syncer)
 		assert.Equal(t, host, syncer.host)

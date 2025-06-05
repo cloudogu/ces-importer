@@ -3,8 +3,6 @@ package cron
 import (
 	"context"
 	"fmt"
-	"log/slog"
-
 	"github.com/adhocore/gronx"
 	"github.com/adhocore/gronx/pkg/tasker"
 )
@@ -19,6 +17,8 @@ type taskRunner interface {
 	Run()
 	// Stop interrupts the provided task.
 	Stop()
+	// Running checks whether the taskRunner is running.
+	Running() bool
 }
 
 // Task allows executing functions in recurring points in time, depending on the system time. Considering
@@ -42,11 +42,15 @@ func New(ctx context.Context, expr string, jobClosure JobFunc) (*Task, error) {
 
 // Run executes the given function. It can be stopped with Stop(). Please note that Run() does not return an error.
 func (t *Task) Run() {
-	slog.Debug("starting a new run")
 	t.taskExecuter.Run()
 }
 
 // Stop stops the looping over the provided function given to Run().
 func (t *Task) Stop() {
 	t.taskExecuter.Stop()
+}
+
+// Running checks whether the taskRunner is running.
+func (t *Task) Running() bool {
+	return t.taskExecuter.Running()
 }

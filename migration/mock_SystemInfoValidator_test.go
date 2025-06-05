@@ -5,6 +5,7 @@ package migration
 import (
 	context "context"
 
+	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -21,17 +22,17 @@ func (_m *MockSystemInfoValidator) EXPECT() *MockSystemInfoValidator_Expecter {
 	return &MockSystemInfoValidator_Expecter{mock: &_m.Mock}
 }
 
-// Validate provides a mock function with given fields: ctx
-func (_m *MockSystemInfoValidator) Validate(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// Validate provides a mock function with given fields: ctx, exporterInfo, importerInfo
+func (_m *MockSystemInfoValidator) Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
+	ret := _m.Called(ctx, exporterInfo, importerInfo)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Validate")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, *exporter.SystemInfo, *exporter.SystemInfo) error); ok {
+		r0 = rf(ctx, exporterInfo, importerInfo)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,13 +47,15 @@ type MockSystemInfoValidator_Validate_Call struct {
 
 // Validate is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSystemInfoValidator_Expecter) Validate(ctx interface{}) *MockSystemInfoValidator_Validate_Call {
-	return &MockSystemInfoValidator_Validate_Call{Call: _e.mock.On("Validate", ctx)}
+//   - exporterInfo *exporter.SystemInfo
+//   - importerInfo *exporter.SystemInfo
+func (_e *MockSystemInfoValidator_Expecter) Validate(ctx interface{}, exporterInfo interface{}, importerInfo interface{}) *MockSystemInfoValidator_Validate_Call {
+	return &MockSystemInfoValidator_Validate_Call{Call: _e.mock.On("Validate", ctx, exporterInfo, importerInfo)}
 }
 
-func (_c *MockSystemInfoValidator_Validate_Call) Run(run func(ctx context.Context)) *MockSystemInfoValidator_Validate_Call {
+func (_c *MockSystemInfoValidator_Validate_Call) Run(run func(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo)) *MockSystemInfoValidator_Validate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(*exporter.SystemInfo), args[2].(*exporter.SystemInfo))
 	})
 	return _c
 }
@@ -62,7 +65,7 @@ func (_c *MockSystemInfoValidator_Validate_Call) Return(_a0 error) *MockSystemIn
 	return _c
 }
 
-func (_c *MockSystemInfoValidator_Validate_Call) RunAndReturn(run func(context.Context) error) *MockSystemInfoValidator_Validate_Call {
+func (_c *MockSystemInfoValidator_Validate_Call) RunAndReturn(run func(context.Context, *exporter.SystemInfo, *exporter.SystemInfo) error) *MockSystemInfoValidator_Validate_Call {
 	_c.Call.Return(run)
 	return _c
 }
