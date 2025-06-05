@@ -17,6 +17,8 @@ type taskRunner interface {
 	Run()
 	// Stop interrupts the provided task.
 	Stop()
+	// Running checks whether the taskRunner is running.
+	Running() bool
 }
 
 // Task allows executing functions in recurring points in time, depending on the system time. Considering
@@ -46,4 +48,9 @@ func (t *Task) Run() {
 // Stop stops the looping over the provided function given to Run().
 func (t *Task) Stop() {
 	t.taskExecuter.Stop()
+}
+
+// Running checks whether the taskRunner is running.
+func (t *Task) Running() bool {
+	return t.taskExecuter.Running()
 }
