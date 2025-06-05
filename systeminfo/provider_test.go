@@ -63,7 +63,7 @@ func TestGetSystemInfo(t *testing.T) {
 			componentLister: components,
 			doguLister:      dogus,
 		}
-		_, err := mockProvider.getImporterSystemInfo(context.Background())
+		_, err := mockProvider.GetImporterSystemInfo(context.Background())
 
 		require.NoError(t, err)
 	})
@@ -76,7 +76,7 @@ func TestGetSystemInfo(t *testing.T) {
 			componentLister: nil,
 			doguLister:      dogus,
 		}
-		_, err := mockProvider.getImporterSystemInfo(context.Background())
+		_, err := mockProvider.GetImporterSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems dogus: error")
 	})
@@ -111,7 +111,7 @@ func TestGetSystemInfo(t *testing.T) {
 			componentLister: components,
 			doguLister:      dogus,
 		}
-		_, err := mockProvider.getImporterSystemInfo(context.Background())
+		_, err := mockProvider.GetImporterSystemInfo(context.Background())
 
 		require.EqualError(t, err, "could not get systems components: error")
 	})
@@ -141,7 +141,7 @@ func TestGetSystemInfo(t *testing.T) {
 		mockProvider := Provider{
 			doguLister: dogus,
 		}
-		_, err := mockProvider.getImporterSystemInfo(context.Background())
+		_, err := mockProvider.GetImporterSystemInfo(context.Background())
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "ould not get minDataVolumeSize for dogu: quantities must match the regular expression")
@@ -192,7 +192,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 			systemInfoApiClient: apiCli,
 		}
 
-		apiSystemInfo, err := p.getExporterSystemInfo(context.Background())
+		apiSystemInfo, err := p.GetExporterSystemInfo(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, sInfo.Dogus, apiSystemInfo.Dogus)
 		require.Equal(t, sInfo.Components, apiSystemInfo.Components)
@@ -208,7 +208,7 @@ func TestGetExporterSystemInfo(t *testing.T) {
 			systemInfoApiClient: apiCli,
 		}
 
-		_, err := p.getExporterSystemInfo(context.Background())
+		_, err := p.GetExporterSystemInfo(context.Background())
 		require.EqualError(t, err, "testerror")
 	})
 }

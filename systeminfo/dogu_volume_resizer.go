@@ -6,6 +6,8 @@ import (
 	"fmt"
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/api/exporter"
+	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
@@ -25,17 +27,32 @@ var (
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
 )
 
-type doguVolumeResizer interface {
-	ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error
+// client used for interacting with dogus
+type doguClient interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguv2.Dogu, error)
+	Update(ctx context.Context, dogu *doguv2.Dogu, opts metav1.UpdateOptions) (*doguv2.Dogu, error)
 }
 
-type defaultDoguVolumeResizer struct {
+// client used for interacting with persistent volume claims
+type pvcClient interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.PersistentVolumeClaim, error)
+}
+
+type DoguVolumeResizer struct {
 	doguClient    doguClient
 	pvcClient     pvcClient
 	excludedDogus []string
 }
 
-func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
+func NewDoguVolumeResizer(doguClient doguClient, pvcCLient pvcClient) *DoguVolumeResizer {
+	return &DoguVolumeResizer{
+		doguClient:    doguClient,
+		pvcClient:     pvcCLient,
+		excludedDogus: append(excludedDogus, doguNginx),
+	}
+}
+
+func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
 	var wg sync.WaitGroup
 	var err error
 
@@ -68,7 +85,7 @@ func (d *defaultDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, expo
 	return err
 }
 
-func (d *defaultDoguVolumeResizer) resize(ctx context.Context, fullDoguName string, newSizeInBytes int64) error {
+func (d *DoguVolumeResizer) resize(ctx context.Context, fullDoguName string, newSizeInBytes int64) error {
 	fullImportDoguName, err := cescommons.QualifiedNameFromString(fullDoguName)
 	if err != nil {
 		return fmt.Errorf("dogu %s name is not a qualified dogu name: %w", fullDoguName, err)
@@ -100,7 +117,7 @@ func (d *defaultDoguVolumeResizer) resize(ctx context.Context, fullDoguName stri
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
-func (d *defaultDoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName string) error {
+func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName string) error {
 	retries := 0
 	for {
 		retries++

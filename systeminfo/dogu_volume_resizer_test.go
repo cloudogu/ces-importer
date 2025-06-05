@@ -16,7 +16,7 @@ import (
 func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 	testCtx := context.Background()
 	t.Run("should fail to resize pvc if doguName can not be parsed", func(t *testing.T) {
-		resizer := &defaultDoguVolumeResizer{}
+		resizer := &DoguVolumeResizer{}
 
 		err := resizer.resize(testCtx, "simpleDoguName", 1)
 
@@ -28,7 +28,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 		mDoguClient := newMockDoguClient(t)
 		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(nil, assert.AnError)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			doguClient: mDoguClient,
 		}
 
@@ -51,7 +51,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(dogu, nil)
 		mDoguClient.EXPECT().Update(testCtx, dogu, metav1.UpdateOptions{}).Return(nil, assert.AnError)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			doguClient: mDoguClient,
 		}
 
@@ -81,7 +81,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 		mPvcClient := newMockPvcClient(t)
 		mPvcClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(nil, assert.AnError)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			doguClient: mDoguClient,
 			pvcClient:  mPvcClient,
 		}
@@ -130,7 +130,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 			},
 		}, nil)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			doguClient: mDoguClient,
 			pvcClient:  mPvcClient,
 		}
@@ -152,7 +152,7 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 		mPvcClient := newMockPvcClient(t)
 		mPvcClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(nil, assert.AnError)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			pvcClient: mPvcClient,
 		}
 
@@ -195,7 +195,7 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 			return pvc, nil
 		})
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			pvcClient: mPvcClient,
 		}
 
@@ -240,7 +240,7 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 			return pvc, nil
 		})
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			pvcClient: mPvcClient,
 		}
 
@@ -289,7 +289,7 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 			},
 		}, nil)
 
-		resizer := &defaultDoguVolumeResizer{
+		resizer := &DoguVolumeResizer{
 			doguClient:    mDoguClient,
 			pvcClient:     mPvcClient,
 			excludedDogus: []string{"excluded/dogu"},
@@ -351,5 +351,19 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to find dogu official/otherDogu in the importing system")
 		assert.ErrorContains(t, err, "failed to resize dogu simpleName: dogu simpleName name is not a qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
+	})
+}
+
+func TestNewDoguVolumeResizer(t *testing.T) {
+	t.Run("should create new DoguVolumeResizer", func(t *testing.T) {
+		mDoguClient := newMockDoguClient(t)
+		mPvcClient := newMockPvcClient(t)
+
+		dvr := NewDoguVolumeResizer(mDoguClient, mPvcClient)
+
+		assert.NotNil(t, dvr)
+		assert.Equal(t, mDoguClient, dvr.doguClient)
+		assert.Equal(t, mPvcClient, dvr.pvcClient)
+		assert.Equal(t, append(excludedDogus, doguNginx), dvr.excludedDogus)
 	})
 }

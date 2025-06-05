@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
-	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
-	kubv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"slices"
 )
@@ -26,74 +23,41 @@ var (
 	}
 )
 
-// client used for interacting with persistent volume claims
-type doguClient interface {
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*doguv2.Dogu, error)
-	Update(ctx context.Context, dogu *doguv2.Dogu, opts metav1.UpdateOptions) (*doguv2.Dogu, error)
-}
+type Validator struct{}
 
-type pvcClient interface {
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*kubv1.PersistentVolumeClaim, error)
-}
-
-type systemInfoProvider interface {
-	getImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
-	getExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
-}
-
-type Validator struct {
-	systemInfoProvider systemInfoProvider
-	doguVolumeResizer  doguVolumeResizer
-}
-
-func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
-	return &Validator{
-		systemInfoProvider: p,
-		doguVolumeResizer: &defaultDoguVolumeResizer{
-			doguClient:    doguClient,
-			pvcClient:     pvcClient,
-			excludedDogus: append(excludedDogus, doguNginx),
-		},
-	}, nil
+func NewValidator() *Validator {
+	return &Validator{}
 }
 
 // Validate validates that the importing system has the same configuration as the exporting system
 // - dogus exist in correct version
 // - components exist in correct version
 // - pvcs are large enough (a resize is attempted)
-func (v *Validator) Validate(ctx context.Context) error {
+func (v *Validator) Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
 	slog.Info("Starting validation of system configuration")
-	imSystemInfo, err := v.systemInfoProvider.getImporterSystemInfo(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get importer system info: %s", err)
-	}
-	exSystemInfo, err := v.systemInfoProvider.getExporterSystemInfo(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get exporter system info: %s", err)
-	}
-	err = v.doValidateSystemInfo(*exSystemInfo, *imSystemInfo, ctx)
+
+	err := v.doValidateSystemInfo(exporterInfo, importerInfo, ctx)
 	if err != nil {
 		return fmt.Errorf("could not validate system info: %w", err)
 	}
-	slog.Info("System configuration validated")
+
+	slog.Info("System configuration validated successfully")
+
 	return nil
 }
 
-func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo exporter.SystemInfo, ctx context.Context) error {
+func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *exporter.SystemInfo, ctx context.Context) error {
 	//validate dogus
 	result := validateDogus(imInfo, exInfo)
 
 	// validate components
 	result = errors.Join(result, validateComponents(imInfo, exInfo))
 
-	// validate dogu-volume-sizes
-	result = errors.Join(result, v.doguVolumeResizer.ResizeDogusIfNeeded(ctx, exInfo.Dogus, imInfo.Dogus))
-
 	return result
 }
 
 // validateDogus validates that the importing system has the same configuration as the exporting system
-func validateDogus(imInfo exporter.SystemInfo, exInfo exporter.SystemInfo) (result error) {
+func validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
 	// Create a map of importing dogus for quick lookup
 	imDoguMap := make(map[string]exporter.Dogu)
 	for _, d := range imInfo.Dogus {
@@ -155,7 +119,7 @@ func validateNginxDogus(imDoguMap map[string]exporter.Dogu, result error) error 
 	return result
 }
 
-func validateComponents(imInfo exporter.SystemInfo, exInfo exporter.SystemInfo) (result error) {
+func validateComponents(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
 	imComponentsMap := make(map[string]exporter.Component)
 	for _, c := range imInfo.Components {
 		imComponentsMap[c.Name] = c

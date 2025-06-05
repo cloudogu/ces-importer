@@ -2,24 +2,15 @@ package systeminfo
 
 import (
 	"context"
-	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
-		p := newMockSystemInfoProvider(t)
-		dc := newMockDoguClient(t)
-		pc := newMockPvcClient(t)
-		v, err := NewValidator(p, dc, pc)
-		require.NoError(t, err)
-		require.Equal(t, v.systemInfoProvider, p)
-		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).doguClient, dc)
-		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).pvcClient, pc)
-		require.Equal(t, v.doguVolumeResizer.(*defaultDoguVolumeResizer).excludedDogus, append(excludedDogus, doguNginx))
+		v := NewValidator()
+		require.NotNil(t, v)
 	})
 }
 
@@ -42,18 +33,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&sysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&sysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, sysInfo.Dogus, sysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &sysInfo, &sysInfo)
 		require.NoError(t, err)
 	})
 
@@ -92,18 +74,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
 	})
 
@@ -134,18 +107,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
 	})
 
@@ -179,18 +143,9 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 			Components: []exporter.Component{},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
 	})
 
@@ -229,48 +184,10 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exsysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exsysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
-	})
-
-	t.Run("should return error getting importer system info", func(t *testing.T) {
-
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(nil, fmt.Errorf("testerror"))
-
-		v := Validator{
-			systemInfoProvider: s,
-		}
-		err := v.Validate(context.Background())
-		require.ErrorContains(t, err, "could not get importer system info: testerror")
-	})
-
-	t.Run("should return error getting exporter system info", func(t *testing.T) {
-
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&exporter.SystemInfo{}, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(nil, fmt.Errorf("testerror"))
-
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		//mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, nil, nil).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
-		require.ErrorContains(t, err, "could not get exporter system info: testerror")
 	})
 
 	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
@@ -315,18 +232,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
 	})
 
@@ -372,18 +280,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
 	})
 
@@ -422,18 +321,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.ErrorContains(t, err, "dogu k8s/nginx-static is not installed")
 	})
 
@@ -464,18 +354,9 @@ func TestValidateSystemInfo(t *testing.T) {
 				},
 			},
 		}
-		s := newMockSystemInfoProvider(t)
-		s.EXPECT().getImporterSystemInfo(context.Background()).Return(&imSysInfo, nil)
-		s.EXPECT().getExporterSystemInfo(mock.Anything).Return(&exSysInfo, nil)
 
-		mVolumeResizer := newMockDoguVolumeResizer(t)
-		mVolumeResizer.EXPECT().ResizeDogusIfNeeded(mock.Anything, exSysInfo.Dogus, imSysInfo.Dogus).Return(nil)
-
-		v := Validator{
-			systemInfoProvider: s,
-			doguVolumeResizer:  mVolumeResizer,
-		}
-		err := v.Validate(context.Background())
+		v := Validator{}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
 	})
 }

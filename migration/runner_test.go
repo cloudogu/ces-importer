@@ -3,6 +3,7 @@ package migration
 import (
 	"context"
 	"fmt"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -14,14 +15,28 @@ import (
 )
 
 func TestMigrator_RunMigration(t *testing.T) {
+	exporterInfo := &exporter.SystemInfo{
+		Dogus: []exporter.Dogu{{Name: "exporter/dogu"}},
+	}
+	importerInfo := &exporter.SystemInfo{
+		Dogus: []exporter.Dogu{{Name: "importer/dogu"}},
+	}
+
 	t.Run("should run delta migration", func(t *testing.T) {
 		testCtx := context.Background()
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -47,7 +62,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -69,8 +86,15 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(nil)
@@ -97,7 +121,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -117,7 +143,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -136,7 +166,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -159,7 +191,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(assert.AnError)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -180,7 +216,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -197,14 +235,18 @@ func TestMigrator_RunMigration(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to validate export mode:")
 	})
 
-	t.Run("should fail to run delta migration for error in systemInfoValidator", func(t *testing.T) {
+	t.Run("should fail to run delta migration for error in getting exporter system-info", func(t *testing.T) {
 		testCtx := context.Background()
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, assert.AnError)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(assert.AnError)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -225,7 +267,114 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
+			maintenanceModeHandler: mMaintenanceModeHandler,
+			mailSender:             mMailSender,
+			logWriter:              mLogWriter,
+			jobRunner:              mJobRunner,
+			doguStopper:            mDoguStopper,
+			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
+		}
+
+		err := m.RunMigration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to get system-info from exporter:")
+	})
+
+	t.Run("should fail to run delta migration for error getting importer system-info", func(t *testing.T) {
+		testCtx := context.Background()
+
+		mExportModeValidator := NewMockExportModeValidator(t)
+		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
+
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, assert.AnError)
+
+		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+
+		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
+
+		mMailSender := NewMockMailSender(t)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		mLogWriter := NewMockLogWriter(t)
+
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+
+		mJobRunner := NewMockJobRunner(t)
+
+		mDoguStopper := NewMockDoguStopper(t)
+
+		mDoguStarter := NewMockDoguStarter(t)
+		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
+
+		m := &Migrator{
+			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
+			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
+			maintenanceModeHandler: mMaintenanceModeHandler,
+			mailSender:             mMailSender,
+			logWriter:              mLogWriter,
+			jobRunner:              mJobRunner,
+			doguStopper:            mDoguStopper,
+			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
+		}
+
+		err := m.RunMigration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to get system-info from importer:")
+	})
+
+	t.Run("should fail to run delta migration for error in systemInfoValidator", func(t *testing.T) {
+		testCtx := context.Background()
+
+		mExportModeValidator := NewMockExportModeValidator(t)
+		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
+
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
+		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(assert.AnError)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+
+		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
+
+		mMailSender := NewMockMailSender(t)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		mLogWriter := NewMockLogWriter(t)
+
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+
+		mJobRunner := NewMockJobRunner(t)
+
+		mDoguStopper := NewMockDoguStopper(t)
+
+		mDoguStarter := NewMockDoguStarter(t)
+		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
+
+		m := &Migrator{
+			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
+			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -242,14 +391,75 @@ func TestMigrator_RunMigration(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to validate system info:")
 	})
 
+	t.Run("should fail to run delta migration for error in resizing dogu volumes", func(t *testing.T) {
+		testCtx := context.Background()
+
+		mExportModeValidator := NewMockExportModeValidator(t)
+		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
+
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
+		mSystemInfoValidator := NewMockSystemInfoValidator(t)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(assert.AnError)
+
+		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
+
+		mMailSender := NewMockMailSender(t)
+		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		mLogWriter := NewMockLogWriter(t)
+
+		mlogIntializer := NewMockLogInitializer(t)
+		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+
+		mJobRunner := NewMockJobRunner(t)
+
+		mDoguStopper := NewMockDoguStopper(t)
+
+		mDoguStarter := NewMockDoguStarter(t)
+		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
+
+		m := &Migrator{
+			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
+			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
+			maintenanceModeHandler: mMaintenanceModeHandler,
+			mailSender:             mMailSender,
+			logWriter:              mLogWriter,
+			jobRunner:              mJobRunner,
+			doguStopper:            mDoguStopper,
+			doguStarter:            mDoguStarter,
+			logInitializer:         mlogIntializer,
+		}
+
+		err := m.RunMigration(testCtx)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to resize dogu-volumes:")
+	})
+
 	t.Run("should fail to run delta migration for error stopping dogus", func(t *testing.T) {
 		testCtx := context.Background()
 
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -271,7 +481,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -294,8 +506,15 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -318,7 +537,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -349,8 +570,15 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 
@@ -376,7 +604,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -399,8 +629,15 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mExportModeValidator := NewMockExportModeValidator(t)
 		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
 
+		mSystemInfoProvider := NewMockSystemInfoProvider(t)
+		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
+		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
+
 		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx).Return(nil)
+		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
+
+		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
+		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
 
 		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 		mMaintenanceModeHandler.EXPECT().Enable(testCtx).Return(assert.AnError)
@@ -424,7 +661,9 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
+			systemInfoProvider:     mSystemInfoProvider,
 			systemInfoValidator:    mSystemInfoValidator,
+			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			logWriter:              mLogWriter,
@@ -546,7 +785,9 @@ func TestMigrator_cleanup(t *testing.T) {
 
 func TestNewMigrator(t *testing.T) {
 	mExportModeValidator := NewMockExportModeValidator(t)
+	mSystemInfoProvider := NewMockSystemInfoProvider(t)
 	mSystemInfoValidator := NewMockSystemInfoValidator(t)
+	mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
 	mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 	mMailSender := NewMockMailSender(t)
 	mLogWriter := NewMockLogWriter(t)
@@ -556,7 +797,9 @@ func TestNewMigrator(t *testing.T) {
 
 	m := NewMigrator(MigratorDependencies{
 		ExportModeValidator:    mExportModeValidator,
+		SystemInfoProvider:     mSystemInfoProvider,
 		SystemInfoValidator:    mSystemInfoValidator,
+		DoguVolumeResizer:      mDoguVolumeResizer,
 		MaintenanceModeHandler: mMaintenanceModeHandler,
 		MailSender:             mMailSender,
 		LogWriter:              mLogWriter,
@@ -567,7 +810,9 @@ func TestNewMigrator(t *testing.T) {
 
 	require.NotNil(t, m)
 	assert.Equal(t, mExportModeValidator, m.exportModeValidator)
+	assert.Equal(t, mSystemInfoProvider, m.systemInfoProvider)
 	assert.Equal(t, mSystemInfoValidator, m.systemInfoValidator)
+	assert.Equal(t, mDoguVolumeResizer, m.doguVolumeResizer)
 	assert.Equal(t, mMaintenanceModeHandler, m.maintenanceModeHandler)
 	assert.Equal(t, mMailSender, m.mailSender)
 	assert.Equal(t, mLogWriter, m.logWriter)
