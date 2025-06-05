@@ -3,14 +3,16 @@ package systeminfo
 import (
 	"context"
 	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestNewValidator(t *testing.T) {
 	t.Run("should return new validator", func(t *testing.T) {
-		v := NewValidator()
+		v := NewValidator([]string{"test1", "test2"})
 		require.NotNil(t, v)
+		assert.Equal(t, []string{"test1", "test2"}, v.excludedDogus)
 	})
 }
 
@@ -355,7 +357,9 @@ func TestValidateSystemInfo(t *testing.T) {
 			},
 		}
 
-		v := Validator{}
+		v := Validator{
+			excludedDogus: []string{"official/registrator", "test2"},
+		}
 		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
 	})

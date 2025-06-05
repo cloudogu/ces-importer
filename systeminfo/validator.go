@@ -15,18 +15,14 @@ const (
 	doguNginxIngress = "k8s/nginx-ingress"
 )
 
-var (
-	excludedDogus = []string{
-		"official/monitoring",
-		"premium/backup",
-		"official/registrator",
+type Validator struct {
+	excludedDogus []string
+}
+
+func NewValidator(excludedDogus []string) *Validator {
+	return &Validator{
+		excludedDogus: excludedDogus,
 	}
-)
-
-type Validator struct{}
-
-func NewValidator() *Validator {
-	return &Validator{}
 }
 
 // Validate validates that the importing system has the same configuration as the exporting system
@@ -48,7 +44,7 @@ func (v *Validator) Validate(_ context.Context, exporterInfo *exporter.SystemInf
 
 func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *exporter.SystemInfo) error {
 	//validate dogus
-	result := validateDogus(imInfo, exInfo)
+	result := v.validateDogus(imInfo, exInfo)
 
 	// validate components
 	result = errors.Join(result, validateComponents(imInfo, exInfo))
@@ -57,7 +53,7 @@ func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *ex
 }
 
 // validateDogus validates that the importing system has the same configuration as the exporting system
-func validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
+func (v *Validator) validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
 	// Create a map of importing dogus for quick lookup
 	imDoguMap := make(map[string]exporter.Dogu)
 	for _, d := range imInfo.Dogus {
@@ -67,7 +63,7 @@ func validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (re
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
 		// Skip excluded dogus
-		if slices.Contains(excludedDogus, exDogu.Name) {
+		if slices.Contains(v.excludedDogus, exDogu.Name) {
 			continue
 		}
 

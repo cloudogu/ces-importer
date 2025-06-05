@@ -359,11 +359,11 @@ func TestNewDoguVolumeResizer(t *testing.T) {
 		mDoguClient := newMockDoguClient(t)
 		mPvcClient := newMockPvcClient(t)
 
-		dvr := NewDoguVolumeResizer(mDoguClient, mPvcClient)
+		dvr := NewDoguVolumeResizer(mDoguClient, mPvcClient, []string{"test1", "test2"})
 
 		assert.NotNil(t, dvr)
 		assert.Equal(t, mDoguClient, dvr.doguClient)
 		assert.Equal(t, mPvcClient, dvr.pvcClient)
-		assert.Equal(t, append(excludedDogus, doguNginx), dvr.excludedDogus)
+		assert.Equal(t, append([]string{"test1", "test2"}, doguNginx), dvr.excludedDogus)
 	})
 }

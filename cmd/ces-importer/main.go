@@ -218,7 +218,7 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
 
-	systemInfoValidator := systeminfo.NewValidator()
+	systemInfoValidator := systeminfo.NewValidator(cfg.General.ExcludedDogus)
 
 	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.doguClient, k8sClientSet.pvcClient, cfg.General.ExcludedDogus)
 

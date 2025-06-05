@@ -44,7 +44,7 @@ type DoguVolumeResizer struct {
 	excludedDogus []string
 }
 
-func NewDoguVolumeResizer(doguClient doguClient, pvcCLient pvcClient) *DoguVolumeResizer {
+func NewDoguVolumeResizer(doguClient doguClient, pvcCLient pvcClient, excludedDogus []string) *DoguVolumeResizer {
 	return &DoguVolumeResizer{
 		doguClient:    doguClient,
 		pvcClient:     pvcCLient,
