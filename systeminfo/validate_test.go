@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/configuration"
 	v2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,7 +20,7 @@ func TestNewValidator(t *testing.T) {
 		p := newMockSystemInfoProvider(t)
 		dc := newMockDoguClient(t)
 		pc := newMockPvcClient(t)
-		v, err := NewValidator(p, dc, pc)
+		v, err := NewValidator(p, dc, pc, []string{})
 		require.NoError(t, err)
 		require.Equal(t, v.systemInfoProvider, p)
 		require.Equal(t, v.doguClient, dc)
@@ -438,11 +439,11 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{
 			systemInfoProvider: s,
+			excludedDogus:      configuration.GetExcludedDogus(),
 		}
 		err := v.Validate(context.Background())
 		require.NoError(t, err)
 	})
-
 }
 
 func TestUpdatePVC(t *testing.T) {

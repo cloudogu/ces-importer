@@ -13,10 +13,7 @@ type Job struct {
 	API
 	SSH
 	JobConfig
-
-	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
-	// "ecosystem". This value is required but inferred from the used Helm chart.
-	Namespace string
+	General
 }
 
 func ReadJobConfig() (Job, error) {
@@ -54,11 +51,16 @@ func ReadJobConfig() (Job, error) {
 		return Job{}, fmt.Errorf("failed to read job configuration: %w", err)
 	}
 
+	generalConfig := General{
+		ExcludedDogus: GetExcludedDogus(),
+		Namespace:     namespace,
+	}
+
 	return Job{
 		Logging:   loggingConfig,
 		API:       apiConfig,
 		SSH:       sshConfig,
 		JobConfig: jobConfig,
-		Namespace: namespace,
+		General:   generalConfig,
 	}, nil
 }

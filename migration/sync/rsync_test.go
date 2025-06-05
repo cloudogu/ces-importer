@@ -212,6 +212,44 @@ func TestSyncData(t *testing.T) {
 		require.ErrorIs(t, err, assert.AnError)
 		require.ErrorContains(t, err, "failed to sync source /a/b/db/ to destination ../../testdata/sync/test/db: rsync exited with error:")
 	})
+
+	t.Run("should not sync excluded dogu", func(t *testing.T) {
+		cmd := newMockCommand(t)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
+		}
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+			doguVolumeBasePath:  "../../testdata/sync",
+			excludedDogus:       []string{"official/test"},
+		}
+
+		// system info request
+		systemInfo := exporter.SystemInfo{
+			FQDN:        "",
+			IsMultinode: false,
+			Dogus: []exporter.Dogu{
+				{
+					Name:    "official/test",
+					Version: "",
+					Volume:  exporter.DoguVolume{},
+				},
+			},
+			Components: nil,
+		}
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
+
+		err := syncer.SyncData(context.Background())
+		// this test is verified by there being no error and no calls to the cmd
+		require.NoError(t, err)
+	})
 }
 
 func TestSyncDogu(t *testing.T) {
@@ -384,8 +422,9 @@ func TestNewRsyncSyncer(t *testing.T) {
 		privateKeyPath := "/.ssh/private"
 		doguVolumeBasePath := "/dogu/volume"
 		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: "*.test"}}
+		excludedDogus := make([]string, 0)
 
-		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath)
+		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath, excludedDogus)
 
 		require.NotNil(t, syncer)
 		assert.Equal(t, host, syncer.host)

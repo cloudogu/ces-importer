@@ -180,7 +180,7 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 
 	exportAPIService := createAPIService(cfg.API)
 
-	k8sClientSet, err := createK8Sclientset(cfg.Namespace)
+	k8sClientSet, err := createK8Sclientset(cfg.General.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clients for kubernetes: %v", err)
 	}
@@ -218,7 +218,7 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
 
-	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient)
+	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient, cfg.General.ExcludedDogus)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create systeminfo validator: %w", err)
 	}
