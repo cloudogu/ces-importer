@@ -8,6 +8,14 @@ import (
 	"os"
 )
 
+var (
+	excludedDogus = []string{
+		"official/monitoring",
+		"premium/backup",
+		"official/registrator",
+	}
+)
+
 const (
 	EnvBaseConfigPathKey    = "CONFIG_PATH"
 	EnvImporterNamespaceKey = "IMPORTER_NAMESPACE"
@@ -223,4 +231,9 @@ func joinValidationErrors(err error) error {
 	}
 
 	return allVErrors
+}
+
+// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
+func GetExcludedDogus() []string {
+	return append([]string(nil), excludedDogus...)
 }

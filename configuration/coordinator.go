@@ -12,14 +12,6 @@ import (
 	"path"
 )
 
-var (
-	excludedDogus = []string{
-		"official/monitoring",
-		"premium/backup",
-		"official/registrator",
-	}
-)
-
 type secretGetter interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Secret, error)
 }
@@ -145,9 +137,4 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		Smtp:         smtpConfig,
 		General:      generalConfig,
 	}, nil
-}
-
-// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
-func GetExcludedDogus() []string {
-	return append([]string(nil), excludedDogus...)
 }
