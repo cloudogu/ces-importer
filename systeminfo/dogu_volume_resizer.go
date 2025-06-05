@@ -54,7 +54,10 @@ func NewDoguVolumeResizer(doguClient doguClient, pvcCLient pvcClient, excludedDo
 
 func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
 	var wg sync.WaitGroup
+
 	var err error
+	errorsChan := make(chan error)
+	defer close(errorsChan)
 
 	for _, exporterDogu := range exporterDogus {
 		if slices.Contains(d.excludedDogus, exporterDogu.Name) {
@@ -74,11 +77,17 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 			go func() {
 				defer wg.Done()
 				if resizeErr := d.resize(ctx, importerDogu.Name, exporterDogu.Volume.SizeInBytes); resizeErr != nil {
-					err = errors.Join(err, fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, resizeErr))
+					errorsChan <- fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, resizeErr)
 				}
 			}()
 		}
 	}
+
+	go func() {
+		for resizeErr := range errorsChan {
+			err = errors.Join(err, resizeErr)
+		}
+	}()
 
 	wg.Wait()
 
@@ -129,7 +138,8 @@ func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName strin
 
 		pvc, err := d.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("could not get pvc for dogu %q: %w", doguName, err)
+			slog.Warn("could not get pvc for dogu %q: %w", doguName, err)
+			continue
 		}
 		requestedStorage := pvc.Spec.Resources.Requests.Storage()
 		actualStorage := pvc.Status.Capacity.Storage()
