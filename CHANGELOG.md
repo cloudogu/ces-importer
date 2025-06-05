@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - [#32] copy sparse files with rsync
+- [#38] stop dogus after system-validation
+  - This is needed to wait for dogu-volume-resizes to complete
 
 ### Changed
 - [#26] retrieve mail server password from a secret

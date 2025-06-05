@@ -94,7 +94,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s", dogu.Name))
 			continue
 		}
-		slog.Info("Starting sync for dogu ", "doguName", dogu.Name)
+		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
 		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
 		if err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))

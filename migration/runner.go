@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudogu/ces-importer/api/exporter"
 	"io"
 	"log/slog"
 	"time"
@@ -13,8 +14,17 @@ type ExportModeValidator interface {
 	Validate(ctx context.Context) error
 }
 
+type SystemInfoProvider interface {
+	GetExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+	GetImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+}
+
 type SystemInfoValidator interface {
-	Validate(ctx context.Context) error
+	Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error
+}
+
+type DoguVolumeResizer interface {
+	ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error
 }
 
 type DoguStopper interface {
@@ -48,7 +58,9 @@ type LogInitializer interface {
 
 type Migrator struct {
 	exportModeValidator    ExportModeValidator
+	systemInfoProvider     SystemInfoProvider
 	systemInfoValidator    SystemInfoValidator
+	doguVolumeResizer      DoguVolumeResizer
 	maintenanceModeHandler MaintenanceModeHandler
 	mailSender             MailSender
 	logWriter              LogWriter
@@ -60,7 +72,9 @@ type Migrator struct {
 
 type MigratorDependencies struct {
 	ExportModeValidator
+	SystemInfoProvider
 	SystemInfoValidator
+	DoguVolumeResizer
 	MaintenanceModeHandler
 	MailSender
 	LogWriter
@@ -73,7 +87,9 @@ type MigratorDependencies struct {
 func NewMigrator(dependencies MigratorDependencies) *Migrator {
 	return &Migrator{
 		exportModeValidator:    dependencies.ExportModeValidator,
+		systemInfoProvider:     dependencies.SystemInfoProvider,
 		systemInfoValidator:    dependencies.SystemInfoValidator,
+		doguVolumeResizer:      dependencies.DoguVolumeResizer,
 		maintenanceModeHandler: dependencies.MaintenanceModeHandler,
 		mailSender:             dependencies.MailSender,
 		logWriter:              dependencies.LogWriter,
@@ -103,15 +119,29 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to validate export mode: %w", err)
 	}
 
+	exporterInfo, err := m.systemInfoProvider.GetExporterSystemInfo(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get system-info from exporter: %w", err)
+	}
+
+	importerInfo, err := m.systemInfoProvider.GetImporterSystemInfo(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get system-info from importer: %w", err)
+	}
+
+	err = m.systemInfoValidator.Validate(ctx, exporterInfo, importerInfo)
+	if err != nil {
+		return fmt.Errorf("failed to validate system info: %w", err)
+	}
+
+	err = m.doguVolumeResizer.ResizeDogusIfNeeded(ctx, exporterInfo.Dogus, importerInfo.Dogus)
+	if err != nil {
+		return fmt.Errorf("failed to resize dogu-volumes: %w", err)
+	}
+
 	err = m.doguStopper.StopAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to stop all dogus: %w", err)
-	}
-
-	// TODO: Do not resize inside validate function, create a new interface
-	err = m.systemInfoValidator.Validate(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to validate system info: %w", err)
 	}
 
 	if isFinalMigration {

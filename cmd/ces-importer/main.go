@@ -218,10 +218,9 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
 
-	systemInfoValidator, err := systeminfo.NewValidator(systemInfoProvider, k8sClientSet.doguClient, k8sClientSet.pvcClient, cfg.General.ExcludedDogus)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create systeminfo validator: %w", err)
-	}
+	systemInfoValidator := systeminfo.NewValidator(cfg.General.ExcludedDogus)
+
+	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.doguClient, k8sClientSet.pvcClient, cfg.General.ExcludedDogus)
 
 	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
 
@@ -234,7 +233,9 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 
 	deps := migration.MigratorDependencies{
 		ExportModeValidator: exportModeValidator,
+		SystemInfoProvider:  systemInfoProvider,
 		SystemInfoValidator: systemInfoValidator,
+		DoguVolumeResizer:   doguVolumeResizer,
 		MaintenanceModeHandler: &maintenanceModeHandler{
 			service: exportAPIService.MaintenanceModeService,
 			title:   cfg.Migration.MaintenanceModeMessage.Title,
