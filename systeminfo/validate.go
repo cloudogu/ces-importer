@@ -27,11 +27,6 @@ var (
 	waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 	maxWaitMinutes            = defaultMaxWaitMinutes
 	maxRetries                = (maxWaitMinutes * 60) / waitSecondsBetweenRetries
-	excludedDogus             = []string{
-		"official/monitoring",
-		"premium/backup",
-		"official/registrator",
-	}
 )
 
 // client used for interacting with persistent volume claims
@@ -53,13 +48,15 @@ type Validator struct {
 	systemInfoProvider systemInfoProvider
 	doguClient         doguClient
 	pvcClient          pvcClient
+	excludedDogus      []string
 }
 
-func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClient) (*Validator, error) {
+func NewValidator(p systemInfoProvider, doguClient doguClient, pvcClient pvcClient, excludedDogus []string) (*Validator, error) {
 	return &Validator{
 		systemInfoProvider: p,
 		doguClient:         doguClient,
 		pvcClient:          pvcClient,
+		excludedDogus:      excludedDogus,
 	}, nil
 }
 
@@ -115,7 +112,7 @@ func (v *Validator) doValidateSystemInfo(exInfo exporter.SystemInfo, imInfo expo
 	}
 	for _, exDogu := range exInfo.Dogus {
 		// special case for excluded dogus
-		isExcluded := slices.Contains(excludedDogus, exDogu.Name)
+		isExcluded := slices.Contains(v.excludedDogus, exDogu.Name)
 		if isExcluded {
 			continue
 		}

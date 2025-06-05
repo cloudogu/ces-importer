@@ -177,6 +177,15 @@ type Smtp struct {
 	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
 }
 
+// General ces importer config
+type General struct {
+	// List of dogus that are excluded from the migration because they are not available in MN
+	ExcludedDogus []string
+	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
+	// "ecosystem". This value is required but inferred from the used Helm chart.
+	Namespace string
+}
+
 type Types interface {
 	API | Logging | Migration | JobContainer | JobConfig | SSH | Smtp
 }

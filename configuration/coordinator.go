@@ -12,6 +12,14 @@ import (
 	"path"
 )
 
+var (
+	excludedDogus = []string{
+		"official/monitoring",
+		"premium/backup",
+		"official/registrator",
+	}
+)
+
 type secretGetter interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Secret, error)
 }
@@ -26,10 +34,7 @@ type Coordinator struct {
 	JobConfig
 	JobContainer
 	Smtp
-
-	// Namespace contains the k8s namespace in which the importer Cloudogu EcoSystem is running., f. i.
-	// "ecosystem". This value is required but inferred from the used Helm chart.
-	Namespace string
+	General
 }
 
 // ValidateSecrets validates whether the secrets with their corresponding names exist as well as the defined data keys.
@@ -125,6 +130,11 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		return Coordinator{}, fmt.Errorf("failed to read smtp configuration: %w", err)
 	}
 
+	generalConfig := General{
+		ExcludedDogus: GetExcludedDogus(),
+		Namespace:     namespace,
+	}
+
 	return Coordinator{
 		Logging:      loggingConfig,
 		API:          apiConfig,
@@ -133,6 +143,11 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		JobConfig:    jobConfig,
 		JobContainer: jobContainerConfig,
 		Smtp:         smtpConfig,
-		Namespace:    namespace,
+		General:      generalConfig,
 	}, nil
+}
+
+// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
+func GetExcludedDogus() []string {
+	return append([]string(nil), excludedDogus...)
 }

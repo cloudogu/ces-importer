@@ -46,7 +46,7 @@ func run() int {
 
 	slog.Debug("Successfully created service for exporter API")
 
-	k8sClientSet, err := createK8SClientSet(jobConfig.Namespace)
+	k8sClientSet, err := createK8SClientSet(jobConfig.General.Namespace)
 	if err != nil {
 		slog.Error("failed to create k8s client set", "cause", err)
 		return 1
