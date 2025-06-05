@@ -2,12 +2,15 @@ package migration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
 
 const timeFormat = time.RFC3339
+
+var ErrExpiredTimestamp = errors.New("final migration timestamp is in the past")
 
 var (
 	tickDuration = 1 * time.Minute
@@ -82,7 +85,7 @@ func ParseFinalTimestamp(timestamp string) (FinalTimestamp, error) {
 	}
 
 	if time.Now().After(finalTimestamp) {
-		return FinalTimestamp{}, fmt.Errorf("final migration timestamp is in the past")
+		return FinalTimestamp{}, ErrExpiredTimestamp
 	}
 
 	return FinalTimestamp(finalTimestamp), nil

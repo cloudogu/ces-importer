@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -80,6 +81,11 @@ func runMigration(ctx context.Context, cfg configuration.Coordinator, migrator *
 
 	finalTimestamp, err := migration.ParseFinalTimestamp(cfg.FinalTimestamp)
 	if err != nil {
+		if errors.Is(err, migration.ErrExpiredTimestamp) {
+			slog.Error("no migration (delta/final) will run", "cause", err)
+			return nil
+		}
+
 		slog.Warn("failed to parse final timestamp, fallback to zero value", "cause", err)
 		finalTimestamp = migration.FinalTimestamp{}
 	}
