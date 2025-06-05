@@ -33,10 +33,10 @@ func NewValidator() *Validator {
 // - dogus exist in correct version
 // - components exist in correct version
 // - pvcs are large enough (a resize is attempted)
-func (v *Validator) Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
+func (v *Validator) Validate(_ context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
 	slog.Info("Starting validation of system configuration")
 
-	err := v.doValidateSystemInfo(exporterInfo, importerInfo, ctx)
+	err := v.doValidateSystemInfo(exporterInfo, importerInfo)
 	if err != nil {
 		return fmt.Errorf("could not validate system info: %w", err)
 	}
@@ -46,7 +46,7 @@ func (v *Validator) Validate(ctx context.Context, exporterInfo *exporter.SystemI
 	return nil
 }
 
-func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *exporter.SystemInfo, ctx context.Context) error {
+func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *exporter.SystemInfo) error {
 	//validate dogus
 	result := validateDogus(imInfo, exInfo)
 
