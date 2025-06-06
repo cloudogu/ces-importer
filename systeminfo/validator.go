@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
 	"slices"
 )
@@ -29,7 +29,7 @@ func NewValidator(excludedDogus []string) *Validator {
 // - dogus exist in correct version
 // - components exist in correct version
 // - pvcs are large enough (a resize is attempted)
-func (v *Validator) Validate(_ context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
+func (v *Validator) Validate(_ context.Context, exporterInfo *migration.SystemInfo, importerInfo *migration.SystemInfo) error {
 	slog.Info("Starting validation of system configuration")
 
 	err := v.doValidateSystemInfo(exporterInfo, importerInfo)
@@ -42,7 +42,7 @@ func (v *Validator) Validate(_ context.Context, exporterInfo *exporter.SystemInf
 	return nil
 }
 
-func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *exporter.SystemInfo) error {
+func (v *Validator) doValidateSystemInfo(exInfo *migration.SystemInfo, imInfo *migration.SystemInfo) error {
 	//validate dogus
 	result := v.validateDogus(imInfo, exInfo)
 
@@ -53,9 +53,9 @@ func (v *Validator) doValidateSystemInfo(exInfo *exporter.SystemInfo, imInfo *ex
 }
 
 // validateDogus validates that the importing system has the same configuration as the exporting system
-func (v *Validator) validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
+func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migration.SystemInfo) (result error) {
 	// Create a map of importing dogus for quick lookup
-	imDoguMap := make(map[string]exporter.Dogu)
+	imDoguMap := make(map[string]migration.Dogu)
 	for _, d := range imInfo.Dogus {
 		imDoguMap[d.Name] = d
 	}
@@ -86,7 +86,7 @@ func (v *Validator) validateDogus(imInfo *exporter.SystemInfo, exInfo *exporter.
 }
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid
-func validateRegularDogu(exDogu exporter.Dogu, imDoguMap map[string]exporter.Dogu, result error) error {
+func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.Dogu, result error) error {
 	imDogu, exists := imDoguMap[exDogu.Name]
 	if !exists {
 		return errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
@@ -103,7 +103,7 @@ func validateRegularDogu(exDogu exporter.Dogu, imDoguMap map[string]exporter.Dog
 }
 
 // validateNginxDogus validates the special case of nginx-related dogus
-func validateNginxDogus(imDoguMap map[string]exporter.Dogu, result error) error {
+func validateNginxDogus(imDoguMap map[string]migration.Dogu, result error) error {
 	nginxMnDogus := []string{doguNginxStatic, doguNginxIngress}
 	for _, name := range nginxMnDogus {
 		imDogu := imDoguMap[name]
@@ -115,8 +115,8 @@ func validateNginxDogus(imDoguMap map[string]exporter.Dogu, result error) error 
 	return result
 }
 
-func validateComponents(imInfo *exporter.SystemInfo, exInfo *exporter.SystemInfo) (result error) {
-	imComponentsMap := make(map[string]exporter.Component)
+func validateComponents(imInfo *migration.SystemInfo, exInfo *migration.SystemInfo) (result error) {
+	imComponentsMap := make(map[string]migration.Component)
 	for _, c := range imInfo.Components {
 		imComponentsMap[c.Name] = c
 	}

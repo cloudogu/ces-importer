@@ -5,7 +5,7 @@ package systeminfo
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
+	migration "github.com/cloudogu/ces-importer/migration"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,23 +23,23 @@ func (_m *mockSystemInfoApiClient) EXPECT() *mockSystemInfoApiClient_Expecter {
 }
 
 // GetSystemInfo provides a mock function with given fields: ctx
-func (_m *mockSystemInfoApiClient) GetSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (_m *mockSystemInfoApiClient) GetSystemInfo(ctx context.Context) (*migration.SystemInfo, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSystemInfo")
 	}
 
-	var r0 *exporter.SystemInfo
+	var r0 *migration.SystemInfo
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*exporter.SystemInfo, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (*migration.SystemInfo, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) *exporter.SystemInfo); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) *migration.SystemInfo); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exporter.SystemInfo)
+			r0 = ret.Get(0).(*migration.SystemInfo)
 		}
 	}
 
@@ -70,12 +70,12 @@ func (_c *mockSystemInfoApiClient_GetSystemInfo_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *mockSystemInfoApiClient_GetSystemInfo_Call) Return(_a0 *exporter.SystemInfo, _a1 error) *mockSystemInfoApiClient_GetSystemInfo_Call {
+func (_c *mockSystemInfoApiClient_GetSystemInfo_Call) Return(_a0 *migration.SystemInfo, _a1 error) *mockSystemInfoApiClient_GetSystemInfo_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockSystemInfoApiClient_GetSystemInfo_Call) RunAndReturn(run func(context.Context) (*exporter.SystemInfo, error)) *mockSystemInfoApiClient_GetSystemInfo_Call {
+func (_c *mockSystemInfoApiClient_GetSystemInfo_Call) RunAndReturn(run func(context.Context) (*migration.SystemInfo, error)) *mockSystemInfoApiClient_GetSystemInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }

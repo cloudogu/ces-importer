@@ -3,6 +3,7 @@ package exporter
 import (
 	"context"
 	"errors"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -12,21 +13,27 @@ func TestGetConfig(t *testing.T) {
 		name           string
 		mockResponse   []byte
 		mockError      error
-		expectedConfig *Configuration
+		expectedConfig *migration.Configuration
 		expectedError  bool
 	}{
 		{
 			name:         "successful config fetch",
-			mockResponse: []byte(`{"global": [{"key": "key","value": "value"}],"dogus": [{"name": "test-dogu","normal": [{"key": "key","value": "value"}]}]}`),
-			expectedConfig: &Configuration{
-				GlobalConfig: []KeyValue{
+			mockResponse: []byte(`{"global": [{"key": "key","value": "value"}],"dogus": [{"name": "test-dogu","normal": [{"key": "key","value": "value"}]}], "backupSchedules": [{"name": "bs1","schedule": "0 0 1 * *"}]}`),
+			expectedConfig: &migration.Configuration{
+				GlobalConfig: []migration.KeyValue{
 					{Key: "key", Value: "value"},
 				},
-				DoguConfigs: []DoguConfig{
+				DoguConfigs: []migration.DoguConfig{
 					{Name: "test-dogu",
-						NormalConfig: []KeyValue{
+						NormalConfig: []migration.KeyValue{
 							{Key: "key", Value: "value"},
 						},
+					},
+				},
+				BackupSchedules: []migration.BackupSchedule{
+					{
+						Name:     "bs1",
+						Schedule: "0 0 1 * *",
 					},
 				},
 			},

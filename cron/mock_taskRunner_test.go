@@ -49,6 +49,51 @@ func (_c *mockTaskRunner_Run_Call) RunAndReturn(run func()) *mockTaskRunner_Run_
 	return _c
 }
 
+// Running provides a mock function with no fields
+func (_m *mockTaskRunner) Running() bool {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Running")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// mockTaskRunner_Running_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Running'
+type mockTaskRunner_Running_Call struct {
+	*mock.Call
+}
+
+// Running is a helper method to define mock.On call
+func (_e *mockTaskRunner_Expecter) Running() *mockTaskRunner_Running_Call {
+	return &mockTaskRunner_Running_Call{Call: _e.mock.On("Running")}
+}
+
+func (_c *mockTaskRunner_Running_Call) Run(run func()) *mockTaskRunner_Running_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *mockTaskRunner_Running_Call) Return(_a0 bool) *mockTaskRunner_Running_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *mockTaskRunner_Running_Call) RunAndReturn(run func() bool) *mockTaskRunner_Running_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Stop provides a mock function with no fields
 func (_m *mockTaskRunner) Stop() {
 	_m.Called()

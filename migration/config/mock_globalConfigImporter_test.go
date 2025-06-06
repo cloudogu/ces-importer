@@ -5,7 +5,7 @@ package configuration
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
+	migration "github.com/cloudogu/ces-importer/migration"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,7 +23,7 @@ func (_m *mockGlobalConfigImporter) EXPECT() *mockGlobalConfigImporter_Expecter 
 }
 
 // importGlobalConfig provides a mock function with given fields: ctx, config
-func (_m *mockGlobalConfigImporter) importGlobalConfig(ctx context.Context, config exporter.GlobalConfig) error {
+func (_m *mockGlobalConfigImporter) importGlobalConfig(ctx context.Context, config migration.GlobalConfig) error {
 	ret := _m.Called(ctx, config)
 
 	if len(ret) == 0 {
@@ -31,7 +31,7 @@ func (_m *mockGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, exporter.GlobalConfig) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, migration.GlobalConfig) error); ok {
 		r0 = rf(ctx, config)
 	} else {
 		r0 = ret.Error(0)
@@ -47,14 +47,14 @@ type mockGlobalConfigImporter_importGlobalConfig_Call struct {
 
 // importGlobalConfig is a helper method to define mock.On call
 //   - ctx context.Context
-//   - config exporter.GlobalConfig
+//   - config migration.GlobalConfig
 func (_e *mockGlobalConfigImporter_Expecter) importGlobalConfig(ctx interface{}, config interface{}) *mockGlobalConfigImporter_importGlobalConfig_Call {
 	return &mockGlobalConfigImporter_importGlobalConfig_Call{Call: _e.mock.On("importGlobalConfig", ctx, config)}
 }
 
-func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) Run(run func(ctx context.Context, config exporter.GlobalConfig)) *mockGlobalConfigImporter_importGlobalConfig_Call {
+func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) Run(run func(ctx context.Context, config migration.GlobalConfig)) *mockGlobalConfigImporter_importGlobalConfig_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(exporter.GlobalConfig))
+		run(args[0].(context.Context), args[1].(migration.GlobalConfig))
 	})
 	return _c
 }
@@ -64,7 +64,7 @@ func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) Return(_a0 error) *m
 	return _c
 }
 
-func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) RunAndReturn(run func(context.Context, exporter.GlobalConfig) error) *mockGlobalConfigImporter_importGlobalConfig_Call {
+func (_c *mockGlobalConfigImporter_importGlobalConfig_Call) RunAndReturn(run func(context.Context, migration.GlobalConfig) error) *mockGlobalConfigImporter_importGlobalConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }

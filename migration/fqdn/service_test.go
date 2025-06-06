@@ -2,7 +2,7 @@ package fqdn
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -18,40 +18,40 @@ const (
 	emptyKey
 )
 
-func createExporterConfig(tc exporterConfigTestCase) *exporter.Configuration {
-	var globalConfigValues []exporter.KeyValue
+func createExporterConfig(tc exporterConfigTestCase) *migration.Configuration {
+	var globalConfigValues []migration.KeyValue
 
 	switch tc {
 	case validExporterConfig:
-		globalConfigValues = []exporter.KeyValue{
+		globalConfigValues = []migration.KeyValue{
 			{Key: globalCfgFQDNKey, Value: "test.com"},
 			{Key: globalCfgCertTypeKey, Value: "self-signed"},
 			{Key: globalCfgCertKey, Value: "certificate"},
 			{Key: globalCfgPrivateKey, Value: "privateKey"},
 		}
 	case emptyFqdn:
-		globalConfigValues = []exporter.KeyValue{
+		globalConfigValues = []migration.KeyValue{
 			// empty fqdn
 			{Key: globalCfgCertTypeKey, Value: "self-signed"},
 			{Key: globalCfgCertKey, Value: "certificate"},
 			{Key: globalCfgPrivateKey, Value: "privateKey"},
 		}
 	case emptyCertType:
-		globalConfigValues = []exporter.KeyValue{
+		globalConfigValues = []migration.KeyValue{
 			{Key: globalCfgFQDNKey, Value: "test.com"},
 			// empty certificate type
 			{Key: globalCfgCertKey, Value: "certificate"},
 			{Key: globalCfgPrivateKey, Value: "privateKey"},
 		}
 	case emptyCert:
-		globalConfigValues = []exporter.KeyValue{
+		globalConfigValues = []migration.KeyValue{
 			{Key: globalCfgFQDNKey, Value: "test.com"},
 			{Key: globalCfgCertTypeKey, Value: "self-signed"},
 			// empty certificate
 			{Key: globalCfgPrivateKey, Value: "privateKey"},
 		}
 	case emptyKey:
-		globalConfigValues = []exporter.KeyValue{
+		globalConfigValues = []migration.KeyValue{
 			{Key: globalCfgFQDNKey, Value: "test.com"},
 			{Key: globalCfgCertTypeKey, Value: "self-signed"},
 			{Key: globalCfgCertKey, Value: "certificate"},
@@ -59,7 +59,7 @@ func createExporterConfig(tc exporterConfigTestCase) *exporter.Configuration {
 		}
 	}
 
-	return &exporter.Configuration{
+	return &migration.Configuration{
 		GlobalConfig: globalConfigValues,
 	}
 }

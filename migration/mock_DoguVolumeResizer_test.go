@@ -5,7 +5,6 @@ package migration
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,7 +22,7 @@ func (_m *MockDoguVolumeResizer) EXPECT() *MockDoguVolumeResizer_Expecter {
 }
 
 // ResizeDogusIfNeeded provides a mock function with given fields: ctx, exporterDogus, importerDogus
-func (_m *MockDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
+func (_m *MockDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []Dogu, importerDogus []Dogu) error {
 	ret := _m.Called(ctx, exporterDogus, importerDogus)
 
 	if len(ret) == 0 {
@@ -31,7 +30,7 @@ func (_m *MockDoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, export
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, []exporter.Dogu, []exporter.Dogu) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []Dogu, []Dogu) error); ok {
 		r0 = rf(ctx, exporterDogus, importerDogus)
 	} else {
 		r0 = ret.Error(0)
@@ -47,15 +46,15 @@ type MockDoguVolumeResizer_ResizeDogusIfNeeded_Call struct {
 
 // ResizeDogusIfNeeded is a helper method to define mock.On call
 //   - ctx context.Context
-//   - exporterDogus []exporter.Dogu
-//   - importerDogus []exporter.Dogu
+//   - exporterDogus []Dogu
+//   - importerDogus []Dogu
 func (_e *MockDoguVolumeResizer_Expecter) ResizeDogusIfNeeded(ctx interface{}, exporterDogus interface{}, importerDogus interface{}) *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call {
 	return &MockDoguVolumeResizer_ResizeDogusIfNeeded_Call{Call: _e.mock.On("ResizeDogusIfNeeded", ctx, exporterDogus, importerDogus)}
 }
 
-func (_c *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call) Run(run func(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu)) *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call {
+func (_c *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call) Run(run func(ctx context.Context, exporterDogus []Dogu, importerDogus []Dogu)) *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]exporter.Dogu), args[2].([]exporter.Dogu))
+		run(args[0].(context.Context), args[1].([]Dogu), args[2].([]Dogu))
 	})
 	return _c
 }
@@ -65,7 +64,7 @@ func (_c *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call) Return(_a0 error) *Moc
 	return _c
 }
 
-func (_c *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call) RunAndReturn(run func(context.Context, []exporter.Dogu, []exporter.Dogu) error) *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call {
+func (_c *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call) RunAndReturn(run func(context.Context, []Dogu, []Dogu) error) *MockDoguVolumeResizer_ResizeDogusIfNeeded_Call {
 	_c.Call.Return(run)
 	return _c
 }

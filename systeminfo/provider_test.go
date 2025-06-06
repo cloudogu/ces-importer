@@ -3,7 +3,7 @@ package systeminfo
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/assert"
@@ -168,15 +168,15 @@ func TestNewSystemInfoProvider(t *testing.T) {
 
 func TestGetExporterSystemInfo(t *testing.T) {
 	t.Run("should get exporter system info", func(t *testing.T) {
-		sInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		sInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testD",
 					Version: "1.1.1",
-					Volume:  exporter.DoguVolume{},
+					Volume:  migration.DoguVolume{},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testC",
 					Version: "1.2.3",

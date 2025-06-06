@@ -2,7 +2,7 @@ package configuration
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	backupv1 "github.com/cloudogu/k8s-backup-operator/pkg/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 			backupScheduleClient: mockBsc,
 		}
 
-		schedules := []exporter.BackupSchedule{
+		schedules := []migration.BackupSchedule{
 			{Name: "schedule1", Schedule: "0 0 * * *"},
 			{Name: "schedule2", Schedule: "2 2 * 3 *"},
 		}
@@ -52,7 +52,7 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 			backupScheduleClient: mockBsc,
 		}
 
-		schedules := []exporter.BackupSchedule{
+		schedules := []migration.BackupSchedule{
 			{Name: "schedule1", Schedule: "0 0 * * *"},
 			{Name: "schedule2", Schedule: "2 2 * 3 *"},
 		}
@@ -74,7 +74,7 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 			backupScheduleClient: mockBsc,
 		}
 
-		schedules := []exporter.BackupSchedule{
+		schedules := []migration.BackupSchedule{
 			{Name: "schedule1", Schedule: "0 0 * * *"},
 			{Name: "schedule2", Schedule: "2 2 * 3 *"},
 		}

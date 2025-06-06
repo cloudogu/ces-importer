@@ -3,8 +3,8 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -70,14 +70,14 @@ func TestSyncData(t *testing.T) {
 		}
 
 		// system info request
-		systemInfo := exporter.SystemInfo{
+		systemInfo := migration.SystemInfo{
 			FQDN:        "",
 			IsMultinode: false,
-			Dogus: []exporter.Dogu{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/test",
 					Version: "",
-					Volume:  exporter.DoguVolume{},
+					Volume:  migration.DoguVolume{},
 				},
 			},
 			Components: nil,
@@ -86,7 +86,7 @@ func TestSyncData(t *testing.T) {
 		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 
 		// set export dogu request
-		export := exporter.DoguExport{
+		export := migration.DoguExport{
 			Dogu:         "test",
 			VolumePath:   "/a/b",
 			ExporterPort: 1234,
@@ -137,14 +137,14 @@ func TestSyncData(t *testing.T) {
 		}
 
 		// system info request
-		systemInfo := exporter.SystemInfo{
+		systemInfo := migration.SystemInfo{
 			FQDN:        "",
 			IsMultinode: false,
-			Dogus: []exporter.Dogu{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/test",
 					Version: "",
-					Volume:  exporter.DoguVolume{},
+					Volume:  migration.DoguVolume{},
 				},
 			},
 			Components: nil,
@@ -186,14 +186,14 @@ func TestSyncData(t *testing.T) {
 		}
 
 		// system info request
-		systemInfo := exporter.SystemInfo{
+		systemInfo := migration.SystemInfo{
 			FQDN:        "",
 			IsMultinode: false,
-			Dogus: []exporter.Dogu{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/test",
 					Version: "",
-					Volume:  exporter.DoguVolume{},
+					Volume:  migration.DoguVolume{},
 				},
 			},
 			Components: nil,
@@ -201,7 +201,7 @@ func TestSyncData(t *testing.T) {
 		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 
 		// set export dogu request
-		export := exporter.DoguExport{
+		export := migration.DoguExport{
 			Dogu:         "test",
 			VolumePath:   "/a/b",
 			ExporterPort: 1234,
@@ -232,14 +232,14 @@ func TestSyncData(t *testing.T) {
 		}
 
 		// system info request
-		systemInfo := exporter.SystemInfo{
+		systemInfo := migration.SystemInfo{
 			FQDN:        "",
 			IsMultinode: false,
-			Dogus: []exporter.Dogu{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/test",
 					Version: "",
-					Volume:  exporter.DoguVolume{},
+					Volume:  migration.DoguVolume{},
 				},
 			},
 			Components: nil,

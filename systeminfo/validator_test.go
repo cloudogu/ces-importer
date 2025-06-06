@@ -2,7 +2,7 @@ package systeminfo
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -18,17 +18,17 @@ func TestNewValidator(t *testing.T) {
 
 func TestValidateSystemInfo(t *testing.T) {
 	t.Run("should return with no error", func(t *testing.T) {
-		sysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		sysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -42,34 +42,34 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should return error mismatching dogu versions", func(t *testing.T) {
-		exsysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exsysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "9.9.9",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -83,26 +83,26 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should return error dogu not installed", func(t *testing.T) {
-		exsysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exsysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{},
-			Components: []exporter.Component{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{},
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -116,34 +116,34 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should return error component not installed", func(t *testing.T) {
-		exsysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exsysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{},
+			Components: []migration.Component{},
 		}
 
 		v := Validator{}
@@ -152,34 +152,34 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should return error component mismatching component version", func(t *testing.T) {
-		exsysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exsysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "9.9.9",
@@ -193,41 +193,41 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 				{
 					Name:    "onlyPresentHere",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "testdogu",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -241,41 +241,41 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should validate special nginx case", func(t *testing.T) {
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "k8s/nginx-static",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 				{
 					Name:    "k8s/nginx-ingress",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/nginx",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -289,34 +289,34 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should throw error on nginx-static missing when validating nginx dogu", func(t *testing.T) {
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "k8s/nginx-ingress",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/nginx",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
@@ -330,26 +330,26 @@ func TestValidateSystemInfo(t *testing.T) {
 	})
 
 	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
-		imSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{},
-			Components: []exporter.Component{
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{},
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",
 				},
 			},
 		}
-		exSysInfo := exporter.SystemInfo{
-			Dogus: []exporter.Dogu{
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
 				{
 					Name:    "official/registrator",
 					Version: "1.2.3",
-					Volume: exporter.DoguVolume{
+					Volume: migration.DoguVolume{
 						SizeInBytes: 10,
 					},
 				},
 			},
-			Components: []exporter.Component{
+			Components: []migration.Component{
 				{
 					Name:    "testcomponent",
 					Version: "1.2.3",

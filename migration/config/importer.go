@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"path"
 	"strings"
 )
 
 type configGetter interface {
-	GetConfig(ctx context.Context) (*exporter.Configuration, error)
+	GetConfig(ctx context.Context) (*migration.Configuration, error)
 }
 
 type globalConfigRepo interface {
@@ -28,15 +28,15 @@ type doguConfigRepo interface {
 }
 
 type globalConfigImporter interface {
-	importGlobalConfig(ctx context.Context, config exporter.GlobalConfig) error
+	importGlobalConfig(ctx context.Context, config migration.GlobalConfig) error
 }
 
 type doguConfigImporter interface {
-	importDoguConfigs(ctx context.Context, config []exporter.DoguConfig) error
+	importDoguConfigs(ctx context.Context, config []migration.DoguConfig) error
 }
 
 type backupScheduleImporter interface {
-	importBackupSchedules(ctx context.Context, config []exporter.BackupSchedule) error
+	importBackupSchedules(ctx context.Context, config []migration.BackupSchedule) error
 }
 
 type ConfigImporter struct {

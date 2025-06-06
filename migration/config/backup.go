@@ -3,7 +3,7 @@ package configuration
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	backupv1 "github.com/cloudogu/k8s-backup-operator/pkg/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
@@ -20,7 +20,7 @@ type cesBackupScheduleImporter struct {
 	backupScheduleClient backupScheduleClient
 }
 
-func (bsi *cesBackupScheduleImporter) importBackupSchedules(ctx context.Context, config []exporter.BackupSchedule) error {
+func (bsi *cesBackupScheduleImporter) importBackupSchedules(ctx context.Context, config []migration.BackupSchedule) error {
 	slog.Info("Importing backup schedules...")
 	for _, schedule := range config {
 		if err := bsi.backupScheduleClient.Delete(ctx, schedule.Name, metav1.DeleteOptions{}); err != nil {

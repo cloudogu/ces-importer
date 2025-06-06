@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"io"
 	"log/slog"
 	"time"
@@ -15,16 +14,16 @@ type ExportModeValidator interface {
 }
 
 type SystemInfoProvider interface {
-	GetExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
-	GetImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+	GetExporterSystemInfo(ctx context.Context) (*SystemInfo, error)
+	GetImporterSystemInfo(ctx context.Context) (*SystemInfo, error)
 }
 
 type SystemInfoValidator interface {
-	Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error
+	Validate(ctx context.Context, exporterInfo *SystemInfo, importerInfo *SystemInfo) error
 }
 
 type DoguVolumeResizer interface {
-	ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error
+	ResizeDogusIfNeeded(ctx context.Context, exporterDogus []Dogu, importerDogus []Dogu) error
 }
 
 type DoguStopper interface {
