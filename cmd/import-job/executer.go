@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/migration"
 	migrationConfig "github.com/cloudogu/ces-importer/migration/config"
@@ -30,14 +31,14 @@ type ImportExecuter struct {
 	fqdnChanger
 }
 
-func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSet k8sClients) *ImportExecuter {
-	globalConfigRepo := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
-	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.configMap)
-	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.secret)
+func NewImportExecuter(cfg configuration.Job, apiService apiService, k8sClientSet importer.K8sClients) *ImportExecuter {
+	globalConfigRepo := repository.NewGlobalConfigRepository(k8sClientSet.ConfigMap)
+	doguConfigRepo := repository.NewDoguConfigRepository(k8sClientSet.ConfigMap)
+	sensitiveDoguConfigRepo := repository.NewSensitiveDoguConfigRepository(k8sClientSet.Secret)
 
 	ds := sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath, apiService.dogu, apiService.system, cfg.Exclude, cfg.DoguVolumeBasePath, cfg.ExcludedDogus)
-	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.config, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, k8sClientSet.backupSchedule)
-	fc := migrationFQDN.NewService(apiService.config, globalConfigRepo, k8sClientSet.configMap, k8sClientSet.secret)
+	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.config, globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo, k8sClientSet.BackupSchedule)
+	fc := migrationFQDN.NewService(apiService.config, globalConfigRepo, k8sClientSet.ConfigMap, k8sClientSet.Secret)
 
 	return &ImportExecuter{
 		configSyncer: cs,

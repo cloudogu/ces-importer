@@ -1,0 +1,75 @@
+package importer
+
+import (
+	"fmt"
+	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
+	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
+	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
+	"k8s.io/client-go/kubernetes"
+	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+)
+
+type K8sClients struct {
+	Pvc            corev1.PersistentVolumeClaimInterface
+	Pod            corev1.PodInterface
+	Job            batchv1.JobInterface
+	ConfigMap      corev1.ConfigMapInterface
+	Secret         corev1.SecretInterface
+	Dogu           doguLibClient.DoguInterface
+	Component      componentEcoClient.ComponentInterface
+	BackupSchedule backupEcosystem.BackupScheduleInterface
+}
+
+func CreateK8SClientSet(namespace string) (K8sClients, error) {
+	k8sRestConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to read kube config: %w", err)
+	}
+
+	k8sClientSet, err := kubernetes.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to create k8s client set: %w", err)
+	}
+
+	k8sCoreClient := k8sClientSet.CoreV1()
+	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(namespace)
+	k8sPodClient := k8sCoreClient.Pods(namespace)
+	k8sConfigMapClient := k8sCoreClient.ConfigMaps(namespace)
+	k8sSecretClient := k8sCoreClient.Secrets(namespace)
+
+	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
+
+	ecoSystemClient, err := doguLibClient.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
+	}
+
+	k8sDoguClient := ecoSystemClient.Dogus(namespace)
+
+	v1Alpha1Client, err := componentEcoClient.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to create component client: %w", err)
+	}
+
+	k8sComponentClient := v1Alpha1Client.Components(namespace)
+
+	backupClient, err := backupEcosystem.NewForConfig(k8sRestConfig)
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to create ecosystem backup client: %w", err)
+	}
+
+	backupScheduleClient := backupClient.BackupSchedules(namespace)
+
+	return K8sClients{
+		Pvc:            k8sPVCClient,
+		Pod:            k8sPodClient,
+		Job:            k8sJobClient,
+		ConfigMap:      k8sConfigMapClient,
+		Secret:         k8sSecretClient,
+		Dogu:           k8sDoguClient,
+		Component:      k8sComponentClient,
+		BackupSchedule: backupScheduleClient,
+	}, nil
+}

@@ -10,16 +10,10 @@ import (
 	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
-	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
-	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"github.com/cloudogu/k8s-registry-lib/repository"
-	"k8s.io/client-go/kubernetes"
-	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"log/slog"
 	"os"
 	"os/signal"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"syscall"
 	"time"
 )
@@ -83,7 +77,7 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 
 	exportAPIService := createAPIService(cfg.API)
 
-	k8sClientSet, err := createK8Sclientset(cfg.General.Namespace)
+	k8sClientSet, err := importer.CreateK8SClientSet(cfg.General.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clients for kubernetes: %v", err)
 	}
@@ -94,17 +88,17 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 			SSHConfig:          cfg.SSH,
 			APIKey:             cfg.API.ExporterApiKey,
 			DoguVolumeBasePath: cfg.JobConfig.DoguVolumeBasePath,
-			PVCClient:          migration.NewPVCGetter(k8sClientSet.pvcClient),
+			PVCClient:          migration.NewPVCGetter(k8sClientSet.Pvc),
 		},
-		JobClient: k8sClientSet.jobClient,
-		PodClient: k8sClientSet.podClient,
+		JobClient: k8sClientSet.Job,
+		PodClient: k8sClientSet.Pod,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new job service: %v", err)
 	}
 
 	// Validate Secrets
-	if vErr := cfg.ValidateSecrets(context.Background(), k8sClientSet.secret); vErr != nil {
+	if vErr := cfg.ValidateSecrets(context.Background(), k8sClientSet.Secret); vErr != nil {
 		return nil, fmt.Errorf("found invalid secrets in configuration: %w", vErr)
 	}
 
@@ -114,18 +108,18 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 
 	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
 
-	doguStartStopper := importer.NewDoguClient(k8sClientSet.doguClient)
+	doguStartStopper := importer.NewDoguClient(k8sClientSet.Dogu)
 
-	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.componentClient, k8sClientSet.doguClient, systemInfoApiClient)
+	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.Component, k8sClientSet.Dogu, systemInfoApiClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
 
 	systemInfoValidator := systeminfo.NewValidator(cfg.General.ExcludedDogus)
 
-	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.doguClient, k8sClientSet.pvcClient, cfg.General.ExcludedDogus)
+	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.Dogu, k8sClientSet.Pvc, cfg.General.ExcludedDogus)
 
-	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.configMap)
+	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.ConfigMap)
 
 	mailSender := mail.CreateSender(
 		cfg.Smtp,
@@ -170,60 +164,6 @@ func createAPIClient(apiCfg configuration.API) *exporter.Client {
 	}
 
 	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterApiKey, options...)
-}
-
-type k8sClients struct {
-	pvcClient       corev1.PersistentVolumeClaimInterface
-	podClient       corev1.PodInterface
-	jobClient       batchv1.JobInterface
-	configMap       corev1.ConfigMapInterface
-	secret          corev1.SecretInterface
-	doguClient      doguLibClient.DoguInterface
-	componentClient componentEcoClient.ComponentInterface
-}
-
-func createK8Sclientset(namespace string) (k8sClients, error) {
-	k8sRestConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return k8sClients{}, fmt.Errorf("failed to read kube config: %w", err)
-	}
-
-	k8sClientSet, err := kubernetes.NewForConfig(k8sRestConfig)
-	if err != nil {
-		return k8sClients{}, fmt.Errorf("failed to create k8s client set: %w", err)
-	}
-
-	k8sCoreClient := k8sClientSet.CoreV1()
-	k8sPVCClient := k8sCoreClient.PersistentVolumeClaims(namespace)
-	k8sPodClient := k8sCoreClient.Pods(namespace)
-	k8sConfigMapClient := k8sCoreClient.ConfigMaps(namespace)
-	k8sSecretClient := k8sCoreClient.Secrets(namespace)
-
-	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
-
-	ecoSystemClient, err := doguLibClient.NewForConfig(k8sRestConfig)
-	if err != nil {
-		return k8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
-	}
-
-	k8sDoguClient := ecoSystemClient.Dogus(namespace)
-
-	v1Alpha1Client, err := componentEcoClient.NewForConfig(k8sRestConfig)
-	if err != nil {
-		return k8sClients{}, fmt.Errorf("failed to create component client: %w", err)
-	}
-
-	k8sComponentClient := v1Alpha1Client.Components(namespace)
-
-	return k8sClients{
-		pvcClient:       k8sPVCClient,
-		podClient:       k8sPodClient,
-		jobClient:       k8sJobClient,
-		configMap:       k8sConfigMapClient,
-		secret:          k8sSecretClient,
-		doguClient:      k8sDoguClient,
-		componentClient: k8sComponentClient,
-	}, nil
 }
 
 type maintenanceModeHandler struct {
