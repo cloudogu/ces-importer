@@ -38,9 +38,13 @@ type SystemInfo struct {
 	Components []Component
 }
 
+// DoguExport contains data for exporting a Dogu, including its name, volume path, and exporter port configuration.
 type DoguExport struct {
-	Dogu         string
-	VolumePath   string
+	// Dogu specifies the name of the Dogu to be exported.
+	Dogu string
+	// VolumePath specifies the file system path to the volume associated with the Dogu being exported.
+	VolumePath string
+	// ExporterPort defines the network port used by the exporter process for transferring data.
 	ExporterPort int
 }
 
