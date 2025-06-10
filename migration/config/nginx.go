@@ -1,7 +1,7 @@
 package configuration
 
 import (
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
 	"strings"
 )
@@ -28,7 +28,7 @@ var (
 	}
 )
 
-func mergeNginxExternalsConfigIntoGlobalConfig(config *exporter.Configuration) {
+func mergeNginxExternalsConfigIntoGlobalConfig(config *migration.Configuration) {
 	for _, dc := range config.DoguConfigs {
 		if dc.Name != nginxDoguName {
 			continue
@@ -49,18 +49,18 @@ func mergeNginxExternalsConfigIntoGlobalConfig(config *exporter.Configuration) {
 	}
 }
 
-func createDoguConfigForNginxStatic(config exporter.DoguConfig) exporter.DoguConfig {
+func createDoguConfigForNginxStatic(config migration.DoguConfig) migration.DoguConfig {
 	return createDoguConfigForNginxDogu(config, nginxStaticDoguName, nginxStaticExcludeConfigKeys)
 }
 
-func createDoguConfigForNginxIngress(config exporter.DoguConfig) exporter.DoguConfig {
+func createDoguConfigForNginxIngress(config migration.DoguConfig) migration.DoguConfig {
 	return createDoguConfigForNginxDogu(config, nginxIngressDoguName, nginxIngressExcludeConfigKeys)
 }
 
-func createDoguConfigForNginxDogu(config exporter.DoguConfig, doguName string, excludeWithPrefix []string) exporter.DoguConfig {
-	var newNormalConfig []exporter.KeyValue
-	var newSensitiveConfig []exporter.KeyValue
-	var newLocalConfig []exporter.KeyValue
+func createDoguConfigForNginxDogu(config migration.DoguConfig, doguName string, excludeWithPrefix []string) migration.DoguConfig {
+	var newNormalConfig []migration.KeyValue
+	var newSensitiveConfig []migration.KeyValue
+	var newLocalConfig []migration.KeyValue
 
 	for _, configKey := range config.NormalConfig {
 		if matchesAnyKeyByPattern(configKey.Key, excludeWithPrefix) {
@@ -86,7 +86,7 @@ func createDoguConfigForNginxDogu(config exporter.DoguConfig, doguName string, e
 		newLocalConfig = append(newLocalConfig, configKey)
 	}
 
-	return exporter.DoguConfig{
+	return migration.DoguConfig{
 		Name:            doguName,
 		NormalConfig:    newNormalConfig,
 		SensitiveConfig: newSensitiveConfig,

@@ -5,7 +5,7 @@ package sync
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
+	migration "github.com/cloudogu/ces-importer/migration"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,23 +23,23 @@ func (_m *mockExportDoguApiClient) EXPECT() *mockExportDoguApiClient_Expecter {
 }
 
 // GetExportDogu provides a mock function with given fields: ctx
-func (_m *mockExportDoguApiClient) GetExportDogu(ctx context.Context) (*exporter.DoguExport, error) {
+func (_m *mockExportDoguApiClient) GetExportDogu(ctx context.Context) (*migration.DoguExport, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetExportDogu")
 	}
 
-	var r0 *exporter.DoguExport
+	var r0 *migration.DoguExport
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*exporter.DoguExport, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (*migration.DoguExport, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) *exporter.DoguExport); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) *migration.DoguExport); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exporter.DoguExport)
+			r0 = ret.Get(0).(*migration.DoguExport)
 		}
 	}
 
@@ -70,34 +70,34 @@ func (_c *mockExportDoguApiClient_GetExportDogu_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *mockExportDoguApiClient_GetExportDogu_Call) Return(_a0 *exporter.DoguExport, _a1 error) *mockExportDoguApiClient_GetExportDogu_Call {
+func (_c *mockExportDoguApiClient_GetExportDogu_Call) Return(_a0 *migration.DoguExport, _a1 error) *mockExportDoguApiClient_GetExportDogu_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockExportDoguApiClient_GetExportDogu_Call) RunAndReturn(run func(context.Context) (*exporter.DoguExport, error)) *mockExportDoguApiClient_GetExportDogu_Call {
+func (_c *mockExportDoguApiClient_GetExportDogu_Call) RunAndReturn(run func(context.Context) (*migration.DoguExport, error)) *mockExportDoguApiClient_GetExportDogu_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SetExportDogu provides a mock function with given fields: ctx, doguName
-func (_m *mockExportDoguApiClient) SetExportDogu(ctx context.Context, doguName string) (*exporter.DoguExport, error) {
+func (_m *mockExportDoguApiClient) SetExportDogu(ctx context.Context, doguName string) (*migration.DoguExport, error) {
 	ret := _m.Called(ctx, doguName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetExportDogu")
 	}
 
-	var r0 *exporter.DoguExport
+	var r0 *migration.DoguExport
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*exporter.DoguExport, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*migration.DoguExport, error)); ok {
 		return rf(ctx, doguName)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *exporter.DoguExport); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) *migration.DoguExport); ok {
 		r0 = rf(ctx, doguName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exporter.DoguExport)
+			r0 = ret.Get(0).(*migration.DoguExport)
 		}
 	}
 
@@ -129,12 +129,12 @@ func (_c *mockExportDoguApiClient_SetExportDogu_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *mockExportDoguApiClient_SetExportDogu_Call) Return(_a0 *exporter.DoguExport, _a1 error) *mockExportDoguApiClient_SetExportDogu_Call {
+func (_c *mockExportDoguApiClient_SetExportDogu_Call) Return(_a0 *migration.DoguExport, _a1 error) *mockExportDoguApiClient_SetExportDogu_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockExportDoguApiClient_SetExportDogu_Call) RunAndReturn(run func(context.Context, string) (*exporter.DoguExport, error)) *mockExportDoguApiClient_SetExportDogu_Call {
+func (_c *mockExportDoguApiClient_SetExportDogu_Call) RunAndReturn(run func(context.Context, string) (*migration.DoguExport, error)) *mockExportDoguApiClient_SetExportDogu_Call {
 	_c.Call.Return(run)
 	return _c
 }

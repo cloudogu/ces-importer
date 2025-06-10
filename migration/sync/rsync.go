@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/ces-importer/migration"
 	"io"
 	"log/slog"
 	"os"
@@ -22,12 +22,12 @@ var (
 )
 
 type exportDoguApiClient interface {
-	GetExportDogu(ctx context.Context) (*exporter.DoguExport, error)
-	SetExportDogu(ctx context.Context, doguName string) (*exporter.DoguExport, error)
+	GetExportDogu(ctx context.Context) (*migration.DoguExport, error)
+	SetExportDogu(ctx context.Context, doguName string) (*migration.DoguExport, error)
 }
 
 type systemInfoProvider interface {
-	GetSystemInfo(ctx context.Context) (systemInfo *exporter.SystemInfo, err error)
+	GetSystemInfo(ctx context.Context) (systemInfo *migration.SystemInfo, err error)
 }
 
 // RsyncSyncer allows copying data from a remote host.

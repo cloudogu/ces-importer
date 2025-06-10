@@ -3,7 +3,6 @@ package migration
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -15,11 +14,11 @@ import (
 )
 
 func TestMigrator_RunMigration(t *testing.T) {
-	exporterInfo := &exporter.SystemInfo{
-		Dogus: []exporter.Dogu{{Name: "exporter/dogu"}},
+	exporterInfo := &SystemInfo{
+		Dogus: []Dogu{{Name: "exporter/dogu"}},
 	}
-	importerInfo := &exporter.SystemInfo{
-		Dogus: []exporter.Dogu{{Name: "importer/dogu"}},
+	importerInfo := &SystemInfo{
+		Dogus: []Dogu{{Name: "importer/dogu"}},
 	}
 
 	t.Run("should run delta migration", func(t *testing.T) {

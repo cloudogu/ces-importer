@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"os"
@@ -26,7 +26,7 @@ type cesDoguConfigImporter struct {
 	sensitiveDoguConfigRepo doguConfigRepo
 }
 
-func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []exporter.DoguConfig) error {
+func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []migration.DoguConfig) error {
 	slog.Info("Importing dogu config...")
 
 	for _, dc := range config {
@@ -51,7 +51,7 @@ func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 	return nil
 }
 
-func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc exporter.DoguConfig) error {
+func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc migration.DoguConfig) error {
 	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.NormalConfig, dci.doguConfigRepo); err != nil {
 		return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)
 	}
@@ -72,7 +72,7 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc expor
 	return nil
 }
 
-func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []exporter.KeyValue, repo doguConfigRepo) error {
+func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []migration.KeyValue, repo doguConfigRepo) error {
 	doguName := doguCommons.SimpleName(dogu)
 
 	err := repo.Delete(ctx, doguName)
@@ -106,7 +106,7 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []exporter.Ke
 	return nil
 }
 
-func importLocalConfig(dataBasePath string, dogu string, dc []exporter.KeyValue) error {
+func importLocalConfig(dataBasePath string, dogu string, dc []migration.KeyValue) error {
 	if len(dc) == 0 {
 		return nil
 	}
