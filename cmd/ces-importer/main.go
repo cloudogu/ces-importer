@@ -11,9 +11,11 @@ import (
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	"github.com/cloudogu/k8s-registry-lib/repository"
+	"k8s.io/client-go/rest"
 	"log/slog"
 	"os"
 	"os/signal"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"syscall"
 	"time"
 )
@@ -21,12 +23,17 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	clusterConfig, err := ctrl.GetConfig()
+	if err != nil {
+		panic(fmt.Errorf("failed to read kube config: %w", err))
+	}
+
 	cfg, err := configuration.ReadCoordinatorConfig()
 	if err != nil {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	migrator, err := createMigrator(cfg)
+	migrator, err := createMigrator(clusterConfig, cfg)
 	if err != nil {
 		panic(fmt.Errorf("failed to create migrator: %w", err))
 	}
@@ -66,7 +73,7 @@ func main() {
 	slog.Info("exiting")
 }
 
-func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) {
+func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (*migration.Migrator, error) {
 	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
 	err := logInitializer.InitializeWithLogFile()
 	if err != nil {
@@ -77,7 +84,7 @@ func createMigrator(cfg configuration.Coordinator) (*migration.Migrator, error) 
 
 	exportAPIService := createAPIService(cfg.API)
 
-	k8sClientSet, err := importer.CreateK8SClientSet(cfg.General.Namespace)
+	k8sClientSet, err := importer.CreateK8SClientSet(k8sRestConfig, cfg.General.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clients for kubernetes: %v", err)
 	}

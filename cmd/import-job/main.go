@@ -9,6 +9,7 @@ import (
 	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
 	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func main() {
@@ -42,7 +43,13 @@ func run() int {
 
 	slog.Debug("Successfully created service for exporter API")
 
-	k8sClientSet, err := importer.CreateK8SClientSet(jobConfig.General.Namespace)
+	k8sRestConfig, err := ctrl.GetConfig()
+	if err != nil {
+		slog.Error("failed to read kube config", "cause", err)
+		return 1
+	}
+
+	k8sClientSet, err := importer.CreateK8SClientSet(k8sRestConfig, jobConfig.General.Namespace)
 	if err != nil {
 		slog.Error("failed to create k8s client set", "cause", err)
 		return 1

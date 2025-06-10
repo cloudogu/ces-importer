@@ -8,7 +8,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/rest"
+)
+
+var (
+	getK8sClientsSet    = kubernetes.NewForConfig
+	getEcoSystemClient  = doguLibClient.NewForConfig
+	getComponentsClient = componentEcoClient.NewForConfig
+	getBackupClient     = backupEcosystem.NewForConfig
 )
 
 type K8sClients struct {
@@ -22,13 +29,8 @@ type K8sClients struct {
 	BackupSchedule backupEcosystem.BackupScheduleInterface
 }
 
-func CreateK8SClientSet(namespace string) (K8sClients, error) {
-	k8sRestConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return K8sClients{}, fmt.Errorf("failed to read kube config: %w", err)
-	}
-
-	k8sClientSet, err := kubernetes.NewForConfig(k8sRestConfig)
+func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClients, error) {
+	k8sClientSet, err := getK8sClientsSet(k8sRestConfig)
 	if err != nil {
 		return K8sClients{}, fmt.Errorf("failed to create k8s client set: %w", err)
 	}
@@ -41,21 +43,21 @@ func CreateK8SClientSet(namespace string) (K8sClients, error) {
 
 	k8sJobClient := k8sClientSet.BatchV1().Jobs(namespace)
 
-	ecoSystemClient, err := doguLibClient.NewForConfig(k8sRestConfig)
+	ecoSystemClient, err := getEcoSystemClient(k8sRestConfig)
 	if err != nil {
 		return K8sClients{}, fmt.Errorf("failed to create ecosystem client: %w", err)
 	}
 
 	k8sDoguClient := ecoSystemClient.Dogus(namespace)
 
-	v1Alpha1Client, err := componentEcoClient.NewForConfig(k8sRestConfig)
+	v1Alpha1Client, err := getComponentsClient(k8sRestConfig)
 	if err != nil {
 		return K8sClients{}, fmt.Errorf("failed to create component client: %w", err)
 	}
 
 	k8sComponentClient := v1Alpha1Client.Components(namespace)
 
-	backupClient, err := backupEcosystem.NewForConfig(k8sRestConfig)
+	backupClient, err := getBackupClient(k8sRestConfig)
 	if err != nil {
 		return K8sClients{}, fmt.Errorf("failed to create ecosystem backup client: %w", err)
 	}
