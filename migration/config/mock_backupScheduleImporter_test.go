@@ -5,7 +5,7 @@ package configuration
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
+	migration "github.com/cloudogu/ces-importer/migration"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,7 +23,7 @@ func (_m *mockBackupScheduleImporter) EXPECT() *mockBackupScheduleImporter_Expec
 }
 
 // importBackupSchedules provides a mock function with given fields: ctx, config
-func (_m *mockBackupScheduleImporter) importBackupSchedules(ctx context.Context, config []exporter.BackupSchedule) error {
+func (_m *mockBackupScheduleImporter) importBackupSchedules(ctx context.Context, config []migration.BackupSchedule) error {
 	ret := _m.Called(ctx, config)
 
 	if len(ret) == 0 {
@@ -31,7 +31,7 @@ func (_m *mockBackupScheduleImporter) importBackupSchedules(ctx context.Context,
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, []exporter.BackupSchedule) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []migration.BackupSchedule) error); ok {
 		r0 = rf(ctx, config)
 	} else {
 		r0 = ret.Error(0)
@@ -47,14 +47,14 @@ type mockBackupScheduleImporter_importBackupSchedules_Call struct {
 
 // importBackupSchedules is a helper method to define mock.On call
 //   - ctx context.Context
-//   - config []exporter.BackupSchedule
+//   - config []migration.BackupSchedule
 func (_e *mockBackupScheduleImporter_Expecter) importBackupSchedules(ctx interface{}, config interface{}) *mockBackupScheduleImporter_importBackupSchedules_Call {
 	return &mockBackupScheduleImporter_importBackupSchedules_Call{Call: _e.mock.On("importBackupSchedules", ctx, config)}
 }
 
-func (_c *mockBackupScheduleImporter_importBackupSchedules_Call) Run(run func(ctx context.Context, config []exporter.BackupSchedule)) *mockBackupScheduleImporter_importBackupSchedules_Call {
+func (_c *mockBackupScheduleImporter_importBackupSchedules_Call) Run(run func(ctx context.Context, config []migration.BackupSchedule)) *mockBackupScheduleImporter_importBackupSchedules_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]exporter.BackupSchedule))
+		run(args[0].(context.Context), args[1].([]migration.BackupSchedule))
 	})
 	return _c
 }
@@ -64,7 +64,7 @@ func (_c *mockBackupScheduleImporter_importBackupSchedules_Call) Return(_a0 erro
 	return _c
 }
 
-func (_c *mockBackupScheduleImporter_importBackupSchedules_Call) RunAndReturn(run func(context.Context, []exporter.BackupSchedule) error) *mockBackupScheduleImporter_importBackupSchedules_Call {
+func (_c *mockBackupScheduleImporter_importBackupSchedules_Call) RunAndReturn(run func(context.Context, []migration.BackupSchedule) error) *mockBackupScheduleImporter_importBackupSchedules_Call {
 	_c.Call.Return(run)
 	return _c
 }

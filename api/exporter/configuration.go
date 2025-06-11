@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/migration"
 )
 
 const pathConfiguration = "/configuration"
@@ -63,7 +64,7 @@ type ConfigService struct {
 }
 
 // GetConfig returns the configuration of the exporter system.
-func (cs *ConfigService) GetConfig(ctx context.Context) (*Configuration, error) {
+func (cs *ConfigService) GetConfig(ctx context.Context) (*migration.Configuration, error) {
 	var config Configuration
 	res, err := cs.apiClient.DoGetRequest(ctx, pathConfiguration)
 	if err != nil {
@@ -75,5 +76,29 @@ func (cs *ConfigService) GetConfig(ctx context.Context) (*Configuration, error) 
 		return nil, fmt.Errorf("could not unmarshal configuration from exporter: %w", err)
 	}
 
-	return &config, nil
+	return toMigrationConfiguration(&config), nil
+}
+
+func toMigrationConfiguration(configuration *Configuration) *migration.Configuration {
+	return &migration.Configuration{
+		GlobalConfig: mapSlice(configuration.GlobalConfig, mapKeyValue),
+		DoguConfigs: mapSlice(configuration.DoguConfigs, func(dc DoguConfig) migration.DoguConfig {
+			return migration.DoguConfig{
+				Name:            dc.Name,
+				NormalConfig:    mapSlice(dc.NormalConfig, mapKeyValue),
+				LocalConfig:     mapSlice(dc.LocalConfig, mapKeyValue),
+				SensitiveConfig: mapSlice(dc.SensitiveConfig, mapKeyValue),
+			}
+		}),
+		BackupSchedules: mapSlice(configuration.BackupSchedules, func(bs BackupSchedule) migration.BackupSchedule {
+			return migration.BackupSchedule{
+				Name:     bs.Name,
+				Schedule: bs.Schedule,
+			}
+		}),
+	}
+}
+
+func mapKeyValue(kv KeyValue) migration.KeyValue {
+	return migration.KeyValue{Key: kv.Key, Value: kv.Value}
 }

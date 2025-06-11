@@ -3,7 +3,7 @@ package systeminfo
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	componentv1 "github.com/cloudogu/k8s-component-operator/pkg/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ type componentLister interface {
 }
 
 type systemInfoApiClient interface {
-	GetSystemInfo(ctx context.Context) (*exporter.SystemInfo, error)
+	GetSystemInfo(ctx context.Context) (*migration.SystemInfo, error)
 }
 
 type Provider struct {
@@ -36,23 +36,23 @@ func NewSystemInfoProvider(componentLister componentLister, doguLister doguListe
 }
 
 // GetImporterSystemInfo gets the current systems system info about dogus and components
-func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*migration.SystemInfo, error) {
 	// collect Dogus
 	dogus, err := s.doguLister.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems dogus: %w", err)
 	}
-	var systemInfoDogus []exporter.Dogu
+	var systemInfoDogus []migration.Dogu
 	for _, d := range dogus.Items {
 		vol, err := d.GetMinDataVolumeSize()
 		if err != nil {
 			return nil, fmt.Errorf("could not get minDataVolumeSize for dogu: %w", err)
 		}
 
-		systemInfoDogus = append(systemInfoDogus, exporter.Dogu{
+		systemInfoDogus = append(systemInfoDogus, migration.Dogu{
 			Name:    d.Spec.Name,
 			Version: d.Spec.Version,
-			Volume:  exporter.DoguVolume{SizeInBytes: vol.Value()},
+			Volume:  migration.DoguVolume{SizeInBytes: vol.Value()},
 		})
 	}
 
@@ -61,18 +61,18 @@ func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*exporter.SystemI
 	if err != nil {
 		return nil, fmt.Errorf("could not get systems components: %s", err)
 	}
-	var systemInfoComponents []exporter.Component
+	var systemInfoComponents []migration.Component
 	for _, c := range components.Items {
-		systemInfoComponents = append(systemInfoComponents, exporter.Component{
+		systemInfoComponents = append(systemInfoComponents, migration.Component{
 			Name:    c.Name,
 			Version: c.Spec.Version,
 		})
 	}
 
-	return &exporter.SystemInfo{Dogus: systemInfoDogus, Components: systemInfoComponents}, nil
+	return &migration.SystemInfo{Dogus: systemInfoDogus, Components: systemInfoComponents}, nil
 }
 
 // GetExporterSystemInfo gets the exporters system info via get request
-func (s *Provider) GetExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (s *Provider) GetExporterSystemInfo(ctx context.Context) (*migration.SystemInfo, error) {
 	return s.systemInfoApiClient.GetSystemInfo(ctx)
 }

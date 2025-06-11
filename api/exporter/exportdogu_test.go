@@ -61,7 +61,9 @@ func TestExportDoguClient_GetExportDogu(t *testing.T) {
 		result, err := emc.GetExportDogu(testCtx)
 
 		require.NoError(t, err)
-		assert.Equal(t, exportDogu, *result)
+		assert.Equal(t, exportDogu.Dogu, result.Dogu)
+		assert.Equal(t, exportDogu.ExporterPort, result.ExporterPort)
+		assert.Equal(t, exportDogu.VolumePath, result.VolumePath)
 	})
 
 	t.Run("should fail to get export dogu because of an error in the request", func(t *testing.T) {
@@ -115,7 +117,9 @@ func TestExportDoguClient_SetExportDogu(t *testing.T) {
 		result, err := emc.SetExportDogu(testCtx, exportDogu.Dogu)
 
 		require.NoError(t, err)
-		assert.Equal(t, exportDogu, *result)
+		assert.Equal(t, exportDogu.Dogu, result.Dogu)
+		assert.Equal(t, exportDogu.ExporterPort, result.ExporterPort)
+		assert.Equal(t, exportDogu.VolumePath, result.VolumePath)
 	})
 
 	t.Run("should fail to set export dogu because of an error in the request", func(t *testing.T) {

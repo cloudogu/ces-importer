@@ -5,7 +5,6 @@ package migration
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,7 +22,7 @@ func (_m *MockSystemInfoValidator) EXPECT() *MockSystemInfoValidator_Expecter {
 }
 
 // Validate provides a mock function with given fields: ctx, exporterInfo, importerInfo
-func (_m *MockSystemInfoValidator) Validate(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo) error {
+func (_m *MockSystemInfoValidator) Validate(ctx context.Context, exporterInfo *SystemInfo, importerInfo *SystemInfo) error {
 	ret := _m.Called(ctx, exporterInfo, importerInfo)
 
 	if len(ret) == 0 {
@@ -31,7 +30,7 @@ func (_m *MockSystemInfoValidator) Validate(ctx context.Context, exporterInfo *e
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *exporter.SystemInfo, *exporter.SystemInfo) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *SystemInfo, *SystemInfo) error); ok {
 		r0 = rf(ctx, exporterInfo, importerInfo)
 	} else {
 		r0 = ret.Error(0)
@@ -47,15 +46,15 @@ type MockSystemInfoValidator_Validate_Call struct {
 
 // Validate is a helper method to define mock.On call
 //   - ctx context.Context
-//   - exporterInfo *exporter.SystemInfo
-//   - importerInfo *exporter.SystemInfo
+//   - exporterInfo *SystemInfo
+//   - importerInfo *SystemInfo
 func (_e *MockSystemInfoValidator_Expecter) Validate(ctx interface{}, exporterInfo interface{}, importerInfo interface{}) *MockSystemInfoValidator_Validate_Call {
 	return &MockSystemInfoValidator_Validate_Call{Call: _e.mock.On("Validate", ctx, exporterInfo, importerInfo)}
 }
 
-func (_c *MockSystemInfoValidator_Validate_Call) Run(run func(ctx context.Context, exporterInfo *exporter.SystemInfo, importerInfo *exporter.SystemInfo)) *MockSystemInfoValidator_Validate_Call {
+func (_c *MockSystemInfoValidator_Validate_Call) Run(run func(ctx context.Context, exporterInfo *SystemInfo, importerInfo *SystemInfo)) *MockSystemInfoValidator_Validate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*exporter.SystemInfo), args[2].(*exporter.SystemInfo))
+		run(args[0].(context.Context), args[1].(*SystemInfo), args[2].(*SystemInfo))
 	})
 	return _c
 }
@@ -65,7 +64,7 @@ func (_c *MockSystemInfoValidator_Validate_Call) Return(_a0 error) *MockSystemIn
 	return _c
 }
 
-func (_c *MockSystemInfoValidator_Validate_Call) RunAndReturn(run func(context.Context, *exporter.SystemInfo, *exporter.SystemInfo) error) *MockSystemInfoValidator_Validate_Call {
+func (_c *MockSystemInfoValidator_Validate_Call) RunAndReturn(run func(context.Context, *SystemInfo, *SystemInfo) error) *MockSystemInfoValidator_Validate_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -2,7 +2,7 @@ package configuration
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -12,20 +12,20 @@ func TestConfigImporter_SyncConfig(t *testing.T) {
 	testCtx := context.Background()
 
 	t.Run("should import the configuration", func(t *testing.T) {
-		cfg := &exporter.Configuration{
-			GlobalConfig: []exporter.KeyValue{
+		cfg := &migration.Configuration{
+			GlobalConfig: []migration.KeyValue{
 				{Key: "key1", Value: "value1"},
 				{Key: "key2", Value: "value2"},
 			},
-			DoguConfigs: []exporter.DoguConfig{
+			DoguConfigs: []migration.DoguConfig{
 				{
 					Name: "dogu1",
-					NormalConfig: []exporter.KeyValue{
+					NormalConfig: []migration.KeyValue{
 						{Key: "key1", Value: "value1"},
 					},
 				},
 			},
-			BackupSchedules: []exporter.BackupSchedule{
+			BackupSchedules: []migration.BackupSchedule{
 				{Name: "schedule 1", Schedule: "* * * *"},
 			},
 		}
@@ -55,20 +55,20 @@ func TestConfigImporter_SyncConfig(t *testing.T) {
 	})
 
 	t.Run("should fail to import the configuration on error in getter", func(t *testing.T) {
-		cfg := &exporter.Configuration{
-			GlobalConfig: []exporter.KeyValue{
+		cfg := &migration.Configuration{
+			GlobalConfig: []migration.KeyValue{
 				{Key: "key1", Value: "value1"},
 				{Key: "key2", Value: "value2"},
 			},
-			DoguConfigs: []exporter.DoguConfig{
+			DoguConfigs: []migration.DoguConfig{
 				{
 					Name: "dogu1",
-					NormalConfig: []exporter.KeyValue{
+					NormalConfig: []migration.KeyValue{
 						{Key: "key1", Value: "value1"},
 					},
 				},
 			},
-			BackupSchedules: []exporter.BackupSchedule{
+			BackupSchedules: []migration.BackupSchedule{
 				{Name: "schedule 1", Schedule: "* * * *"},
 			},
 		}
@@ -97,20 +97,20 @@ func TestConfigImporter_SyncConfig(t *testing.T) {
 	})
 
 	t.Run("should fail to import the configuration on error in global config", func(t *testing.T) {
-		cfg := &exporter.Configuration{
-			GlobalConfig: []exporter.KeyValue{
+		cfg := &migration.Configuration{
+			GlobalConfig: []migration.KeyValue{
 				{Key: "key1", Value: "value1"},
 				{Key: "key2", Value: "value2"},
 			},
-			DoguConfigs: []exporter.DoguConfig{
+			DoguConfigs: []migration.DoguConfig{
 				{
 					Name: "dogu1",
-					NormalConfig: []exporter.KeyValue{
+					NormalConfig: []migration.KeyValue{
 						{Key: "key1", Value: "value1"},
 					},
 				},
 			},
-			BackupSchedules: []exporter.BackupSchedule{
+			BackupSchedules: []migration.BackupSchedule{
 				{Name: "schedule 1", Schedule: "* * * *"},
 			},
 		}
@@ -140,20 +140,20 @@ func TestConfigImporter_SyncConfig(t *testing.T) {
 	})
 
 	t.Run("should fail to import the configuration on error in dogu config", func(t *testing.T) {
-		cfg := &exporter.Configuration{
-			GlobalConfig: []exporter.KeyValue{
+		cfg := &migration.Configuration{
+			GlobalConfig: []migration.KeyValue{
 				{Key: "key1", Value: "value1"},
 				{Key: "key2", Value: "value2"},
 			},
-			DoguConfigs: []exporter.DoguConfig{
+			DoguConfigs: []migration.DoguConfig{
 				{
 					Name: "dogu1",
-					NormalConfig: []exporter.KeyValue{
+					NormalConfig: []migration.KeyValue{
 						{Key: "key1", Value: "value1"},
 					},
 				},
 			},
-			BackupSchedules: []exporter.BackupSchedule{
+			BackupSchedules: []migration.BackupSchedule{
 				{Name: "schedule 1", Schedule: "* * * *"},
 			},
 		}
@@ -184,20 +184,20 @@ func TestConfigImporter_SyncConfig(t *testing.T) {
 	})
 
 	t.Run("should fail to import the configuration on error in backup schedules", func(t *testing.T) {
-		cfg := &exporter.Configuration{
-			GlobalConfig: []exporter.KeyValue{
+		cfg := &migration.Configuration{
+			GlobalConfig: []migration.KeyValue{
 				{Key: "key1", Value: "value1"},
 				{Key: "key2", Value: "value2"},
 			},
-			DoguConfigs: []exporter.DoguConfig{
+			DoguConfigs: []migration.DoguConfig{
 				{
 					Name: "dogu1",
-					NormalConfig: []exporter.KeyValue{
+					NormalConfig: []migration.KeyValue{
 						{Key: "key1", Value: "value1"},
 					},
 				},
 			},
-			BackupSchedules: []exporter.BackupSchedule{
+			BackupSchedules: []migration.BackupSchedule{
 				{Name: "schedule 1", Schedule: "* * * *"},
 			},
 		}

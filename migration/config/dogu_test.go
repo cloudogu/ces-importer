@@ -3,7 +3,7 @@ package configuration
 import (
 	"context"
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,7 +31,7 @@ func Test_importLocalConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		err := importLocalConfig("", "cas", []exporter.KeyValue{})
+		err := importLocalConfig("", "cas", []migration.KeyValue{})
 		require.NoError(t, err)
 
 		_, err = os.ReadFile(localConfigFile)
@@ -52,7 +52,7 @@ func Test_importLocalConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -81,7 +81,7 @@ func Test_importLocalConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -112,7 +112,7 @@ func Test_importLocalConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -138,7 +138,7 @@ func Test_importLocalConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -175,7 +175,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			return expectedDoguCfg, nil
 		})
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -191,7 +191,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 		mockRepo := newMockDoguConfigRepo(t)
 		mockRepo.EXPECT().Delete(testCtx, doguName).Return(assert.AnError)
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -212,7 +212,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 		newDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})
 		mockRepo.EXPECT().Create(testCtx, newDoguCfg).Return(newDoguCfg, assert.AnError)
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -246,7 +246,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			return expectedDoguCfg, assert.AnError
 		})
 
-		cfg := []exporter.KeyValue{
+		cfg := []migration.KeyValue{
 			{"key1", "value1"},
 			{"sub/key/foo", "bar"},
 		}
@@ -307,16 +307,16 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := exporter.DoguConfig{
+		cfg := migration.DoguConfig{
 			Name: "cas",
-			NormalConfig: []exporter.KeyValue{
+			NormalConfig: []migration.KeyValue{
 				{"key1", "value1"},
 				{"sub/key/foo", "bar"},
 			},
-			SensitiveConfig: []exporter.KeyValue{
+			SensitiveConfig: []migration.KeyValue{
 				{"sensitive", "geheim"},
 			},
-			LocalConfig: []exporter.KeyValue{
+			LocalConfig: []migration.KeyValue{
 				{"local", "lokal"},
 			},
 		}
@@ -342,16 +342,16 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguName).Return(assert.AnError)
 
-		cfg := exporter.DoguConfig{
+		cfg := migration.DoguConfig{
 			Name: "cas",
-			NormalConfig: []exporter.KeyValue{
+			NormalConfig: []migration.KeyValue{
 				{"key1", "value1"},
 				{"sub/key/foo", "bar"},
 			},
-			SensitiveConfig: []exporter.KeyValue{
+			SensitiveConfig: []migration.KeyValue{
 				{"sensitive", "geheim"},
 			},
-			LocalConfig: []exporter.KeyValue{
+			LocalConfig: []migration.KeyValue{
 				{"local", "lokal"},
 			},
 		}
@@ -389,16 +389,16 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 		mockSensitiveRepo := newMockDoguConfigRepo(t)
 		mockSensitiveRepo.EXPECT().Delete(testCtx, doguName).Return(assert.AnError)
 
-		cfg := exporter.DoguConfig{
+		cfg := migration.DoguConfig{
 			Name: "cas",
-			NormalConfig: []exporter.KeyValue{
+			NormalConfig: []migration.KeyValue{
 				{"key1", "value1"},
 				{"sub/key/foo", "bar"},
 			},
-			SensitiveConfig: []exporter.KeyValue{
+			SensitiveConfig: []migration.KeyValue{
 				{"sensitive", "geheim"},
 			},
-			LocalConfig: []exporter.KeyValue{
+			LocalConfig: []migration.KeyValue{
 				{"local", "lokal"},
 			},
 		}
@@ -459,16 +459,16 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := exporter.DoguConfig{
+		cfg := migration.DoguConfig{
 			Name: "cas",
-			NormalConfig: []exporter.KeyValue{
+			NormalConfig: []migration.KeyValue{
 				{"key1", "value1"},
 				{"sub/key/foo", "bar"},
 			},
-			SensitiveConfig: []exporter.KeyValue{
+			SensitiveConfig: []migration.KeyValue{
 				{"sensitive", "geheim"},
 			},
-			LocalConfig: []exporter.KeyValue{
+			LocalConfig: []migration.KeyValue{
 				{"local", "lokal"},
 			},
 		}
@@ -580,30 +580,30 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.DoguConfig{
+		cfg := []migration.DoguConfig{
 			{
 				Name: "cas",
-				NormalConfig: []exporter.KeyValue{
+				NormalConfig: []migration.KeyValue{
 					{"key1", "value1"},
 					{"sub/key/foo", "bar"},
 				},
-				SensitiveConfig: []exporter.KeyValue{
+				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "geheim"},
 				},
-				LocalConfig: []exporter.KeyValue{
+				LocalConfig: []migration.KeyValue{
 					{"local", "lokal"},
 				},
 			},
 			{
 				Name: "nginx",
-				NormalConfig: []exporter.KeyValue{
+				NormalConfig: []migration.KeyValue{
 					{"key1", "value1"},
 					{"sub/key/foo", "bar"},
 				},
-				SensitiveConfig: []exporter.KeyValue{
+				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "geheim"},
 				},
-				LocalConfig: []exporter.KeyValue{
+				LocalConfig: []migration.KeyValue{
 					{"local", "lokal"},
 				},
 			},
@@ -630,17 +630,17 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguNameCas).Return(assert.AnError)
 
-		cfg := []exporter.DoguConfig{
+		cfg := []migration.DoguConfig{
 			{
 				Name: "cas",
-				NormalConfig: []exporter.KeyValue{
+				NormalConfig: []migration.KeyValue{
 					{"key1", "value1"},
 					{"sub/key/foo", "bar"},
 				},
-				SensitiveConfig: []exporter.KeyValue{
+				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "geheim"},
 				},
-				LocalConfig: []exporter.KeyValue{
+				LocalConfig: []migration.KeyValue{
 					{"local", "lokal"},
 				},
 			},
@@ -707,17 +707,17 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
 		}()
 
-		cfg := []exporter.DoguConfig{
+		cfg := []migration.DoguConfig{
 			{
 				Name: "nginx",
-				NormalConfig: []exporter.KeyValue{
+				NormalConfig: []migration.KeyValue{
 					{"key1", "value1"},
 					{"sub/key/foo", "bar"},
 				},
-				SensitiveConfig: []exporter.KeyValue{
+				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "geheim"},
 				},
-				LocalConfig: []exporter.KeyValue{
+				LocalConfig: []migration.KeyValue{
 					{"local", "lokal"},
 				},
 			},
@@ -741,17 +741,17 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(assert.AnError)
 
-		cfg := []exporter.DoguConfig{
+		cfg := []migration.DoguConfig{
 			{
 				Name: "nginx",
-				NormalConfig: []exporter.KeyValue{
+				NormalConfig: []migration.KeyValue{
 					{"key1", "value1"},
 					{"sub/key/foo", "bar"},
 				},
-				SensitiveConfig: []exporter.KeyValue{
+				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "geheim"},
 				},
-				LocalConfig: []exporter.KeyValue{
+				LocalConfig: []migration.KeyValue{
 					{"local", "lokal"},
 				},
 			},

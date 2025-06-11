@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
 )
 
@@ -72,7 +72,7 @@ func (c Change) isValid() error {
 }
 
 // createChangeRequest creates a change request from the global config of the exporter.
-func createChangeRequest(globalCfg exporter.GlobalConfig) (Change, error) {
+func createChangeRequest(globalCfg migration.GlobalConfig) (Change, error) {
 	var change Change
 
 	for _, kv := range globalCfg {

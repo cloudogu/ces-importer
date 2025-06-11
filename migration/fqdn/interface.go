@@ -2,7 +2,7 @@ package fqdn
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,5 +28,5 @@ type configMapRepository interface {
 }
 
 type configGetter interface {
-	GetConfig(ctx context.Context) (*exporter.Configuration, error)
+	GetConfig(ctx context.Context) (*migration.Configuration, error)
 }

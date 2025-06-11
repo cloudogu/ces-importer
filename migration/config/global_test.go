@@ -2,7 +2,7 @@ package configuration
 
 import (
 	"context"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,7 +31,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		expectedConfig = regConfig.GlobalConfig{Config: newCfg}
 		mockConfigRepo.EXPECT().SaveOrMerge(testCtx, expectedConfig).Return(expectedConfig, nil)
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
@@ -82,7 +82,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			return expectedConfig, nil
 		})
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
@@ -123,7 +123,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			return expectedConfig, nil
 		})
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 			{"certificate/type", "selfsigned"},
@@ -148,7 +148,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		mockConfigRepo := newMockGlobalConfigRepo(t)
 		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, assert.AnError)
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
@@ -172,7 +172,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, nil)
 		mockConfigRepo.EXPECT().Delete(testCtx).Return(assert.AnError)
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
@@ -199,7 +199,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		emptyConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
 		mockConfigRepo.EXPECT().Create(testCtx, emptyConfig).Return(emptyConfig, assert.AnError)
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
@@ -235,7 +235,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		expectedConfig = regConfig.GlobalConfig{Config: newCfg}
 		mockConfigRepo.EXPECT().SaveOrMerge(testCtx, expectedConfig).Return(expectedConfig, assert.AnError)
 
-		testConfig := []exporter.KeyValue{
+		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
 			{"key2", "value2"},
 		}
