@@ -39,8 +39,11 @@ func run() int {
 
 	slog.Debug("Successfully initialized logger")
 
-	exporterService := createAPIService(jobConfig.API)
-
+	exportAPIService := exporter.NewServiceFromConfig(
+		exporter.APIHost(jobConfig.ExporterHost),
+		exporter.APIKey(jobConfig.ExporterApiKey),
+		exporter.SkipTLSVerification(jobConfig.SkipTLSVerify),
+	)
 	slog.Debug("Successfully created service for exporter API")
 
 	k8sRestConfig, err := ctrl.GetConfig()
@@ -57,7 +60,7 @@ func run() int {
 
 	slog.Debug("Successfully created k8s client set")
 
-	importJob := NewImportExecuter(jobConfig, exporterService, k8sClientSet)
+	importJob := NewImportExecuter(jobConfig, exportAPIService, k8sClientSet)
 
 	slog.Info("Import executer created, start data synchronization...")
 
@@ -69,35 +72,4 @@ func run() int {
 
 	slog.Info("Import job finished.")
 	return 0
-
-}
-
-func createAPIClient(apiCfg configuration.API) *exporter.Client {
-	var options []exporter.HTTPClientOption
-
-	if apiCfg.SkipTLSVerify {
-		options = append(options, exporter.WithInsecure())
-	}
-
-	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterApiKey, options...)
-}
-
-type apiService struct {
-	config *exporter.ConfigService
-	dogu   *exporter.ExportDoguClient
-	system *exporter.SystemInfoClient
-}
-
-func createAPIService(apiCfg configuration.API) apiService {
-	exportClient := createAPIClient(apiCfg)
-	exportService := exporter.NewService(exportClient)
-
-	exportDoguApiClient := exporter.NewExportDoguClient(exportClient)
-	systemInfoApiClient := exporter.NewSystemInfoClient(exportClient)
-
-	return apiService{
-		config: exportService.ConfigService,
-		dogu:   exportDoguApiClient,
-		system: systemInfoApiClient,
-	}
 }
