@@ -82,7 +82,13 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 
 	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
-	exportAPIService := createAPIService(cfg.API)
+	exportAPIService := exporter.NewServiceFromConfig(
+		exporter.APIHost(cfg.ExporterHost),
+		exporter.APIKey(cfg.ExporterApiKey),
+		exporter.SkipTLSVerification(cfg.SkipTLSVerify),
+	)
+
+	exportAPIService.MaintenanceModeService.SetMessage(cfg.Migration.MaintenanceModeMessage.Title, cfg.Migration.MaintenanceModeMessage.Text)
 
 	k8sClientSet, err := importer.CreateK8SClientSet(k8sRestConfig, cfg.General.Namespace)
 	if err != nil {
@@ -109,15 +115,9 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 		return nil, fmt.Errorf("found invalid secrets in configuration: %w", vErr)
 	}
 
-	exporterApiClient := createAPIClient(cfg.API)
-	exportModeClient := exporter.NewExportModeClient(exporterApiClient)
-	exportModeValidator := migration.NewExportModeValidatorApiClient(exportModeClient)
+	exportModeValidator := migration.NewExportModeValidatorApiClient(exportAPIService.ExportModeService)
 
-	systemInfoApiClient := exporter.NewSystemInfoClient(exporterApiClient)
-
-	doguStartStopper := importer.NewDoguClient(k8sClientSet.Dogu)
-
-	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.Component, k8sClientSet.Dogu, systemInfoApiClient)
+	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.Component, k8sClientSet.Dogu, exportAPIService.SystemInfoService)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
 	}
@@ -136,53 +136,18 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 	)
 
 	deps := migration.MigratorDependencies{
-		ExportModeValidator: exportModeValidator,
-		SystemInfoProvider:  systemInfoProvider,
-		SystemInfoValidator: systemInfoValidator,
-		DoguVolumeResizer:   doguVolumeResizer,
-		MaintenanceModeHandler: &maintenanceModeHandler{
-			service: exportAPIService.MaintenanceModeService,
-			title:   cfg.Migration.MaintenanceModeMessage.Title,
-			message: cfg.Migration.MaintenanceModeMessage.Text,
-		},
-		JobRunner:      jobService,
-		DoguStopper:    doguStartStopper,
-		DoguStarter:    doguStartStopper,
-		LogWriter:      logWriter,
-		LogInitializer: logInitializer,
-		MailSender:     mailSender,
+		ExportModeValidator:    exportModeValidator,
+		SystemInfoProvider:     systemInfoProvider,
+		SystemInfoValidator:    systemInfoValidator,
+		DoguVolumeResizer:      doguVolumeResizer,
+		MaintenanceModeHandler: exportAPIService.MaintenanceModeService,
+		JobRunner:              jobService,
+		DoguStopper:            k8sClientSet.DoguControl,
+		DoguStarter:            k8sClientSet.DoguControl,
+		LogWriter:              logWriter,
+		LogInitializer:         logInitializer,
+		MailSender:             mailSender,
 	}
 
 	return migration.NewMigrator(deps), nil
-}
-
-func createAPIService(apiCfg configuration.API) *exporter.Service {
-	exportClient := createAPIClient(apiCfg)
-	exportService := exporter.NewService(exportClient)
-
-	return exportService
-}
-
-func createAPIClient(apiCfg configuration.API) *exporter.Client {
-	var options []exporter.HTTPClientOption
-
-	if apiCfg.SkipTLSVerify {
-		options = append(options, exporter.WithInsecure())
-	}
-
-	return exporter.NewClient(apiCfg.ExporterHost, apiCfg.ExporterApiKey, options...)
-}
-
-type maintenanceModeHandler struct {
-	service *exporter.MaintenanceModeService
-	title   string
-	message string
-}
-
-func (m *maintenanceModeHandler) Enable(ctx context.Context) error {
-	return m.service.Enable(ctx, m.title, m.message)
-}
-
-func (m *maintenanceModeHandler) Disable(ctx context.Context) error {
-	return m.service.Disable(ctx)
 }
