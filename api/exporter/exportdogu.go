@@ -9,17 +9,17 @@ import (
 
 const exportModeEndpoint = "/export/dogu"
 
-type ExportDoguClient struct {
+type ExportDoguService struct {
 	apiClient apiClient
 }
 
-func NewExportDoguClient(apiClient apiClient) *ExportDoguClient {
-	return &ExportDoguClient{
+func NewExportDoguService(apiClient apiClient) *ExportDoguService {
+	return &ExportDoguService{
 		apiClient: apiClient,
 	}
 }
 
-func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExport, err error) {
+func (emc *ExportDoguService) GetExportDogu(ctx context.Context) (export *DoguExport, err error) {
 	result, err := emc.apiClient.DoGetRequest(ctx, exportModeEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get export dogu: %w", err)
@@ -34,7 +34,7 @@ func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExp
 	return &doguExport, nil
 }
 
-func (emc *ExportDoguClient) SetExportDogu(ctx context.Context, doguName string) (export *DoguExport, err error) {
+func (emc *ExportDoguService) SetExportDogu(ctx context.Context, doguName string) (export *DoguExport, err error) {
 	apiPath := path.Join(exportModeEndpoint, doguName)
 	result, err := emc.apiClient.DoPostRequest(ctx, apiPath, nil)
 	if err != nil {

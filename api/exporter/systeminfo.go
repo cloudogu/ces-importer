@@ -9,17 +9,17 @@ import (
 // pathSystemInfo contains the endpoint which returns data which describe the exporter system, f. i. installed dogus etc.
 const pathSystemInfo = "/system-info"
 
-type SystemInfoClient struct {
+type SystemInfoService struct {
 	apiClient apiClient
 }
 
-func NewSystemInfoClient(apiClient apiClient) *SystemInfoClient {
-	return &SystemInfoClient{
+func NewSystemInfoService(apiClient apiClient) *SystemInfoService {
+	return &SystemInfoService{
 		apiClient: apiClient,
 	}
 }
 
-func (emc *SystemInfoClient) GetSystemInfo(ctx context.Context) (systemInfo *SystemInfo, err error) {
+func (emc *SystemInfoService) GetSystemInfo(ctx context.Context) (systemInfo *SystemInfo, err error) {
 	result, err := emc.apiClient.DoGetRequest(ctx, pathSystemInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get system info: %w", err)
