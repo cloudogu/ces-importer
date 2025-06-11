@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 )
 
 const (
@@ -31,6 +32,7 @@ type MaintenanceModeStatus struct {
 
 type MaintenanceModeService struct {
 	apiClient
+	message *Message
 }
 
 // NewMaintenanceModeService creates a new maintenance service for the given exporter API client.
@@ -42,7 +44,7 @@ func NewMaintenanceModeService(client apiClient) *MaintenanceModeService {
 
 // GetMaintenanceModeStatus returns the current maintenance mode status of the exporter system.
 // Returns true if the exporter system is in maintenance mode, false otherwise.
-func (s MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (bool, error) {
+func (s *MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (bool, error) {
 	result, err := s.DoGetRequest(ctx, endpointMaintenanceMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to get maintenance mode status: %w", err)
@@ -56,17 +58,32 @@ func (s MaintenanceModeService) GetMaintenanceModeStatus(ctx context.Context) (b
 	return response.IsActive, nil
 }
 
-// Enable enables the maintenance mode of the exporter system with the given title and message.
-func (s MaintenanceModeService) Enable(ctx context.Context, title, message string) error {
+// EnableWithMessage enables the maintenance mode of the exporter system with the given title and message.
+func (s *MaintenanceModeService) EnableWithMessage(ctx context.Context, title, message string) error {
 	return s.setMaintenanceMode(ctx, MaintenanceMode{Activate: true, Message: Message{Title: title, Text: message}})
 }
 
+// SetMessage sets the message used for the Enable function.
+func (s *MaintenanceModeService) SetMessage(title, message string) {
+	s.message = &Message{Title: title, Text: message}
+}
+
+// Enable enables the maintenance mode of the exporter with the message previously set.
+func (s *MaintenanceModeService) Enable(ctx context.Context) error {
+	if s.message == nil {
+		slog.Warn("No maintenance message set. Using empty message.")
+		return s.EnableWithMessage(ctx, "", "")
+	}
+
+	return s.EnableWithMessage(ctx, s.message.Title, s.message.Text)
+}
+
 // Disable disables the maintenance mode of the exporter system.
-func (s MaintenanceModeService) Disable(ctx context.Context) error {
+func (s *MaintenanceModeService) Disable(ctx context.Context) error {
 	return s.setMaintenanceMode(ctx, MaintenanceMode{Activate: false})
 }
 
-func (s MaintenanceModeService) setMaintenanceMode(ctx context.Context, mode MaintenanceMode) error {
+func (s *MaintenanceModeService) setMaintenanceMode(ctx context.Context, mode MaintenanceMode) error {
 	var buf bytes.Buffer
 
 	if err := json.NewEncoder(&buf).Encode(mode); err != nil {

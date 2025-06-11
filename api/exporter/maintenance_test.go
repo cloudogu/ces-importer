@@ -1,10 +1,13 @@
 package exporter
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -82,7 +85,7 @@ func Test_maintenanceModeService_GetStatus(t *testing.T) {
 	}
 }
 
-func Test_maintenanceModeService_Enable(t *testing.T) {
+func Test_maintenanceModeService_EnableWithMessage(t *testing.T) {
 	const title = "Maintenance"
 	const message = "System is under maintenance"
 
@@ -138,7 +141,7 @@ func Test_maintenanceModeService_Enable(t *testing.T) {
 			}
 
 			// when
-			err := service.Enable(ctx, title, message)
+			err := service.EnableWithMessage(ctx, title, message)
 
 			// then
 			if tt.expectedErr {
@@ -149,6 +152,95 @@ func Test_maintenanceModeService_Enable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_maintenanceModeService_Enable(t *testing.T) {
+	const title = "Maintenance"
+	const message = "System is under maintenance"
+
+	tests := []struct {
+		name           string
+		inMessage      *Message
+		responseBody   []byte
+		responseErr    error
+		expectedErr    bool
+		expectedErrMsg string
+	}{
+		{
+			name: "should enable maintenance mode with message set",
+			inMessage: &Message{
+				Title: title,
+				Text:  message,
+			},
+			responseBody: []byte(`{"isActive": true}`),
+			responseErr:  nil,
+			expectedErr:  false,
+		},
+		{
+			name:         "should enable maintenance mode with empty message",
+			inMessage:    nil,
+			responseBody: []byte(`{"isActive": true}`),
+			responseErr:  nil,
+			expectedErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			apiClientMock := newMockApiClient(t)
+
+			body := &MaintenanceMode{
+				Activate: true,
+			}
+
+			if tt.inMessage != nil {
+				body.Message = *tt.inMessage
+			}
+
+			var buf bytes.Buffer
+
+			err := json.NewEncoder(&buf).Encode(body)
+			require.NoError(t, err)
+
+			ctx := context.Background()
+			// Verify that the correct maintenance mode is sent
+			apiClientMock.EXPECT().
+				DoPostRequest(ctx, endpointMaintenanceMode, &buf).
+				Return(tt.responseBody, tt.responseErr)
+
+			service := MaintenanceModeService{
+				apiClient: apiClientMock,
+				message:   tt.inMessage,
+			}
+
+			// when
+			err = service.Enable(ctx)
+
+			// then
+			if tt.expectedErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErrMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_maintenanceModeService_Set(t *testing.T) {
+	t.Run("should set maintenance mode message", func(t *testing.T) {
+		const title = "Maintenance"
+		const message = "System is under maintenance"
+
+		service := MaintenanceModeService{}
+		assert.Nil(t, service.message)
+
+		service.SetMessage(title, message)
+		assert.NotNil(t, service.message)
+		assert.Equal(t, title, service.message.Title)
+		assert.Equal(t, message, service.message.Text)
+	})
 }
 
 func Test_maintenanceModeService_Disable(t *testing.T) {

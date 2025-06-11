@@ -26,10 +26,10 @@ func TestNewSystemInfoClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := NewSystemInfoClient(tt.apiClient)
+			client := NewSystemInfoService(tt.apiClient)
 
 			if client == nil {
-				t.Fatalf("Expected non-nil SystemInfoClient, got nil")
+				t.Fatalf("Expected non-nil SystemInfoService, got nil")
 			}
 
 			if client.apiClient != tt.apiClient {
@@ -75,7 +75,7 @@ func TestSystemInfoClient_GetSystemInfo(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/system-info").Return([]byte(exmapleJson), nil)
 
-		emc := &SystemInfoClient{
+		emc := &SystemInfoService{
 			apiClient: mApiClient,
 		}
 
@@ -102,7 +102,7 @@ func TestSystemInfoClient_GetSystemInfo(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/system-info").Return(nil, assert.AnError)
 
-		emc := &SystemInfoClient{
+		emc := &SystemInfoService{
 			apiClient: mApiClient,
 		}
 
@@ -117,7 +117,7 @@ func TestSystemInfoClient_GetSystemInfo(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/system-info").Return([]byte(`this is no json`), nil)
 
-		emc := &SystemInfoClient{
+		emc := &SystemInfoService{
 			apiClient: mApiClient,
 		}
 

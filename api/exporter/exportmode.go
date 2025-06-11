@@ -9,17 +9,17 @@ import (
 // pathExportMode contains the endpoint which returns data on the readiness of the exporter system.
 const pathExportMode = "/export/mode"
 
-type ExportModeClient struct {
+type ExportModeService struct {
 	apiClient apiClient
 }
 
-func NewExportModeClient(apiClient apiClient) *ExportModeClient {
-	return &ExportModeClient{
+func NewExportModeService(apiClient apiClient) *ExportModeService {
+	return &ExportModeService{
 		apiClient: apiClient,
 	}
 }
 
-func (emc *ExportModeClient) GetExportMode(ctx context.Context) (isActive bool, err error) {
+func (emc *ExportModeService) GetExportMode(ctx context.Context) (isActive bool, err error) {
 	result, err := emc.apiClient.DoGetRequest(ctx, pathExportMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to check whether export mode is ready: %w", err)
