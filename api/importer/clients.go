@@ -25,6 +25,7 @@ type K8sClients struct {
 	ConfigMap      corev1.ConfigMapInterface
 	Secret         corev1.SecretInterface
 	Dogu           doguLibClient.DoguInterface
+	DoguControl    *DoguControl
 	Component      componentEcoClient.ComponentInterface
 	BackupSchedule backupEcosystem.BackupScheduleInterface
 }
@@ -49,6 +50,7 @@ func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClient
 	}
 
 	k8sDoguClient := ecoSystemClient.Dogus(namespace)
+	doguControl := NewDoguControl(k8sDoguClient)
 
 	v1Alpha1Client, err := getComponentsClient(k8sRestConfig)
 	if err != nil {
@@ -71,6 +73,7 @@ func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClient
 		ConfigMap:      k8sConfigMapClient,
 		Secret:         k8sSecretClient,
 		Dogu:           k8sDoguClient,
+		DoguControl:    doguControl,
 		Component:      k8sComponentClient,
 		BackupSchedule: backupScheduleClient,
 	}, nil

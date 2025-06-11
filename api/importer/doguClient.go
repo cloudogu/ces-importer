@@ -22,19 +22,19 @@ type DoguInterface interface {
 	UpdateSpecWithRetry(ctx context.Context, dogu *doguV2.Dogu, updateFunc func(spec doguV2.DoguSpec) doguV2.DoguSpec, opts metav1.UpdateOptions) (*doguV2.Dogu, error)
 }
 
-type doguClient struct {
+type DoguControl struct {
 	doguCli DoguInterface
 }
 
-// NewDoguClient creates a new client that operates on dogu deployments on the importer system.
-func NewDoguClient(doguCli DoguInterface) *doguClient {
-	return &doguClient{
+// NewDoguControl creates a new client that operates on dogu deployments on the importer system.
+func NewDoguControl(doguCli DoguInterface) *DoguControl {
+	return &DoguControl{
 		doguCli: doguCli,
 	}
 }
 
 // StopAll stopps all dogus in the importer system.
-func (dc *doguClient) StopAll(ctx context.Context) error {
+func (dc *DoguControl) StopAll(ctx context.Context) error {
 	slog.Info("Stopping all dogus")
 	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -52,7 +52,7 @@ func (dc *doguClient) StopAll(ctx context.Context) error {
 }
 
 // StopDogu stopps the given dogu in the importer system.
-func (dc *doguClient) StopDogu(ctx context.Context, doguName string) error {
+func (dc *DoguControl) StopDogu(ctx context.Context, doguName string) error {
 	slog.Info(fmt.Sprintf("Stopping dogu %s", doguName))
 	err := dc.startStop(ctx, doguName, true)
 	if err != nil {
@@ -63,7 +63,7 @@ func (dc *doguClient) StopDogu(ctx context.Context, doguName string) error {
 }
 
 // StartAll starts all dogus in the importer system.
-func (dc *doguClient) StartAll(ctx context.Context) error {
+func (dc *DoguControl) StartAll(ctx context.Context) error {
 	slog.Info("Starting all dogus")
 	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -81,7 +81,7 @@ func (dc *doguClient) StartAll(ctx context.Context) error {
 }
 
 // StartDogu starts the given dogu in the importer system.
-func (dc *doguClient) StartDogu(ctx context.Context, doguName string) error {
+func (dc *DoguControl) StartDogu(ctx context.Context, doguName string) error {
 	slog.Info(fmt.Sprintf("Starting dogu %s", doguName))
 	err := dc.startStop(ctx, doguName, false)
 	if err != nil {
@@ -91,7 +91,7 @@ func (dc *doguClient) StartDogu(ctx context.Context, doguName string) error {
 	return nil
 }
 
-func (dc *doguClient) startStop(ctx context.Context, exporterDoguName string, shouldStop bool) error {
+func (dc *DoguControl) startStop(ctx context.Context, exporterDoguName string, shouldStop bool) error {
 	fullyQualifiedDoguName, err := cescommons.QualifiedNameFromString(exporterDoguName)
 	if err != nil {
 		return err
