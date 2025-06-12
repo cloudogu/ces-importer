@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -8,8 +9,12 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
+	"mime/multipart"
+	"mime/quotedprintable"
 	"net/smtp"
+	"net/textproto"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -82,57 +87,80 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 //
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, start time.Time, end time.Time) error {
+	if s.config.Server == "" || s.config.Port <= 0 {
+		slog.Warn("SMTP server not configured. Not sending mail.", "server", s.config.Server, "port", s.config.Port)
+		return nil
+	}
+
 	slog.Info("Sending migration result via mail...")
 	slog.Debug(fmt.Sprintf("Mail is sent from: %s", s.config.From))
 	slog.Debug(fmt.Sprintf("Mail is sent to: %v", s.config.To))
 	slog.Debug(fmt.Sprintf("Mail is sent to server: %s", s.server()))
+
 	if s.auth() != nil {
 		slog.Info("Using authentication for mail server")
 	} else {
 		slog.Info("Mail server is unauthenticated")
 	}
 
+	migrationSuccessful := migrationResult == nil
+
 	targetInstance, err := s.getTargetInstance(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get target instance: %v", err))
+		return fmt.Errorf("failed to get target instance: %w", err)
 	}
+
+	// Create buffer and multipart writer
+	var body bytes.Buffer
+	multipartWriter := multipart.NewWriter(&body)
 
 	from := fmt.Sprintf("From: %s\r\n", s.config.From)
-	body := s.body(migrationResult, s.sourceInstance, targetInstance, start, end, isFinal)
-	boundary := "MIME_BOUNDARY_CES_IMPORTER"
-	mime := fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%s\r\n\r\n", boundary)
-	messageId := fmt.Sprintf("Message-ID: %s\r\n", buildMessageId(targetInstance))
-	message := messageId +
-		mime +
-		"--" + boundary + "\r\n" +
-		"Content-Type: text/plain; charset=utf-8\r\n\r\n" +
-		body + "\r\n"
 
-	for _, file := range s.attachments {
-		attachment, err := s.buildAttachment(file, boundary)
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to add attachment to mail: %v", err))
-			continue
-		}
-		slog.Debug(fmt.Sprintf("Added attachment to mail: %s", attachment))
-		message += attachment
+	// Write headers
+	headers := make(map[string]string)
+	headers["From"] = from
+	headers["To"] = strings.Join(s.config.To, ", ")
+	headers["Subject"] = buildSubject(migrationSuccessful)
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "multipart/mixed; boundary=" + multipartWriter.Boundary()
+	headers["Message-ID"] = buildMessageId(targetInstance)
+	headers["Date"] = getDate()
+
+	for k, v := range headers {
+		body.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
+	}
+	body.WriteString("\r\n")
+
+	err = s.writeBodyText(ctx, multipartWriter, migrationResult, start, end, isFinal)
+	if err != nil {
+		return fmt.Errorf("failed to write body text: %w", err)
 	}
 
-	message += "--" + boundary
+	for _, file := range s.attachments {
+		if err := s.writeAttachment(multipartWriter, file); err != nil {
+			slog.Error("failed to add attachment to mail", "err", err)
+			continue
+		}
+		slog.Debug("Added attachment to mail: %s", "file", file)
+	}
+
+	if err := multipartWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close multipart writer: %w", err)
+	}
 
 	return s.senderService(
 		s.server(),
 		s.auth(),
 		s.config.From,
 		s.config.To,
-		[]byte(from+s.subject(migrationResult == nil)+message),
+		body.Bytes(),
 	)
 }
 
 func (s *Sender) auth() smtp.Auth {
 	var auth smtp.Auth
 
-	if s.config.Username != "" || s.config.Password != "" {
+	if s.config.Username != "" && s.config.Password != "" {
 		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Server)
 	}
 
@@ -143,56 +171,12 @@ func (s *Sender) server() string {
 	return fmt.Sprintf("%s:%d", s.config.Server, s.config.Port)
 }
 
-func (s *Sender) subject(success bool) string {
+func buildSubject(success bool) string {
 	result := stateMigrationSuccess
 	if !success {
 		result = stateMigrationFailure
 	}
-	return fmt.Sprintf("Subject: %s\r\n", fmt.Sprintf(mailSubject, result))
-}
-
-func (s *Sender) body(migrationResult error, sourceInstance string, targetInstance string, start time.Time, end time.Time, isFinal bool) string {
-	result := stateMigrationSuccess
-	errorMsg := ""
-	if migrationResult != nil {
-		result = stateMigrationFailure
-		errorMsg = fmt.Sprintf(errorMsgTemplate, migrationResult.Error())
-	}
-
-	migrationType := typeMigrationPartial
-	if isFinal {
-		migrationType = typeMigrationFinal
-	}
-
-	return fmt.Sprintf("%s\r\n",
-		fmt.Sprintf(
-			mailBody,
-			migrationType,
-			sourceInstance,
-			targetInstance,
-			result,
-			start.Format("15:04"),
-			end.Format("15:04"),
-			errorMsg,
-		),
-	)
-}
-
-func (s *Sender) buildAttachment(filename, boundary string) (string, error) {
-	data, err := s.readFile(filename)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file for attachment: %w", err)
-	}
-
-	encoded := base64.StdEncoding.EncodeToString(data)
-
-	attachment := "\r\n--" + boundary + "\r\n" +
-		"Content-Type: application/octet-stream\r\n" +
-		"Content-Transfer-Encoding: base64\r\n" +
-		"Content-Disposition: attachment; filename=\"" + filename + "\"\r\n\r\n" +
-		chunkSplit(encoded, 76) + "\r\n"
-
-	return attachment, nil
+	return fmt.Sprintf(mailSubject, result)
 }
 
 func (s *Sender) getTargetInstance(ctx context.Context) (string, error) {
@@ -209,16 +193,78 @@ func (s *Sender) getTargetInstance(ctx context.Context) (string, error) {
 	return fqdn.String(), nil
 }
 
-func chunkSplit(body string, limit int) string {
-	var chunked []string
-	for i := 0; i < len(body); i += limit {
-		end := i + limit
-		if end > len(body) {
-			end = len(body)
-		}
-		chunked = append(chunked, body[i:end])
+func (s *Sender) writeBodyText(ctx context.Context, writer *multipart.Writer, migrationResult error, start time.Time, end time.Time, isFinal bool) error {
+	result := stateMigrationSuccess
+	errorMsg := ""
+	if migrationResult != nil {
+		result = stateMigrationFailure
+		errorMsg = fmt.Sprintf(errorMsgTemplate, migrationResult.Error())
 	}
-	return strings.Join(chunked, "\r\n")
+
+	migrationType := typeMigrationPartial
+	if isFinal {
+		migrationType = typeMigrationFinal
+	}
+
+	targetInstance, err := s.getTargetInstance(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get target instance: %w", err)
+	}
+
+	bodyText := fmt.Sprintf(
+		mailBody,
+		migrationType,
+		s.sourceInstance,
+		targetInstance,
+		result,
+		start.Format("15:04"),
+		end.Format("15:04"),
+		errorMsg,
+	)
+
+	textPart, err := writer.CreatePart(textproto.MIMEHeader{
+		"Content-Type":              {"text/plain; charset=utf-8"},
+		"Content-Transfer-Encoding": {"quoted-printable"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create text part: %w", err)
+	}
+
+	qp := quotedprintable.NewWriter(textPart)
+	if _, err := qp.Write([]byte(bodyText)); err != nil {
+		return fmt.Errorf("failed to write body-text: %w", err)
+	}
+
+	if err := qp.Close(); err != nil {
+		return fmt.Errorf("failed to close quoted-printable writer: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Sender) writeAttachment(writer *multipart.Writer, filename string) error {
+	fileData, err := s.readFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to read file for attachment: %w", err)
+	}
+
+	attachmentPart, err := writer.CreatePart(textproto.MIMEHeader{
+		"Content-Type":              {"application/octet-stream"},
+		"Content-Disposition":       {`attachment; filename="` + filepath.Base(filename) + `"`},
+		"Content-Transfer-Encoding": {"base64"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create attachment part: %w", err)
+	}
+
+	b := make([]byte, base64.StdEncoding.EncodedLen(len(fileData)))
+	base64.StdEncoding.Encode(b, fileData)
+
+	if _, err := attachmentPart.Write(b); err != nil {
+		return fmt.Errorf("failed to write attachment: %w", err)
+	}
+
+	return nil
 }
 
 func buildMessageId(fqdn string) string {
@@ -231,4 +277,9 @@ func buildMessageId(fqdn string) string {
 	timestamp := time.Now().UTC().Format("20060102150405.999999999")
 	identifier := fmt.Sprintf("%s.%x", timestamp, b)
 	return fmt.Sprintf("<%s@%s>", identifier, fqdn)
+}
+
+// getDate returns the current date time formatted for the email related date fields. This format uses the date RFC 1123 formatting which matches the date format used for the email `date` field as described by RFC 5322 and other relevant mail RFCs .
+func getDate() string {
+	return time.Now().Format(time.RFC1123)
 }
