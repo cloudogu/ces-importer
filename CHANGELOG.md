@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.0.3] - 2025-06-12
+### Fixed
+- [#48] add permissions for the service account to handle backup schedules
+- [#48] wait for backup schedule to be deleted to create a new one
+
 ## [v0.0.2] - 2025-06-05
 ### Fixed
 - [#32] copy sparse files with rsync

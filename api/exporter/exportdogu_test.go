@@ -27,10 +27,10 @@ func TestNewExportDoguClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := NewExportDoguClient(tt.apiClient)
+			client := NewExportDoguService(tt.apiClient)
 
 			if client == nil {
-				t.Fatalf("Expected non-nil ExportModeClient, got nil")
+				t.Fatalf("Expected non-nil ExportModeService, got nil")
 			}
 
 			if client.apiClient != tt.apiClient {
@@ -54,21 +54,23 @@ func TestExportDoguClient_GetExportDogu(t *testing.T) {
 		}
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/dogu").Return(exportDoguBytes, nil)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 
 		result, err := emc.GetExportDogu(testCtx)
 
 		require.NoError(t, err)
-		assert.Equal(t, exportDogu, *result)
+		assert.Equal(t, exportDogu.Dogu, result.Dogu)
+		assert.Equal(t, exportDogu.ExporterPort, result.ExporterPort)
+		assert.Equal(t, exportDogu.VolumePath, result.VolumePath)
 	})
 
 	t.Run("should fail to get export dogu because of an error in the request", func(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/dogu").Return(nil, assert.AnError)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 
@@ -83,7 +85,7 @@ func TestExportDoguClient_GetExportDogu(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/dogu").Return([]byte(`this is no json`), nil)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 
@@ -108,21 +110,23 @@ func TestExportDoguClient_SetExportDogu(t *testing.T) {
 		}
 		mApiClient.EXPECT().DoPostRequest(testCtx, "/export/dogu/test", nil).Return(exportDoguBytes, nil)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 
 		result, err := emc.SetExportDogu(testCtx, exportDogu.Dogu)
 
 		require.NoError(t, err)
-		assert.Equal(t, exportDogu, *result)
+		assert.Equal(t, exportDogu.Dogu, result.Dogu)
+		assert.Equal(t, exportDogu.ExporterPort, result.ExporterPort)
+		assert.Equal(t, exportDogu.VolumePath, result.VolumePath)
 	})
 
 	t.Run("should fail to set export dogu because of an error in the request", func(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoPostRequest(testCtx, "/export/dogu/test", nil).Return(nil, assert.AnError)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 
@@ -137,7 +141,7 @@ func TestExportDoguClient_SetExportDogu(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoPostRequest(testCtx, "/export/dogu/test", nil).Return([]byte(`this is no json`), nil)
 
-		emc := &ExportDoguClient{
+		emc := &ExportDoguService{
 			apiClient: mApiClient,
 		}
 

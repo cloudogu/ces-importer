@@ -55,3 +55,16 @@ type DoguExport struct {
 	VolumePath   string `json:"volumePath"`
 	ExporterPort int    `json:"exporterPort"`
 }
+
+// mapSlice applies a mapping function to each element of the input slice.
+func mapSlice[S any, T any](input []S, mapFn func(S) T) []T {
+	if input == nil {
+		return nil
+	}
+
+	output := make([]T, len(input))
+	for i, v := range input {
+		output[i] = mapFn(v)
+	}
+	return output
+}

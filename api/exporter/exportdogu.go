@@ -4,22 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudogu/ces-importer/migration"
 	"path"
 )
 
 const exportModeEndpoint = "/export/dogu"
 
-type ExportDoguClient struct {
+type ExportDoguService struct {
 	apiClient apiClient
 }
 
-func NewExportDoguClient(apiClient apiClient) *ExportDoguClient {
-	return &ExportDoguClient{
+func NewExportDoguService(apiClient apiClient) *ExportDoguService {
+	return &ExportDoguService{
 		apiClient: apiClient,
 	}
 }
 
-func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExport, err error) {
+func (emc *ExportDoguService) GetExportDogu(ctx context.Context) (export *migration.DoguExport, err error) {
 	result, err := emc.apiClient.DoGetRequest(ctx, exportModeEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get export dogu: %w", err)
@@ -31,10 +32,10 @@ func (emc *ExportDoguClient) GetExportDogu(ctx context.Context) (export *DoguExp
 		return nil, fmt.Errorf("failed to parse export dogu response: %q: %w", result, err)
 	}
 
-	return &doguExport, nil
+	return toMigrationDoguExport(&doguExport), nil
 }
 
-func (emc *ExportDoguClient) SetExportDogu(ctx context.Context, doguName string) (export *DoguExport, err error) {
+func (emc *ExportDoguService) SetExportDogu(ctx context.Context, doguName string) (export *migration.DoguExport, err error) {
 	apiPath := path.Join(exportModeEndpoint, doguName)
 	result, err := emc.apiClient.DoPostRequest(ctx, apiPath, nil)
 	if err != nil {
@@ -47,5 +48,13 @@ func (emc *ExportDoguClient) SetExportDogu(ctx context.Context, doguName string)
 		return nil, fmt.Errorf("failed to parse export dogu response: %q: %w", result, err)
 	}
 
-	return &doguExport, nil
+	return toMigrationDoguExport(&doguExport), nil
+}
+
+func toMigrationDoguExport(doguExport *DoguExport) *migration.DoguExport {
+	return &migration.DoguExport{
+		Dogu:         doguExport.Dogu,
+		VolumePath:   doguExport.VolumePath,
+		ExporterPort: doguExport.ExporterPort,
+	}
 }

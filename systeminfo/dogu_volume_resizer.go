@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -52,7 +52,7 @@ func NewDoguVolumeResizer(doguClient doguClient, pvcCLient pvcClient, excludedDo
 	}
 }
 
-func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []exporter.Dogu, importerDogus []exporter.Dogu) error {
+func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDogus []migration.Dogu, importerDogus []migration.Dogu) error {
 	var wg sync.WaitGroup
 
 	var err error
@@ -64,7 +64,7 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 			continue
 		}
 
-		importerDoguIndex := slices.IndexFunc(importerDogus, func(dogu exporter.Dogu) bool { return dogu.Name == exporterDogu.Name })
+		importerDoguIndex := slices.IndexFunc(importerDogus, func(dogu migration.Dogu) bool { return dogu.Name == exporterDogu.Name })
 		if importerDoguIndex < 0 {
 			err = errors.Join(err, fmt.Errorf("failed to find dogu %s in the importing system", exporterDogu.Name))
 			continue

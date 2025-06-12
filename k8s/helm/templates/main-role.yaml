@@ -68,6 +68,21 @@ rules:
     - components
   verbs:
     - list
+  # allow creating / deleting backup schedules
+- apiGroups:
+  - k8s.cloudogu.com
+  resources:
+    - backupschedules
+  verbs:
+    - create
+    - watch
+    - delete
+- apiGroups:
+  - k8s.cloudogu.com
+  resources:
+    - backupschedules/finalizers
+  verbs:
+    - update
   # allow for jobs creating
 - apiGroups:
     - batch

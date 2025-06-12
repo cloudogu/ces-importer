@@ -26,10 +26,10 @@ func TestNewExportModeClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := NewExportModeClient(tt.apiClient)
+			client := NewExportModeService(tt.apiClient)
 
 			if client == nil {
-				t.Fatalf("Expected non-nil ExportModeClient, got nil")
+				t.Fatalf("Expected non-nil ExportModeService, got nil")
 			}
 
 			if client.apiClient != tt.apiClient {
@@ -44,7 +44,7 @@ func TestExportModeClient_GetExportMode(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/mode").Return([]byte(`{"isActive": true}`), nil)
 
-		emc := &ExportModeClient{
+		emc := &ExportModeService{
 			apiClient: mApiClient,
 		}
 
@@ -58,7 +58,7 @@ func TestExportModeClient_GetExportMode(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/mode").Return(nil, assert.AnError)
 
-		emc := &ExportModeClient{
+		emc := &ExportModeService{
 			apiClient: mApiClient,
 		}
 
@@ -73,7 +73,7 @@ func TestExportModeClient_GetExportMode(t *testing.T) {
 		mApiClient := newMockApiClient(t)
 		mApiClient.EXPECT().DoGetRequest(testCtx, "/export/mode").Return([]byte(`this is no json`), nil)
 
-		emc := &ExportModeClient{
+		emc := &ExportModeService{
 			apiClient: mApiClient,
 		}
 

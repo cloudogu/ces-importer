@@ -5,7 +5,6 @@ package migration
 import (
 	context "context"
 
-	exporter "github.com/cloudogu/ces-importer/api/exporter"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,23 +22,23 @@ func (_m *MockSystemInfoProvider) EXPECT() *MockSystemInfoProvider_Expecter {
 }
 
 // GetExporterSystemInfo provides a mock function with given fields: ctx
-func (_m *MockSystemInfoProvider) GetExporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (_m *MockSystemInfoProvider) GetExporterSystemInfo(ctx context.Context) (*SystemInfo, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetExporterSystemInfo")
 	}
 
-	var r0 *exporter.SystemInfo
+	var r0 *SystemInfo
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*exporter.SystemInfo, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (*SystemInfo, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) *exporter.SystemInfo); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) *SystemInfo); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exporter.SystemInfo)
+			r0 = ret.Get(0).(*SystemInfo)
 		}
 	}
 
@@ -70,34 +69,34 @@ func (_c *MockSystemInfoProvider_GetExporterSystemInfo_Call) Run(run func(ctx co
 	return _c
 }
 
-func (_c *MockSystemInfoProvider_GetExporterSystemInfo_Call) Return(_a0 *exporter.SystemInfo, _a1 error) *MockSystemInfoProvider_GetExporterSystemInfo_Call {
+func (_c *MockSystemInfoProvider_GetExporterSystemInfo_Call) Return(_a0 *SystemInfo, _a1 error) *MockSystemInfoProvider_GetExporterSystemInfo_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSystemInfoProvider_GetExporterSystemInfo_Call) RunAndReturn(run func(context.Context) (*exporter.SystemInfo, error)) *MockSystemInfoProvider_GetExporterSystemInfo_Call {
+func (_c *MockSystemInfoProvider_GetExporterSystemInfo_Call) RunAndReturn(run func(context.Context) (*SystemInfo, error)) *MockSystemInfoProvider_GetExporterSystemInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetImporterSystemInfo provides a mock function with given fields: ctx
-func (_m *MockSystemInfoProvider) GetImporterSystemInfo(ctx context.Context) (*exporter.SystemInfo, error) {
+func (_m *MockSystemInfoProvider) GetImporterSystemInfo(ctx context.Context) (*SystemInfo, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetImporterSystemInfo")
 	}
 
-	var r0 *exporter.SystemInfo
+	var r0 *SystemInfo
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*exporter.SystemInfo, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (*SystemInfo, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) *exporter.SystemInfo); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) *SystemInfo); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exporter.SystemInfo)
+			r0 = ret.Get(0).(*SystemInfo)
 		}
 	}
 
@@ -128,12 +127,12 @@ func (_c *MockSystemInfoProvider_GetImporterSystemInfo_Call) Run(run func(ctx co
 	return _c
 }
 
-func (_c *MockSystemInfoProvider_GetImporterSystemInfo_Call) Return(_a0 *exporter.SystemInfo, _a1 error) *MockSystemInfoProvider_GetImporterSystemInfo_Call {
+func (_c *MockSystemInfoProvider_GetImporterSystemInfo_Call) Return(_a0 *SystemInfo, _a1 error) *MockSystemInfoProvider_GetImporterSystemInfo_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSystemInfoProvider_GetImporterSystemInfo_Call) RunAndReturn(run func(context.Context) (*exporter.SystemInfo, error)) *MockSystemInfoProvider_GetImporterSystemInfo_Call {
+func (_c *MockSystemInfoProvider_GetImporterSystemInfo_Call) RunAndReturn(run func(context.Context) (*SystemInfo, error)) *MockSystemInfoProvider_GetImporterSystemInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }

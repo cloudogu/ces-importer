@@ -22,7 +22,7 @@ var gibiByte int64 = 1024 * 1024 * 1024
 var jenkinsDoguNotFoundErr = errors.NewNotFound(schema.GroupResource{Group: "k8s.cloudogu.com", Resource: "dogu/v2"}, "jenkins")
 
 func TestNewDoguDeploymentClient(t *testing.T) {
-	client := NewDoguClient(nil)
+	client := NewDoguControl(nil)
 
 	require.NotNil(t, client)
 }
@@ -46,7 +46,7 @@ func Test_doguClient_StopAll(t *testing.T) {
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguJenkins, mock.Anything, mock.Anything).Return(&v2DoguJenkins, nil)
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguRedmine, mock.Anything, mock.Anything).Return(&v2DoguRedmine, nil)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StopAll(testCtx)
@@ -60,7 +60,7 @@ func Test_doguClient_StopAll(t *testing.T) {
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().List(testCtx, mock.Anything).Return(nil, assert.AnError)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StopAll(testCtx)
@@ -86,7 +86,7 @@ func Test_doguClient_StopAll(t *testing.T) {
 		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, assert.AnError)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StopAll(testCtx)
@@ -117,7 +117,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, v2DoguJenkins, mock.Anything, mock.Anything).Return(v2DoguJenkins, nil)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StopDogu(testCtx, dogu.Name)
@@ -143,7 +143,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{doguCli}
+		sut := &DoguControl{doguCli}
 
 		// when
 		err := sut.StopDogu(testCtx, dogu.Name)
@@ -164,7 +164,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{doguCli}
+		sut := &DoguControl{doguCli}
 
 		opts := &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -191,7 +191,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			Name: "missingnamespacedoguname",
 		}
 
-		sut := &doguClient{nil}
+		sut := &DoguControl{nil}
 
 		// when
 		err := sut.StopDogu(testCtx, dogu.Name)
@@ -222,7 +222,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{doguCli}
+		sut := &DoguControl{doguCli}
 
 		// when
 		err := sut.StartDogu(testCtx, dogu.Name)
@@ -248,7 +248,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			},
 		}
 
-		sut := &doguClient{doguCli}
+		sut := &DoguControl{doguCli}
 
 		// when
 		err := sut.StartDogu(testCtx, dogu.Name)
@@ -270,7 +270,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(nil, jenkinsDoguNotFoundErr)
 
-		sut := &doguClient{doguCli}
+		sut := &DoguControl{doguCli}
 
 		opts := &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -297,7 +297,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 			Name: "missingnamespacedoguname",
 		}
 
-		sut := &doguClient{nil}
+		sut := &DoguControl{nil}
 
 		// when
 		err := sut.StartDogu(testCtx, dogu.Name)
@@ -327,7 +327,7 @@ func Test_doguClient_StartAll(t *testing.T) {
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguJenkins, mock.Anything, mock.Anything).Return(&v2DoguJenkins, nil)
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, &v2DoguRedmine, mock.Anything, mock.Anything).Return(&v2DoguRedmine, nil)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StartAll(testCtx)
@@ -341,7 +341,7 @@ func Test_doguClient_StartAll(t *testing.T) {
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().List(testCtx, mock.Anything).Return(nil, assert.AnError)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StartAll(testCtx)
@@ -367,7 +367,7 @@ func Test_doguClient_StartAll(t *testing.T) {
 		doguCli.EXPECT().List(testCtx, mock.Anything).Return(&v2.DoguList{Items: []v2.Dogu{v2DoguJenkins, v2DoguRedmine}}, nil)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(&v2DoguJenkins, assert.AnError)
 
-		sut := &doguClient{doguCli: doguCli}
+		sut := &DoguControl{doguCli: doguCli}
 
 		// when
 		err := sut.StartAll(testCtx)

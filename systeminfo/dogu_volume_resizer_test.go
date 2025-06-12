@@ -3,7 +3,7 @@ package systeminfo
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/api/exporter"
+	"github.com/cloudogu/ces-importer/migration"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -345,49 +345,49 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 		}()
 
-		exporterDogus := []exporter.Dogu{
+		exporterDogus := []migration.Dogu{
 			{
 				Name:    "official/ldap",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "official/otherDogu",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "official/cas",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "simpleName",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "excluded/dogu",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 		}
 
-		importerDogus := []exporter.Dogu{
+		importerDogus := []migration.Dogu{
 			{
 				Name:    "official/ldap",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "official/cas",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
 			},
 			{
 				Name:    "simpleName",
 				Version: "1.2.3",
-				Volume:  exporter.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+				Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
 			},
 		}
 
