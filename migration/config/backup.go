@@ -32,7 +32,8 @@ func (bsi *cesBackupScheduleImporter) importBackupSchedules(ctx context.Context,
 	slog.Info("Importing backup schedules...")
 	for _, schedule := range config {
 		if err := bsi.delete(ctx, schedule.Name); err != nil {
-			return fmt.Errorf("failed to delete backup schedule '%s': %w", schedule.Name, err)
+			slog.Warn("failed to delete backup schedule", "name", schedule.Name, "schedule", schedule.Schedule, "error", err)
+			continue
 		}
 
 		bs := &backupv1.BackupSchedule{
