@@ -73,7 +73,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 		}
 		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(dogu, nil)
 		mDoguClient.EXPECT().Update(testCtx, dogu, metav1.UpdateOptions{}).RunAndReturn(func(ctx context.Context, dogu *doguv2.Dogu, options metav1.UpdateOptions) (*doguv2.Dogu, error) {
-			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
+			assert.Equal(t, "6Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
 
 			return dogu, nil
 		})
@@ -115,7 +115,7 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 			maxRetries = defaultMaxRetries
 		}()
 
-		err := resizer.resize(testCtx, "official/ldap", 2*1024*1024*1024)
+		err := resizer.resize(testCtx, "official/ldap", 6*1024*1024*1024)
 
 		require.Error(t, err)
 		require.ErrorContains(t, err, "error waiting for pvc of dogu ldap to be resized: maximum amount of retries reached for the resize of dogu \"ldap\" volume")
@@ -172,6 +172,9 @@ func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
 func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 	testCtx := context.Background()
 	t.Run("should not fail to wait for pvc resize if pvc can not be found", func(t *testing.T) {
+		requestedDataVolumeSize := resource.MustParse("2Gi")
+		actualDataVolumeSize := resource.MustParse("2Gi")
+
 		counter := 0
 		mPvcClient := newMockPvcClient(t)
 		mPvcClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).RunAndReturn(func(ctx context.Context, doguName string, options metav1.GetOptions) (*corev1.PersistentVolumeClaim, error) {
@@ -185,13 +188,13 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("2Gi"),
+							corev1.ResourceStorage: requestedDataVolumeSize,
 						},
 					},
 				},
 				Status: corev1.PersistentVolumeClaimStatus{
 					Capacity: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse("2Gi"),
+						corev1.ResourceStorage: actualDataVolumeSize,
 					},
 				},
 			}
@@ -208,12 +211,14 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 		}()
 
-		err := resizer.waitForPVCResize(testCtx, "ldap")
+		err := resizer.waitForPVCResize(testCtx, "ldap", &requestedDataVolumeSize)
 
 		require.NoError(t, err)
 	})
 
 	t.Run("should fail to wait for pvc resize if max retries is reached", func(t *testing.T) {
+		requestedDataVolumeSize := resource.MustParse("6Gi")
+
 		mPvcClient := newMockPvcClient(t)
 
 		i := 0
@@ -226,7 +231,7 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("6Gi"),
+							corev1.ResourceStorage: requestedDataVolumeSize,
 						},
 					},
 				},
@@ -252,13 +257,15 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 			maxRetries = defaultMaxRetries
 		}()
 
-		err := resizer.waitForPVCResize(testCtx, "ldap")
+		err := resizer.waitForPVCResize(testCtx, "ldap", &requestedDataVolumeSize)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "maximum amount of retries reached for the resize of dogu \"ldap\" volume")
 	})
 
 	t.Run("should succeed to wait for pvc resize with retries", func(t *testing.T) {
+		requestedDataVolumeSize := resource.MustParse("3Gi")
+
 		mPvcClient := newMockPvcClient(t)
 
 		i := 0
@@ -271,7 +278,7 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 				Spec: corev1.PersistentVolumeClaimSpec{
 					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("3Gi"),
+							corev1.ResourceStorage: requestedDataVolumeSize,
 						},
 					},
 				},
@@ -294,7 +301,55 @@ func Test_defaultDoguVolumeResizer_waitForPVCResize(t *testing.T) {
 			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
 		}()
 
-		err := resizer.waitForPVCResize(testCtx, "ldap")
+		err := resizer.waitForPVCResize(testCtx, "ldap", &requestedDataVolumeSize)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("should succeed to wait for pvc resize if actual size is bigger than requested size", func(t *testing.T) {
+		requestedDataVolumeSize := resource.MustParse("3Gi")
+
+		mPvcClient := newMockPvcClient(t)
+
+		i := 0
+		mPvcClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).RunAndReturn(func(ctx context.Context, doguName string, options metav1.GetOptions) (*corev1.PersistentVolumeClaim, error) {
+			// increase with each iteration
+			i++
+			assert.Less(t, i, 3)
+
+			actulaDataVolumeSize := resource.MustParse("2Gi")
+			if i == 2 {
+				actulaDataVolumeSize = resource.MustParse("8Gi")
+			}
+
+			pvc := &corev1.PersistentVolumeClaim{
+				Spec: corev1.PersistentVolumeClaimSpec{
+					Resources: corev1.VolumeResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: requestedDataVolumeSize,
+						},
+					},
+				},
+				Status: corev1.PersistentVolumeClaimStatus{
+					Capacity: corev1.ResourceList{
+						corev1.ResourceStorage: actulaDataVolumeSize,
+					},
+				},
+			}
+
+			return pvc, nil
+		})
+
+		resizer := &DoguVolumeResizer{
+			pvcClient: mPvcClient,
+		}
+
+		waitSecondsBetweenRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
+		err := resizer.waitForPVCResize(testCtx, "ldap", &requestedDataVolumeSize)
 
 		require.NoError(t, err)
 	})
