@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - [#50] do not send mails, when no mail-server is configured
+- [#55] notify user when migration job gets deleted
 
 ### Added
 - [#50] add "Date"-header to mail
