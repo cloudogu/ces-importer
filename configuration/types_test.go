@@ -65,9 +65,12 @@ jobServiceAccount: "ces-importer-main-manager"
 doguVolumeBasePath: "/data"
 exclude:
   - dogu: "jenkins"
-    pattern: "JENKINS_PATTERN"
+    pattern:
+    - "JENKINS_PATTERN"
   - dogu: "redmine"
-    pattern: "REDMINE_PATTERN"
+    pattern:
+    - "REDMINE_PATTERN_1"
+    - "REDMINE_PATTERN_2"
 `
 	case fileSMTPConfig:
 		content = `---
@@ -1068,9 +1071,12 @@ func Test_validateJobConfig(t *testing.T) {
 doguVolumeBasePath: "/data"
 exclude:
   - dogu: "jenkins"
-    pattern: "JENKINS_PATTERN"
+    pattern: 
+    - "JENKINS_PATTERN"
   - dogu: "redmine"
-    pattern: "REDMINE_PATTERN"
+    pattern: 
+    - "REDMINE_PATTERN_1"
+    - "REDMINE_PATTERN_2"
 verbose: true
 `,
 			expectErr: false,
@@ -1081,9 +1087,12 @@ verbose: true
 doguVolumeBasePath: "/data"
 exclude:
   - dogu: "jenkins"
-    pattern: "JENKINS_PATTERN"
+    pattern: 
+    - "JENKINS_PATTERN"
   - dogu: "redmine"
-    pattern: "REDMINE_PATTERN"
+    pattern: 
+    - "REDMINE_PATTERN_1"
+    - "REDMINE_PATTERN_2"
 `,
 			expectErr: false,
 		},
@@ -1102,9 +1111,12 @@ verbose: true
 doguVolumeBasePath: ""
 exclude:
   - dogu: "jenkins"
-    pattern: "JENKINS_PATTERN"
+    pattern: 
+    - "JENKINS_PATTERN"
   - dogu: "redmine"
-    pattern: "REDMINE_PATTERN"
+    pattern: 
+    - "REDMINE_PATTERN_1"
+    - "REDMINE_PATTERN_2"
 verbose: true
 `,
 			expectErr: true,
@@ -1115,7 +1127,8 @@ verbose: true
 doguVolumeBasePath: "/data"
 exclude:
   - dogu: ""
-    pattern: "JENKINS_PATTERN"
+    pattern: 
+    - "JENKINS_PATTERN"
 verbose: true
 `,
 			expectErr: true,
@@ -1126,9 +1139,38 @@ verbose: true
 doguVolumeBasePath: "/data"
 exclude:
   - dogu: "jenkins"
-    pattern: "JENKINS_PATTERN"
+    pattern: 
+    - "JENKINS_PATTERN"
   - dogu: "redmine"
-    pattern: ""
+    pattern: []
+verbose: true
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - nil pattern in exclude",
+			inConfig: `---
+doguVolumeBasePath: "/data"
+exclude:
+  - dogu: "jenkins"
+    pattern: 
+    - "JENKINS_PATTERN"
+  - dogu: "redmine"
+verbose: true
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - empty string in pattern in exclude",
+			inConfig: `---
+doguVolumeBasePath: "/data"
+exclude:
+  - dogu: "jenkins"
+    pattern: 
+    - "JENKINS_PATTERN"
+  - dogu: "redmine"
+    pattern:
+      - ""
 verbose: true
 `,
 			expectErr: true,

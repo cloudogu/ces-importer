@@ -71,7 +71,9 @@ config:
     # example:
     #   exclude:
     #   - dogu: "jenkins"
-    #     pattern: "EXCLUDE_PATTERN"
+    #     pattern:
+    #     - "EXCLUDE_PATTERN_1"
+    #     - "EXCLUDE_PATTERN_2"
     exclude: []
     # verbose sets the migrator to verbose logging
     verbose: true

@@ -152,7 +152,7 @@ type ExcludePattern struct {
 	// DoguName specifies the name of the dogu for which the files should not be synchronized.
 	DoguName string `yaml:"dogu" validate:"required"`
 	// Pattern specifies the file pattern for the excluded files.
-	Pattern string `yaml:"pattern" validate:"required"`
+	Pattern []string `yaml:"pattern" validate:"gt=0,dive,required"`
 }
 
 // JobConfig contains the configuration data for the job container.
