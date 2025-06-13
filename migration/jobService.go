@@ -221,6 +221,12 @@ func watchEvents(resultChan <-chan watchAPI.Event, jobName string) (errWatch err
 			break
 		}
 
+		// Handle job deletion
+		if event.Type == watchAPI.Deleted {
+			errWatch = fmt.Errorf("job has been deleted during migration: %s", jobName)
+			break
+		}
+
 		// Ensure the event object is a Job
 		jobChange, ok := event.Object.(*batchv1.Job)
 		if !ok {
