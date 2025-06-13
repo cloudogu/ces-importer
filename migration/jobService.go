@@ -4,6 +4,7 @@
 package migration
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -11,9 +12,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/wait"
 	watchAPI "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/watch"
+	"k8s.io/client-go/util/retry"
 	"log/slog"
+	"sync"
+	"time"
 )
 
 // Static assertion to ensure JobService implements the JobRunner interface
@@ -22,6 +27,14 @@ var _ JobRunner = JobService{}
 // getStreamerFunc is a function type that retrieves a log streamer for a specific job pod
 // It takes a job name and pod log options and returns a streamer for accessing pod logs
 type getStreamerFunc func(jobName string, options *corev1.PodLogOptions) (streamer, error)
+
+// getStreamerBackoff defines the backoff strategy for retrying operations to fetch a log streamer, including steps and delays.
+var getStreamerBackoff = wait.Backoff{
+	Steps:    50,
+	Duration: 2 * time.Second,
+	Factor:   1.0,
+	Jitter:   0.1,
+}
 
 // getWatcherFunc is a function type that creates a watcher for monitoring job status changes
 // It takes a context and resource version and returns a watch interface for receiving events
@@ -95,12 +108,16 @@ func createGetStreamerFunc(podClient podClient) getStreamerFunc {
 		}
 
 		// Get the name of the first pod (jobs typically have one pod)
-		podName := pods.Items[0].GetName()
+		pod := pods.Items[0]
 
-		slog.Debug("Found pod for job", "name", jobName, "pod name", podName)
+		slog.Debug("Found pod for job", "name", jobName, "pod name", pod.GetName())
+
+		if pod.Status.Phase != corev1.PodRunning {
+			return nil, fmt.Errorf("pod %s is not yet running", pod.GetName())
+		}
 
 		// Return a log streamer for the pod
-		return podClient.GetLogs(podName, options), nil
+		return podClient.GetLogs(pod.GetName(), options), nil
 	}
 }
 
@@ -155,11 +172,11 @@ func buildJobLabelSelector(jobName string) string {
 //
 // The method returns an io.ReadCloser containing the job logs if successful,
 // or an error if any step in the process fails
-func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) {
+func (j JobService) Run(ctx context.Context) (err error) {
 	// Create the job specification
 	job, err := j.createImportJob(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create import job: %w", err)
+		return fmt.Errorf("failed to create import job: %w", err)
 	}
 
 	slog.Info("Created import job", "name", job.GetName())
@@ -167,29 +184,15 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 	// Submit the job to Kubernetes
 	jobResource, err := j.jobClient.Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create import job resource: %w", err)
+		return fmt.Errorf("failed to create import job resource: %w", err)
 	}
 
 	slog.Info("Submitted import job", "name", jobResource.GetName(), "resource version", jobResource.GetResourceVersion())
 
-	// Set up deferred function to retrieve logs when the method returns
-	// This ensures we attempt to get logs regardless of whether the job succeeds or fails
-	defer func() {
-		logs, logErr := j.getLogs(ctx, jobResource.GetName())
-		if logErr != nil {
-			slog.Error("Failed to get logs for job", "name", jobResource.GetName(), "error", logErr)
-			return
-		}
-
-		slog.Info("Retrieved logs for job", "name", jobResource.GetName())
-
-		jobLogs = logs
-	}()
-
 	// Create a watcher to monitor the job's status
 	watcher, err := j.getWatcher(ctx, jobResource.GetName())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create watcher for job %s: %w", jobResource.GetName(), err)
+		return fmt.Errorf("failed to create watcher for job %s: %w", jobResource.GetName(), err)
 	}
 
 	slog.Debug("Got watcher for job", "name", jobResource.GetName())
@@ -199,14 +202,25 @@ func (j JobService) Run(ctx context.Context) (jobLogs io.ReadCloser, err error) 
 
 	slog.Debug("Starting to wait for job to complete or fail")
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Start streaming the logs regardless of whether the job succeeds or fails
+	go func() {
+		defer wg.Done()
+		j.streamLogs(ctx, jobResource.GetName())
+	}()
+
 	// Process events from the watcher until the job completes, fails, or an error occurs
 	errWatch := watchEvents(watcher.ResultChan(), jobResource.GetName())
 	if errWatch != nil {
-		return nil, fmt.Errorf("received error while watching job: %w", errWatch)
+		return fmt.Errorf("received error while watching job: %w", errWatch)
 	}
 
+	wg.Wait()
+
 	// Return nil values because the actual logs are set by the deferred function
-	return nil, nil
+	return nil
 }
 
 // watchEvents processes events from a watcher until the job completes, fails, or an error occurs.
@@ -250,27 +264,53 @@ func watchEvents(resultChan <-chan watchAPI.Event, jobName string) (errWatch err
 	return errWatch
 }
 
-// getLogs retrieves the logs from a job's pod
-// It uses the getStreamer function to find the pod associated with the job
-// and create a log streamer, then returns the log stream
-func (j JobService) getLogs(ctx context.Context, jobName string) (io.ReadCloser, error) {
-	slog.Debug("Starting to get logs for job", "name", jobName)
+// streamLogs tries to get the log streamer for the job-pod with a backoff.
+// It logs all logs from the job-pod line by line.
+func (j JobService) streamLogs(ctx context.Context, jobName string) {
+	slog.Info("Streaming logs for job", "name", jobName)
 
-	// Get a log streamer for the job's pod
-	logStreamer, err := j.getStreamer(jobName, &corev1.PodLogOptions{})
+	var logStreamer streamer
+
+	// retries to get the logs streamer on all errors until the backoff is reached
+	err := retry.OnError(getStreamerBackoff, func(err error) bool { return true }, func() error {
+		var logErr error
+		logStreamer, logErr = j.getStreamer(jobName, &corev1.PodLogOptions{
+			Follow: true,
+		})
+		if logErr != nil {
+			return fmt.Errorf("failed to get logs for job %q: %w", jobName, logErr)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for logs for job %s: %w", jobName, err)
+		slog.Error("Finally failed to get logs for job. Backoff reached.", "name", jobName, "error", err)
+		return
 	}
 
-	slog.Debug("Got log streamer for job", "name", jobName)
-
-	// Start streaming the logs
 	logs, err := logStreamer.Stream(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stream logs for job %s: %w", jobName, err)
+		slog.Error("Failed to stream logs for job", "name", jobName, "error", err)
+		return
+	}
+	defer func(logs io.ReadCloser) {
+		err := logs.Close()
+		if err != nil {
+			slog.Error("Failed to close logs stream", "error", err)
+		}
+	}(logs)
+
+	scanner := bufio.NewScanner(logs)
+	for scanner.Scan() {
+		line := scanner.Text()
+		slog.Info(fmt.Sprintf("[%s] %s", jobName, line))
 	}
 
-	return logs, nil
+	if err := scanner.Err(); err != nil {
+		slog.Error("Error reading logs for job.", "error", err)
+	}
+
+	slog.Info("Finished streaming logs for job.", "name", jobName)
 }
 
 // handleWatchError extracts error information from a watch error event
