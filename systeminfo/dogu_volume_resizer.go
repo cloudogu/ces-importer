@@ -138,7 +138,7 @@ func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName strin
 
 		pvc, err := d.pvcClient.Get(ctx, doguName, metav1.GetOptions{})
 		if err != nil {
-			slog.Warn("could not get pvc for dogu %q: %w", doguName, err)
+			slog.Warn("could not get pvc for dogu", "dogu", doguName, "error", err)
 			continue
 		}
 

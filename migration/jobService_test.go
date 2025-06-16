@@ -6,14 +6,19 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"io"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"log/slog"
+	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 type mockReadCloser struct {
@@ -77,6 +82,15 @@ func TestJobService_Run(t *testing.T) {
 
 		expLogs := "test-Log"
 
+		// Save the original stdout
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		defer func() {
+			os.Stdout = old
+		}()
+
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test-job",
@@ -109,7 +123,7 @@ func TestJobService_Run(t *testing.T) {
 		streamerMock.EXPECT().Stream(ctx).Return(readCloserMock, nil)
 
 		getStreamerMock := newMockGetStreamerFunc(t)
-		getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(streamerMock, nil)
+		getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil)
 
 		sut := &JobService{
 			jobClient:   jobClientMock,
@@ -118,18 +132,25 @@ func TestJobService_Run(t *testing.T) {
 			getStreamer: getStreamerMock.Execute,
 		}
 
-		logReader, err := sut.Run(ctx)
+		err := sut.Run(ctx)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, logReader)
 
-		logs, err := io.ReadAll(logReader)
-		assert.NoError(t, err)
-		assert.Equal(t, expLogs, string(logs))
+		err = w.Close()
+		require.NoError(t, err)
+		var buf bytes.Buffer
+		_, err = buf.ReadFrom(r)
+		require.NoError(t, err)
+		assert.Contains(t, buf.String(), expLogs)
 	})
 
 	t.Run("fail to create job - no logs available", func(t *testing.T) {
 		ctx := context.TODO()
+
+		originalLogger, sb := wrapLoggerWithMock()
+		defer func() {
+			slog.SetDefault(originalLogger)
+		}()
 
 		jobCreatorMock := newMockJobCreator(t)
 		jobCreatorMock.EXPECT().createImportJob(ctx).Return(nil, assert.AnError)
@@ -141,14 +162,13 @@ func TestJobService_Run(t *testing.T) {
 			getStreamer: newMockGetStreamerFunc(t).Execute,
 		}
 
-		logReader, err := sut.Run(ctx)
+		err := sut.Run(ctx)
 
 		assert.ErrorIs(t, err, assert.AnError)
-		assert.Nil(t, logReader)
-
+		assert.Empty(t, sb.String())
 	})
 
-	t.Run("fail to save job - no logs available", func(t *testing.T) {
+	t.Run("fail to save job", func(t *testing.T) {
 		ctx := context.TODO()
 
 		job := &batchv1.Job{
@@ -171,16 +191,13 @@ func TestJobService_Run(t *testing.T) {
 			getStreamer: newMockGetStreamerFunc(t).Execute,
 		}
 
-		logReader, err := sut.Run(ctx)
+		err := sut.Run(ctx)
 
 		assert.ErrorIs(t, err, assert.AnError)
-		assert.Nil(t, logReader)
 	})
 
 	t.Run("fail to get watcher", func(t *testing.T) {
 		ctx := context.TODO()
-
-		expLogs := "test-Log"
 
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -198,13 +215,7 @@ func TestJobService_Run(t *testing.T) {
 		getWatcherMock := newMockGetWatcherFunc(t)
 		getWatcherMock.EXPECT().Execute(ctx, job.Name).Return(nil, assert.AnError)
 
-		readCloserMock := mockReadCloser{Reader: bytes.NewBufferString(expLogs)}
-
-		streamerMock := newMockStreamer(t)
-		streamerMock.EXPECT().Stream(ctx).Return(readCloserMock, nil)
-
 		getStreamerMock := newMockGetStreamerFunc(t)
-		getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(streamerMock, nil)
 
 		sut := &JobService{
 			jobClient:   jobClientMock,
@@ -213,14 +224,9 @@ func TestJobService_Run(t *testing.T) {
 			getStreamer: getStreamerMock.Execute,
 		}
 
-		logReader, err := sut.Run(ctx)
+		err := sut.Run(ctx)
 
 		assert.ErrorIs(t, err, assert.AnError)
-		assert.NotNil(t, logReader)
-
-		logs, err := io.ReadAll(logReader)
-		assert.NoError(t, err)
-		assert.Equal(t, expLogs, string(logs))
 	})
 
 	t.Run("fail because of watch errors", func(t *testing.T) {
@@ -311,15 +317,13 @@ func TestJobService_Run(t *testing.T) {
 				getWatcherMock := newMockGetWatcherFunc(t)
 				getWatcherMock.EXPECT().Execute(ctx, job.Name).Return(watcherMock, nil)
 
-				expLogs := "test-Log"
-
-				readCloserMock := mockReadCloser{Reader: bytes.NewBufferString(expLogs)}
+				readCloserMock := mockReadCloser{Reader: bytes.NewBufferString("expLogs")}
 
 				streamerMock := newMockStreamer(t)
-				streamerMock.EXPECT().Stream(ctx).Return(readCloserMock, nil)
+				streamerMock.EXPECT().Stream(ctx).Return(readCloserMock, nil).Maybe()
 
 				getStreamerMock := newMockGetStreamerFunc(t)
-				getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(streamerMock, nil)
+				getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil).Maybe()
 
 				sut := &JobService{
 					jobClient:   jobClientMock,
@@ -332,15 +336,10 @@ func TestJobService_Run(t *testing.T) {
 					watcherMock.Action(tt.event.Type, tt.event.Object)
 				}()
 
-				logReader, err := sut.Run(ctx)
+				err := sut.Run(ctx)
 
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expErr)
-				assert.NotNil(t, logReader)
-
-				logs, err := io.ReadAll(logReader)
-				assert.NoError(t, err)
-				assert.Equal(t, expLogs, string(logs))
 			})
 		}
 	})
@@ -361,6 +360,18 @@ func TestJobService_Run(t *testing.T) {
 		slog.SetDefault(logger)
 
 		t.Run("fail to get streamer", func(t *testing.T) {
+			originalBackoff := getStreamerBackoff
+			getStreamerBackoff = wait.Backoff{
+				Steps:    1,
+				Duration: 1 * time.Millisecond,
+				Factor:   1,
+				Jitter:   0,
+			}
+
+			defer func() {
+				getStreamerBackoff = originalBackoff
+			}()
+
 			jobCreatorMock := newMockJobCreator(t)
 			jobCreatorMock.EXPECT().createImportJob(ctx).Return(job, nil)
 
@@ -379,7 +390,7 @@ func TestJobService_Run(t *testing.T) {
 			getWatcherMock.EXPECT().Execute(ctx, job.Name).Return(watcherMock, nil)
 
 			getStreamerMock := newMockGetStreamerFunc(t)
-			getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(nil, assert.AnError)
+			getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(nil, assert.AnError)
 
 			sut := &JobService{
 				jobClient:   jobClientMock,
@@ -388,12 +399,11 @@ func TestJobService_Run(t *testing.T) {
 				getStreamer: getStreamerMock.Execute,
 			}
 
-			logReader, err := sut.Run(ctx)
+			err := sut.Run(ctx)
 
 			assert.NoError(t, err)
-			assert.Nil(t, logReader)
 
-			assert.Contains(t, buf.String(), "failed to create request for logs for job")
+			assert.Contains(t, buf.String(), "failed to get logs for job")
 		})
 
 		t.Run("fail to stream logs", func(t *testing.T) {
@@ -418,7 +428,7 @@ func TestJobService_Run(t *testing.T) {
 			streamerMock.EXPECT().Stream(ctx).Return(nil, assert.AnError)
 
 			getStreamerMock := newMockGetStreamerFunc(t)
-			getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{}).Return(streamerMock, nil)
+			getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil)
 
 			sut := &JobService{
 				jobClient:   jobClientMock,
@@ -427,14 +437,19 @@ func TestJobService_Run(t *testing.T) {
 				getStreamer: getStreamerMock.Execute,
 			}
 
-			logReader, err := sut.Run(ctx)
+			err := sut.Run(ctx)
 
 			assert.NoError(t, err)
-			assert.Nil(t, logReader)
-
-			assert.Contains(t, buf.String(), "failed to stream logs for job")
 		})
 	})
+}
+
+func wrapLoggerWithMock() (*slog.Logger, *strings.Builder) {
+	originalLogger := slog.Default()
+	sb := new(strings.Builder)
+	testLogger := slog.New(slog.NewTextHandler(sb, nil))
+	slog.SetDefault(testLogger)
+	return originalLogger, sb
 }
 
 func Test_createGetStreamerFunc(t *testing.T) {
@@ -447,6 +462,9 @@ func Test_createGetStreamerFunc(t *testing.T) {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: podName,
+					},
+					Status: corev1.PodStatus{
+						Phase: corev1.PodRunning,
 					},
 				},
 			},

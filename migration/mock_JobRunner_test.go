@@ -4,7 +4,6 @@ package migration
 
 import (
 	context "context"
-	io "io"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -23,33 +22,21 @@ func (_m *MockJobRunner) EXPECT() *MockJobRunner_Expecter {
 }
 
 // Run provides a mock function with given fields: ctx
-func (_m *MockJobRunner) Run(ctx context.Context) (io.ReadCloser, error) {
+func (_m *MockJobRunner) Run(ctx context.Context) error {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Run")
 	}
 
-	var r0 io.ReadCloser
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (io.ReadCloser, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) io.ReadCloser); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
 		r0 = rf(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.ReadCloser)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // MockJobRunner_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
@@ -70,12 +57,12 @@ func (_c *MockJobRunner_Run_Call) Run(run func(ctx context.Context)) *MockJobRun
 	return _c
 }
 
-func (_c *MockJobRunner_Run_Call) Return(_a0 io.ReadCloser, _a1 error) *MockJobRunner_Run_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockJobRunner_Run_Call) Return(_a0 error) *MockJobRunner_Run_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockJobRunner_Run_Call) RunAndReturn(run func(context.Context) (io.ReadCloser, error)) *MockJobRunner_Run_Call {
+func (_c *MockJobRunner_Run_Call) RunAndReturn(run func(context.Context) error) *MockJobRunner_Run_Call {
 	_c.Call.Return(run)
 	return _c
 }

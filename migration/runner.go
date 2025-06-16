@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"time"
 )
@@ -35,11 +34,7 @@ type DoguStarter interface {
 }
 
 type JobRunner interface {
-	Run(ctx context.Context) (io.ReadCloser, error)
-}
-
-type LogWriter interface {
-	Write(io.ReadCloser) error
+	Run(ctx context.Context) error
 }
 
 type MaintenanceModeHandler interface {
@@ -62,7 +57,6 @@ type Migrator struct {
 	doguVolumeResizer      DoguVolumeResizer
 	maintenanceModeHandler MaintenanceModeHandler
 	mailSender             MailSender
-	logWriter              LogWriter
 	jobRunner              JobRunner
 	doguStopper            DoguStopper
 	doguStarter            DoguStarter
@@ -76,7 +70,6 @@ type MigratorDependencies struct {
 	DoguVolumeResizer
 	MaintenanceModeHandler
 	MailSender
-	LogWriter
 	LogInitializer
 	JobRunner
 	DoguStopper
@@ -91,7 +84,6 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 		doguVolumeResizer:      dependencies.DoguVolumeResizer,
 		maintenanceModeHandler: dependencies.MaintenanceModeHandler,
 		mailSender:             dependencies.MailSender,
-		logWriter:              dependencies.LogWriter,
 		jobRunner:              dependencies.JobRunner,
 		doguStopper:            dependencies.DoguStopper,
 		doguStarter:            dependencies.DoguStarter,
@@ -150,14 +142,7 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		}
 	}
 
-	logs, err := m.jobRunner.Run(ctx)
-	if logs != nil {
-		lerr := m.logWriter.Write(logs)
-		if lerr != nil {
-			slog.Error(fmt.Sprintf("failed to write job log file: %s", lerr.Error()))
-		}
-	}
-
+	err = m.jobRunner.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to run migration job: %w", err)
 	}

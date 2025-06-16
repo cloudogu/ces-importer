@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - [#50] add "Date"-header to mail
 
+### Changed
+- [#54] stream logs and log them directly in the coordinator
+- [#54] cleanup migration job 60 seconds after completion
+
 ## [v0.0.3] - 2025-06-12
 ### Fixed
 - [#48] add permissions for the service account to handle backup schedules
