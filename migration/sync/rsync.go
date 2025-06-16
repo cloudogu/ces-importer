@@ -217,6 +217,7 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	args = append(args, "--stats")
 
 	// exclude pattern
+       args = append(args, "--delete-excluded")
 	for _, pattern := range excludePatterns {
 		args = append(args, "--exclude="+pattern)
 	}
