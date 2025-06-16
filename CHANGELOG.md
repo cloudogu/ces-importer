@@ -5,9 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Changed
-- [#57] support multiple exclude patterns in the values.yaml for the job configuration 
 
+## [v0.0.4] - 2025-06-16
 ### Fixed
 - [#50] do not send mails, when no mail-server is configured
 - [#52] wait for requested minimal data volume size when resizing pvcs
@@ -20,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - [#54] stream logs and log them directly in the coordinator
 - [#54] cleanup migration job 60 seconds after completion
+- [#57] support multiple exclude patterns in the values.yaml for the job configuration
 
 ## [v0.0.3] - 2025-06-12
 ### Fixed
