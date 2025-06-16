@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"log/slog"
 	"net/url"
 	"os"
@@ -325,7 +325,7 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit:            &backoffLimit,
-			TTLSecondsAfterFinished: pointer.Int32(jobTTLCleanupSeconds),
+			TTLSecondsAfterFinished: ptr.To(int32(jobTTLCleanupSeconds)),
 			Template: v1.PodTemplateSpec{
 				Spec: v1.PodSpec{
 					Volumes: jobVolumeMounts.volumes,
