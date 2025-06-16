@@ -70,7 +70,7 @@ config:
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:
-    #   - dogu: "jenkins"
+    #   - dogu: "official/jenkins"
     #     pattern:
     #     - "EXCLUDE_PATTERN_1"
     #     - "EXCLUDE_PATTERN_2"
