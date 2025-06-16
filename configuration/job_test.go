@@ -46,11 +46,16 @@ func TestReadJobConfig(t *testing.T) {
 			Exclude: []ExcludePattern{
 				{
 					DoguName: "jenkins",
-					Pattern:  "JENKINS_PATTERN",
+					Pattern: []string{
+						"JENKINS_PATTERN",
+					},
 				},
 				{
 					DoguName: "redmine",
-					Pattern:  "REDMINE_PATTERN",
+					Pattern: []string{
+						"REDMINE_PATTERN_1",
+						"REDMINE_PATTERN_2",
+					},
 				},
 			},
 			Verbose: true,
