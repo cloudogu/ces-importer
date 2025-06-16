@@ -26,7 +26,7 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer("banana")
+		initializer := NewLogInitializer("banana", "importer")
 		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
@@ -49,7 +49,7 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite := newMockCreateMultiWriter(t)
 
 		// when
-		initializer := NewLogInitializer("banana")
+		initializer := NewLogInitializer("banana", "importer")
 		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
@@ -75,7 +75,7 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer("ERROR")
+		initializer := NewLogInitializer("ERROR", "importer")
 		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
@@ -100,7 +100,7 @@ func Test_configureLogger(t *testing.T) {
 		mockWrite.EXPECT().Execute(mock.Anything, mock.Anything).Return(mockWriter)
 
 		// when
-		initializer := NewLogInitializer("WARN")
+		initializer := NewLogInitializer("WARN", "importer")
 		initializer.open = func(name string, flag int, perm os.FileMode) (file, error) {
 			return mockOpen.Execute(name, flag, perm)
 		}
@@ -128,7 +128,7 @@ func TestLogInitializer_Initialize(t *testing.T) {
 			os.Stdout = originalStdout
 		}()
 
-		initializer := NewLogInitializer("WARN")
+		initializer := NewLogInitializer("WARN", "importer")
 		err := initializer.Initialize()
 		require.NoError(t, err)
 		slog.Warn("test log msg")
@@ -145,7 +145,7 @@ func TestLogInitializer_Initialize(t *testing.T) {
 		var buf bytes.Buffer
 		_, err = io.Copy(&buf, r)
 		require.NoError(t, err)
-		assert.Contains(t, buf.String(), "level=WARN msg=\"test log msg\"\n")
+		assert.Contains(t, buf.String(), "level=WARN msg=\"test log msg\" component=importer\n")
 
 	})
 }

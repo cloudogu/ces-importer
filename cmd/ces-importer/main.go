@@ -74,13 +74,11 @@ func main() {
 }
 
 func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (*migration.Migrator, error) {
-	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
+	logInitializer := logging.NewLogInitializer(cfg.Logging.Level, "ces-importer")
 	err := logInitializer.InitializeWithLogFile()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initilize log: %w", err)
 	}
-
-	logWriter := logging.NewWriter(logging.PathJobLogFile)
 
 	exportAPIService := exporter.NewServiceFromConfig(
 		exporter.APIHost(cfg.ExporterHost),
@@ -131,7 +129,7 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 	mailSender := mail.CreateSender(
 		cfg.Smtp,
 		cfg.ExporterHost,
-		[]string{logging.PathAppLogFile, logging.PathJobLogFile},
+		[]string{logging.PathAppLogFile},
 		globalConfig,
 	)
 
@@ -144,7 +142,6 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 		JobRunner:              jobService,
 		DoguStopper:            k8sClientSet.DoguControl,
 		DoguStarter:            k8sClientSet.DoguControl,
-		LogWriter:              logWriter,
 		LogInitializer:         logInitializer,
 		MailSender:             mailSender,
 	}

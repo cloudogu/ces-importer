@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"io"
 	"log/slog"
 	"strings"
 	"testing"
@@ -42,16 +41,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, nil, mock.Anything, mock.Anything).Return(nil)
 
-		jobLogs := io.NopCloser(strings.NewReader("test"))
-
-		mLogWriter := NewMockLogWriter(t)
-		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
-		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
+		mJobRunner.EXPECT().Run(testCtx).Return(nil)
 
 		mDoguStopper := NewMockDoguStopper(t)
 		mDoguStopper.EXPECT().StopAll(testCtx).Return(nil)
@@ -66,7 +60,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -101,16 +94,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, nil, mock.Anything, mock.Anything).Return(nil)
 
-		jobLogs := io.NopCloser(strings.NewReader("test"))
-
-		mLogWriter := NewMockLogWriter(t)
-		mLogWriter.EXPECT().Write(jobLogs).Return(nil)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
-		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
+		mJobRunner.EXPECT().Run(testCtx).Return(nil)
 
 		mDoguStopper := NewMockDoguStopper(t)
 		mDoguStopper.EXPECT().StopAll(testCtx).Return(nil)
@@ -125,7 +113,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -152,8 +139,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mMailSender := NewMockMailSender(t)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(assert.AnError)
 
@@ -170,7 +155,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -201,8 +185,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -220,7 +202,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -252,8 +233,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -271,7 +250,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -304,8 +282,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -323,7 +299,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -357,8 +332,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -376,7 +349,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -411,8 +383,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -430,7 +400,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -465,8 +434,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -485,7 +452,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -520,13 +486,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
-		mJobRunner.EXPECT().Run(testCtx).Return(nil, assert.AnError)
+		mJobRunner.EXPECT().Run(testCtx).Return(assert.AnError)
 
 		mDoguStopper := NewMockDoguStopper(t)
 		mDoguStopper.EXPECT().StopAll(testCtx).Return(nil)
@@ -541,7 +505,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -553,72 +516,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, "failed to run migration job:")
-	})
-
-	t.Run("should log error when running delta migration with error in logWriter", func(t *testing.T) {
-		testCtx := context.Background()
-
-		originalLogger := slog.Default()
-		defer func() {
-			slog.SetDefault(originalLogger)
-		}()
-		sb := new(strings.Builder)
-		testLogger := slog.New(slog.NewTextHandler(sb, nil))
-		slog.SetDefault(testLogger)
-
-		mExportModeValidator := NewMockExportModeValidator(t)
-		mExportModeValidator.EXPECT().Validate(testCtx).Return(nil)
-
-		mSystemInfoProvider := NewMockSystemInfoProvider(t)
-		mSystemInfoProvider.EXPECT().GetExporterSystemInfo(testCtx).Return(exporterInfo, nil)
-		mSystemInfoProvider.EXPECT().GetImporterSystemInfo(testCtx).Return(importerInfo, nil)
-
-		mSystemInfoValidator := NewMockSystemInfoValidator(t)
-		mSystemInfoValidator.EXPECT().Validate(testCtx, exporterInfo, importerInfo).Return(nil)
-
-		mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
-		mDoguVolumeResizer.EXPECT().ResizeDogusIfNeeded(testCtx, exporterInfo.Dogus, importerInfo.Dogus).Return(nil)
-
-		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
-
-		mMailSender := NewMockMailSender(t)
-		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-		jobLogs := io.NopCloser(strings.NewReader("test"))
-
-		mLogWriter := NewMockLogWriter(t)
-		mLogWriter.EXPECT().Write(jobLogs).Return(assert.AnError)
-
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
-
-		mJobRunner := NewMockJobRunner(t)
-		mJobRunner.EXPECT().Run(testCtx).Return(jobLogs, nil)
-
-		mDoguStopper := NewMockDoguStopper(t)
-		mDoguStopper.EXPECT().StopAll(testCtx).Return(nil)
-
-		mDoguStarter := NewMockDoguStarter(t)
-		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
-
-		m := &Migrator{
-			exportModeValidator:    mExportModeValidator,
-			systemInfoProvider:     mSystemInfoProvider,
-			systemInfoValidator:    mSystemInfoValidator,
-			doguVolumeResizer:      mDoguVolumeResizer,
-			maintenanceModeHandler: mMaintenanceModeHandler,
-			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
-			jobRunner:              mJobRunner,
-			doguStopper:            mDoguStopper,
-			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
-		}
-
-		err := m.RunMigration(testCtx)
-
-		require.NoError(t, err)
-		assert.Contains(t, sb.String(), "failed to write job log file")
 	})
 
 	t.Run("should fail to run final migration for error enabling maintenance-mode", func(t *testing.T) {
@@ -645,8 +542,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mLogWriter := NewMockLogWriter(t)
-
 		mlogIntializer := NewMockLogInitializer(t)
 		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
 
@@ -665,7 +560,6 @@ func TestMigrator_RunMigration(t *testing.T) {
 			doguVolumeResizer:      mDoguVolumeResizer,
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
-			logWriter:              mLogWriter,
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
@@ -789,7 +683,6 @@ func TestNewMigrator(t *testing.T) {
 	mDoguVolumeResizer := NewMockDoguVolumeResizer(t)
 	mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
 	mMailSender := NewMockMailSender(t)
-	mLogWriter := NewMockLogWriter(t)
 	mJobRunner := NewMockJobRunner(t)
 	mDoguStopper := NewMockDoguStopper(t)
 	mDoguStarter := NewMockDoguStarter(t)
@@ -801,7 +694,6 @@ func TestNewMigrator(t *testing.T) {
 		DoguVolumeResizer:      mDoguVolumeResizer,
 		MaintenanceModeHandler: mMaintenanceModeHandler,
 		MailSender:             mMailSender,
-		LogWriter:              mLogWriter,
 		JobRunner:              mJobRunner,
 		DoguStopper:            mDoguStopper,
 		DoguStarter:            mDoguStarter,
@@ -814,7 +706,6 @@ func TestNewMigrator(t *testing.T) {
 	assert.Equal(t, mDoguVolumeResizer, m.doguVolumeResizer)
 	assert.Equal(t, mMaintenanceModeHandler, m.maintenanceModeHandler)
 	assert.Equal(t, mMailSender, m.mailSender)
-	assert.Equal(t, mLogWriter, m.logWriter)
 	assert.Equal(t, mJobRunner, m.jobRunner)
 	assert.Equal(t, mDoguStopper, m.doguStopper)
 	assert.Equal(t, mDoguStarter, m.doguStarter)
