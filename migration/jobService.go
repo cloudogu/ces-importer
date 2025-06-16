@@ -303,7 +303,7 @@ func (j JobService) streamLogs(ctx context.Context, jobName string) {
 	scanner := bufio.NewScanner(logs)
 	for scanner.Scan() {
 		line := scanner.Text()
-		slog.Info(fmt.Sprintf("[%s] %s", jobName, line))
+		fmt.Println(line)
 	}
 
 	if err := scanner.Err(); err != nil {
