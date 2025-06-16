@@ -286,6 +286,22 @@ func TestJobService_Run(t *testing.T) {
 				},
 				expErr: "job test-job failed",
 			},
+			{
+				name: "received job deleted event",
+				event: watch.Event{
+					Type: watch.Deleted,
+					Object: &batchv1.Job{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            "test-job",
+							ResourceVersion: "1",
+						},
+						Status: batchv1.JobStatus{
+							Failed: 0,
+						},
+					},
+				},
+				expErr: "job has been deleted during migration",
+			},
 		}
 
 		for _, tt := range tests {
