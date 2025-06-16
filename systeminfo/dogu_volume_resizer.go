@@ -117,7 +117,7 @@ func (d *DoguVolumeResizer) resize(ctx context.Context, fullDoguName string, new
 		return fmt.Errorf("dogu %q does not have enough volume capacity and the volume could not be resized: %w", doguName, err)
 	}
 
-	err = d.waitForPVCResize(ctx, doguName)
+	err = d.waitForPVCResize(ctx, doguName, minDataVolumeSize)
 	if err != nil {
 		return fmt.Errorf("error waiting for pvc of dogu %s to be resized: %w", doguName, err)
 	}
@@ -126,7 +126,7 @@ func (d *DoguVolumeResizer) resize(ctx context.Context, fullDoguName string, new
 }
 
 // waitForPVCResize waits until the pvc of the dogu has the expected size
-func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName string) error {
+func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName string, requestedMinDataVolumeSize *resource.Quantity) error {
 	retries := 0
 	for {
 		retries++
@@ -141,14 +141,14 @@ func (d *DoguVolumeResizer) waitForPVCResize(ctx context.Context, doguName strin
 			slog.Warn("could not get pvc for dogu %q: %w", doguName, err)
 			continue
 		}
-		requestedStorage := pvc.Spec.Resources.Requests.Storage()
+
 		actualStorage := pvc.Status.Capacity.Storage()
 
-		if requestedStorage.Equal(*actualStorage) {
+		if actualStorage.Cmp(*requestedMinDataVolumeSize) >= 0 {
 			slog.Info(fmt.Sprintf("Dogu %s volume resized to %s", doguName, actualStorage.String()))
 			return nil
 		}
 
-		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, actualStorage.String(), requestedStorage.String()))
+		slog.Info(fmt.Sprintf("Dogu %s: current size: %s, expected size: %s", doguName, actualStorage.String(), requestedMinDataVolumeSize.String()))
 	}
 }
