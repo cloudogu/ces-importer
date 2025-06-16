@@ -5,9 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- [#57] support multiple exclude patterns in the values.yaml for the job configuration 
+
 ### Fixed
 - [#50] do not send mails, when no mail-server is configured
 - [#52] wait for requested minimal data volume size when resizing pvcs
+- use configured value for verbose flag instead of hardcoded value
 
 ### Added
 - [#50] add "Date"-header to mail
