@@ -41,10 +41,11 @@ type RsyncSyncer struct {
 	excludePattern      []configuration.ExcludePattern
 	doguVolumeBasePath  string
 	excludedDogus       []string
+	verbose             bool
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string, excludedDogus []string) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string, excludedDogus []string, verbose bool) *RsyncSyncer {
 	commandMaker := func(name string, arg ...string) command {
 		return exec.Command(name, arg...)
 	}
@@ -58,6 +59,7 @@ func NewRsyncSyncer(host string, user string, privateKeyPath string, client expo
 		excludePattern:      excludePattern,
 		doguVolumeBasePath:  doguVolumeBasePath,
 		excludedDogus:       excludedDogus,
+		verbose:             verbose,
 	}
 }
 
@@ -82,9 +84,9 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 	}
 
 	// map exclude patterns to dogu name for easy retrieval
-	excludeMap := make(map[string]configuration.ExcludePattern)
+	excludeMap := make(map[string][]string)
 	for _, p := range rs.excludePattern {
-		excludeMap[p.DoguName] = p
+		excludeMap[p.DoguName] = append(excludeMap[p.DoguName], p.Pattern...)
 	}
 
 	// sync data for every dogu
@@ -124,7 +126,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 			// Ensure the exporter path ends with a separator for rsync
 			exporterSourcePath := path.Clean(path.Join(doguExport.VolumePath, subDir)) + "/"
 
-			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern, true); err != nil {
+			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern); err != nil {
 				result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSourcePath, importerDestination, err))
 			}
 		}
@@ -135,10 +137,10 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 }
 
 // SyncDoguDir copies dogu volume data from a remote Cloudogu EcoSystem instance.
-func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) error {
+func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destination string, excludePatterns []string) error {
 
 	// Define the rsync command and arguments
-	args := rs.buildRSyncArgs(port, source, destination, exclude, verbose)
+	args := rs.buildRSyncArgs(port, source, destination, excludePatterns)
 	cmd := rs.makeCommand("rsync", args...)
 
 	slog.Debug(fmt.Sprintf("executing rsync command: %s", cmd.String()))
@@ -193,13 +195,13 @@ func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destinat
 }
 
 // buildRSyncArgs builds the arguments for the rsync command based on the given parameters
-func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, exclude configuration.ExcludePattern, verbose bool) []string {
+func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excludePatterns []string) []string {
 	var args []string
 	// archive mode
 	// verbose
 	// human-readable sizes
 	// compress file data during transfer
-	if verbose {
+	if rs.verbose {
 		args = append(args, "-avhz")
 	} else {
 		args = append(args, "-ahz")
@@ -215,7 +217,7 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	args = append(args, "--stats")
 
 	// exclude pattern
-	for _, pattern := range exclude.Pattern {
+	for _, pattern := range excludePatterns {
 		args = append(args, "--exclude="+pattern)
 	}
 
