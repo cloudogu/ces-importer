@@ -215,8 +215,8 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	args = append(args, "--stats")
 
 	// exclude pattern
-	if exclude.Pattern != "" {
-		args = append(args, "--exclude="+exclude.Pattern)
+	for _, pattern := range exclude.Pattern {
+		args = append(args, "--exclude="+pattern)
 	}
 
 	// ssh options

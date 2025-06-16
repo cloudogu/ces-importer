@@ -41,15 +41,17 @@ func TestSyncData(t *testing.T) {
 			iterator++
 
 			assert.Equal(t, "rsync", name)
-			assert.Len(t, arg, 8)
+			assert.Len(t, arg, 10)
 			assert.Equal(t, "-avhz", arg[0])
 			assert.Equal(t, "--delete", arg[1])
 			assert.Equal(t, "--sparse", arg[2])
 			assert.Equal(t, "--stats", arg[3])
-			assert.Equal(t, "-e", arg[4])
-			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[5])
-			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[6])
-			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[7])
+			assert.Equal(t, "--exclude=*.file", arg[4])
+			assert.Equal(t, "--exclude=*.bak", arg[5])
+			assert.Equal(t, "-e", arg[6])
+			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[7])
+			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[8])
+			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[9])
 
 			return cmd
 		}
@@ -65,7 +67,10 @@ func TestSyncData(t *testing.T) {
 			systemInfoProvider:  systemInfoProvider,
 			doguVolumeBasePath:  "../../testdata/sync",
 			excludePattern: []configuration.ExcludePattern{
-				{DoguName: "testDogu", Pattern: "*.file"},
+				{DoguName: "official/test", Pattern: []string{
+					"*.file",
+					"*.bak",
+				}},
 			},
 		}
 
@@ -181,7 +186,7 @@ func TestSyncData(t *testing.T) {
 			systemInfoProvider:  systemInfoProvider,
 			doguVolumeBasePath:  "../../testdata/sync",
 			excludePattern: []configuration.ExcludePattern{
-				{DoguName: "testDogu", Pattern: "*.file"},
+				{DoguName: "official/test", Pattern: []string{"*.file"}},
 			},
 		}
 
@@ -280,11 +285,12 @@ func TestSyncDogu(t *testing.T) {
 
 		exclude := configuration.ExcludePattern{
 			DoguName: "test",
-			Pattern:  "*.test",
+			Pattern:  []string{"*.test"},
 		}
 		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, true)
 		require.NoError(t, err)
 	})
+
 	t.Run("should fail to create std out pipe", func(t *testing.T) {
 		cmd := newMockCommand(t)
 		cmd.EXPECT().String().Return("command")
@@ -421,7 +427,7 @@ func TestNewRsyncSyncer(t *testing.T) {
 		user := "user"
 		privateKeyPath := "/.ssh/private"
 		doguVolumeBasePath := "/dogu/volume"
-		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: "*.test"}}
+		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: []string{"*.file"}}}
 		excludedDogus := make([]string, 0)
 
 		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath, excludedDogus)
