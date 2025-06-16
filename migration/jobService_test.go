@@ -6,6 +6,7 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"io"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -80,9 +82,13 @@ func TestJobService_Run(t *testing.T) {
 
 		expLogs := "test-Log"
 
-		originalLogger, sb := wrapLoggerWithMock()
+		// Save the original stdout
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
 		defer func() {
-			slog.SetDefault(originalLogger)
+			os.Stdout = old
 		}()
 
 		job := &batchv1.Job{
@@ -130,7 +136,12 @@ func TestJobService_Run(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		assert.Contains(t, sb.String(), expLogs)
+		err = w.Close()
+		require.NoError(t, err)
+		var buf bytes.Buffer
+		_, err = buf.ReadFrom(r)
+		require.NoError(t, err)
+		assert.Contains(t, buf.String(), expLogs)
 	})
 
 	t.Run("fail to create job - no logs available", func(t *testing.T) {

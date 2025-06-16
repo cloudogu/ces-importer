@@ -74,7 +74,7 @@ func main() {
 }
 
 func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (*migration.Migrator, error) {
-	logInitializer := logging.NewLogInitializer(cfg.Logging.Level)
+	logInitializer := logging.NewLogInitializer(cfg.Logging.Level, "ces-importer")
 	err := logInitializer.InitializeWithLogFile()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initilize log: %w", err)

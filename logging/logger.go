@@ -17,15 +17,17 @@ type LogInitializer struct {
 	open           osOpenFile
 	newMultiWriter createMultiWriter
 	logLevel       string
+	component      string
 }
 
-func NewLogInitializer(logLevel string) *LogInitializer {
+func NewLogInitializer(logLevel string, component string) *LogInitializer {
 	return &LogInitializer{
 		open: func(name string, flag int, perm os.FileMode) (file, error) {
 			return os.OpenFile(name, flag, perm)
 		},
 		newMultiWriter: io.MultiWriter,
 		logLevel:       logLevel,
+		component:      component,
 	}
 }
 
@@ -56,7 +58,11 @@ func (li LogInitializer) initialize(writer io.Writer) error {
 		Level: level,
 	})
 
-	logger := slog.New(handler)
+	componentHandler := handler.WithAttrs([]slog.Attr{
+		slog.String("component", li.component),
+	})
+
+	logger := slog.New(componentHandler)
 	slog.SetDefault(logger)
 
 	slog.Info("Configured logger", "level", level.String())
