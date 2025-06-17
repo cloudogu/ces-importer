@@ -30,8 +30,8 @@ type getStreamerFunc func(jobName string, options *corev1.PodLogOptions) (stream
 
 // getStreamerBackoff defines the backoff strategy for retrying operations to fetch a log streamer, including steps and delays.
 var getStreamerBackoff = wait.Backoff{
-	Steps:    50,
-	Duration: 2 * time.Second,
+	Steps:    100,
+	Duration: 5 * time.Second,
 	Factor:   1.0,
 	Jitter:   0.1,
 }
