@@ -146,6 +146,64 @@ func TestGetSystemInfo(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "ould not get minDataVolumeSize for dogu: quantities must match the regular expression")
 	})
+	t.Run("should get values from dogu status, not dogu spec", func(t *testing.T) {
+		// dogus
+		dogus := newMockDoguLister(t)
+		doguList := doguv2.DoguList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items: []doguv2.Dogu{{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testDogu",
+				},
+				Spec: doguv2.DoguSpec{
+					Version: "1.1.1",
+				},
+				Status: doguv2.DoguStatus{
+					InstalledVersion: "2.2.2",
+				},
+			}},
+		}
+		dogus.EXPECT().List(mock.Anything, mock.Anything).Return(&doguList, nil)
+
+		// components
+		components := newMockComponentLister(t)
+		componentList := componentv1.ComponentList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items: []componentv1.Component{
+				{
+					TypeMeta: metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "testComponent",
+					},
+					Spec: componentv1.ComponentSpec{
+						Version: "1.1.1",
+					},
+					Status: componentv1.ComponentStatus{
+						InstalledVersion: "2.2.2",
+					},
+				},
+			},
+		}
+		components.EXPECT().List(mock.Anything, mock.Anything).Return(&componentList, nil)
+
+		mockProvider := Provider{
+			componentLister: components,
+			doguLister:      dogus,
+		}
+
+		systemInfo, err := mockProvider.GetImporterSystemInfo(context.Background())
+		require.NoError(t, err)
+
+		for _, d := range systemInfo.Dogus {
+			require.Equal(t, d.Version, "2.2.2")
+		}
+		for _, c := range systemInfo.Components {
+			require.Equal(t, c.Version, "2.2.2")
+		}
+	})
 }
 
 func TestNewSystemInfoProvider(t *testing.T) {
