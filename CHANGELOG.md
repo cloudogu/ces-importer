@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- [#60] remove config values from logs
 - [#61] increase timout when waiting for migration job logs to 500 seconds
 - [#63] use installed version instead of spec version when validating dogus
 
