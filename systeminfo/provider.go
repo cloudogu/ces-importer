@@ -51,7 +51,7 @@ func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*migration.System
 
 		systemInfoDogus = append(systemInfoDogus, migration.Dogu{
 			Name:    d.Spec.Name,
-			Version: d.Spec.Version,
+			Version: d.Status.InstalledVersion,
 			Volume:  migration.DoguVolume{SizeInBytes: vol.Value()},
 		})
 	}
@@ -65,7 +65,7 @@ func (s *Provider) GetImporterSystemInfo(ctx context.Context) (*migration.System
 	for _, c := range components.Items {
 		systemInfoComponents = append(systemInfoComponents, migration.Component{
 			Name:    c.Name,
-			Version: c.Spec.Version,
+			Version: c.Status.InstalledVersion,
 		})
 	}
 
