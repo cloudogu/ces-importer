@@ -89,7 +89,7 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.Dogu, result error) error {
 	imDogu, exists := imDoguMap[exDogu.Name]
 	if !exists {
-		return errors.Join(result, fmt.Errorf("dogu %s is not installed (needed version: %s) \n", exDogu.Name, exDogu.Version))
+		return errors.Join(result, fmt.Errorf("dogu %s is not installed (required version: %s) \n", exDogu.Name, exDogu.Version))
 	}
 
 	// Validate version
@@ -124,7 +124,7 @@ func validateComponents(imInfo *migration.SystemInfo, exInfo *migration.SystemIn
 		// validate that the component exists
 		imComponent := imComponentsMap[c.Name]
 		if imComponent.Name == "" {
-			result = errors.Join(result, fmt.Errorf("component %s is not installed (needed version: %s) \n", c.Name, c.Version))
+			result = errors.Join(result, fmt.Errorf("component %s is not installed (required version: %s) \n", c.Name, c.Version))
 			continue
 		}
 
