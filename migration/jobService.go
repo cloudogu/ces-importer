@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/cloudogu/ces-importer/logging"
 	"io"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,10 @@ var getStreamerBackoff = wait.Backoff{
 	Duration: 5 * time.Second,
 	Factor:   1.0,
 	Jitter:   0.1,
+}
+
+var println = func(a ...any) (n int, err error) {
+	return fmt.Fprintln(logging.GetWriter(), a...)
 }
 
 // getWatcherFunc is a function type that creates a watcher for monitoring job status changes
@@ -309,7 +314,7 @@ func (j JobService) streamLogs(ctx context.Context, jobName string) {
 	scanner := bufio.NewScanner(logs)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
+		println(line)
 	}
 
 	if err := scanner.Err(); err != nil {

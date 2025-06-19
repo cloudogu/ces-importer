@@ -33,7 +33,19 @@ func main() {
 		panic(fmt.Errorf("failed to read config: %w", err))
 	}
 
-	migrator, err := createMigrator(clusterConfig, cfg)
+	initLog := func() error {
+		return logging.InitStructuredLogger(
+			logging.WithLevel(cfg.Logging.Level),
+			logging.WithComponent("ces-importer"),
+			logging.WithFile(logging.PathAppLogFile),
+		)
+	}
+
+	if lErr := initLog(); lErr != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", lErr))
+	}
+
+	migrator, err := createMigrator(clusterConfig, cfg, initLog)
 	if err != nil {
 		panic(fmt.Errorf("failed to create migrator: %w", err))
 	}
@@ -73,13 +85,7 @@ func main() {
 	slog.Info("exiting")
 }
 
-func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (*migration.Migrator, error) {
-	logInitializer := logging.NewLogInitializer(cfg.Logging.Level, "ces-importer")
-	err := logInitializer.InitializeWithLogFile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initilize log: %w", err)
-	}
-
+func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator, initLog migration.LogInitializerFunc) (*migration.Migrator, error) {
 	exportAPIService := exporter.NewServiceFromConfig(
 		exporter.APIHost(cfg.ExporterHost),
 		exporter.APIKey(cfg.ExporterApiKey),
@@ -142,8 +148,8 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator) (
 		JobRunner:              jobService,
 		DoguStopper:            k8sClientSet.DoguControl,
 		DoguStarter:            k8sClientSet.DoguControl,
-		LogInitializer:         logInitializer,
 		MailSender:             mailSender,
+		LogInitializerFunc:     initLog,
 	}
 
 	return migration.NewMigrator(deps), nil

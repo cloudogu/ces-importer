@@ -3,6 +3,7 @@ package migration
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"log/slog"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -83,12 +83,14 @@ func TestJobService_Run(t *testing.T) {
 		expLogs := "test-Log"
 
 		// Save the original stdout
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
+		old := println
+		var buf bytes.Buffer
+		println = func(v ...interface{}) (n int, err error) {
+			return buf.WriteString(fmt.Sprint(v...))
+		}
 
 		defer func() {
-			os.Stdout = old
+			println = old
 		}()
 
 		job := &batchv1.Job{
@@ -136,10 +138,6 @@ func TestJobService_Run(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		err = w.Close()
-		require.NoError(t, err)
-		var buf bytes.Buffer
-		_, err = buf.ReadFrom(r)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), expLogs)
 	})
