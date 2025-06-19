@@ -107,8 +107,9 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator, i
 			DoguVolumeBasePath: cfg.JobConfig.DoguVolumeBasePath,
 			PVCClient:          migration.NewPVCGetter(k8sClientSet.Pvc),
 		},
-		JobClient: k8sClientSet.Job,
-		PodClient: k8sClientSet.Pod,
+		JobClient:    k8sClientSet.Job,
+		PodClient:    k8sClientSet.Pod,
+		GetLogWriter: logging.GetWriter,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new job service: %v", err)

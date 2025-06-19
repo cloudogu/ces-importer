@@ -3,7 +3,6 @@ package migration
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -82,16 +81,7 @@ func TestJobService_Run(t *testing.T) {
 
 		expLogs := "test-Log"
 
-		// Save the original stdout
-		old := println
 		var buf bytes.Buffer
-		println = func(v ...interface{}) (n int, err error) {
-			return buf.WriteString(fmt.Sprint(v...))
-		}
-
-		defer func() {
-			println = old
-		}()
 
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,10 +118,11 @@ func TestJobService_Run(t *testing.T) {
 		getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil)
 
 		sut := &JobService{
-			jobClient:   jobClientMock,
-			jobCreator:  jobCreatorMock,
-			getWatcher:  getWatcherMock.Execute,
-			getStreamer: getStreamerMock.Execute,
+			jobClient:    jobClientMock,
+			jobCreator:   jobCreatorMock,
+			getWatcher:   getWatcherMock.Execute,
+			getStreamer:  getStreamerMock.Execute,
+			getLogWriter: func() io.Writer { return &buf },
 		}
 
 		err := sut.Run(ctx)
@@ -324,10 +315,11 @@ func TestJobService_Run(t *testing.T) {
 				getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil).Maybe()
 
 				sut := &JobService{
-					jobClient:   jobClientMock,
-					jobCreator:  jobCreatorMock,
-					getWatcher:  getWatcherMock.Execute,
-					getStreamer: getStreamerMock.Execute,
+					jobClient:    jobClientMock,
+					jobCreator:   jobCreatorMock,
+					getWatcher:   getWatcherMock.Execute,
+					getStreamer:  getStreamerMock.Execute,
+					getLogWriter: func() io.Writer { return &bytes.Buffer{} },
 				}
 
 				go func() {
