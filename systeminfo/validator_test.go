@@ -112,7 +112,7 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{}
 		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
-		require.ErrorContains(t, err, "dogu testdogu is not installed (needed version: 1.2.3)")
+		require.ErrorContains(t, err, "dogu testdogu is not installed (required version: 1.2.3)")
 	})
 
 	t.Run("should return error component not installed", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{}
 		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
-		require.ErrorContains(t, err, "component testcomponent is not installed (needed version: 1.2.3)")
+		require.ErrorContains(t, err, "component testcomponent is not installed (required version: 1.2.3)")
 	})
 
 	t.Run("should return error component mismatching component version", func(t *testing.T) {
