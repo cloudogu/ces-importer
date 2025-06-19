@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,59 +14,79 @@ const (
 	logFilesPerm   = 0666
 )
 
-type LogInitializer struct {
-	open           osOpenFile
-	newMultiWriter createMultiWriter
-	logLevel       string
-	component      string
+var (
+	writer io.Writer = os.Stdout
+)
+
+func GetWriter() io.Writer {
+	return writer
 }
 
-func NewLogInitializer(logLevel string, component string) *LogInitializer {
-	return &LogInitializer{
-		open: func(name string, flag int, perm os.FileMode) (file, error) {
-			return os.OpenFile(name, flag, perm)
-		},
-		newMultiWriter: io.MultiWriter,
-		logLevel:       logLevel,
-		component:      component,
+type logger struct {
+	level      slog.Level
+	attributes []slog.Attr
+	writer     io.Writer
+	err        error
+}
+
+type LoggerOption func(*logger)
+
+func WithLevel(level string) LoggerOption {
+	return func(l *logger) {
+		var logLevel slog.Level
+
+		if err := logLevel.UnmarshalText([]byte(level)); err != nil {
+			l.err = errors.Join(l.err, fmt.Errorf("failed to parse log level, fallback to INFO: %w", err))
+		}
+
+		l.level = logLevel
 	}
 }
 
-func (li LogInitializer) Initialize() error {
-	return li.initialize(os.Stdout)
+func WithComponent(component string) LoggerOption {
+	return func(l *logger) {
+		l.attributes = append(l.attributes, slog.String("component", component))
+	}
 }
 
-func (li LogInitializer) InitializeWithLogFile() error {
-	logFile, err := li.open(PathAppLogFile, logFilesMode, logFilesPerm)
-	if err != nil {
-		return fmt.Errorf("failed to open app log file: %w", err)
+func WithFile(file string) LoggerOption {
+	return func(l *logger) {
+		logFile, err := os.OpenFile(file, logFilesMode, logFilesPerm)
+		if err != nil {
+			l.err = errors.Join(l.err, fmt.Errorf("failed to open log file: %w", err))
+			return
+		}
+
+		l.writer = io.MultiWriter(l.writer, logFile)
 	}
-
-	multiWriter := li.newMultiWriter(os.Stdout, logFile)
-
-	return li.initialize(multiWriter)
 }
 
-func (li LogInitializer) initialize(writer io.Writer) error {
-	var level slog.Level
-	if err := level.UnmarshalText([]byte(li.logLevel)); err != nil {
-		slog.New(slog.NewTextHandler(os.Stderr, nil)).
-			Error("Error parsing log level. Setting to INFO.", "err", err)
-		level = slog.LevelInfo
+func InitStructuredLogger(options ...LoggerOption) error {
+	l := &logger{
+		level:      slog.LevelInfo,
+		attributes: []slog.Attr{},
+		writer:     os.Stdout,
 	}
 
-	handler := slog.NewTextHandler(writer, &slog.HandlerOptions{
-		Level: level,
+	for _, option := range options {
+		option(l)
+	}
+
+	textHandler := slog.NewTextHandler(l.writer, &slog.HandlerOptions{
+		Level: l.level,
 	})
 
-	componentHandler := handler.WithAttrs([]slog.Attr{
-		slog.String("component", li.component),
-	})
+	handler := textHandler.WithAttrs(l.attributes)
 
-	logger := slog.New(componentHandler)
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(handler))
+	slog.Info("Configured logger", "level", l.level.String())
 
-	slog.Info("Configured logger", "level", level.String())
+	if l.err != nil {
+		return l.err
+	}
+
+	// Set writer from logger
+	writer = l.writer
 
 	return nil
 }
