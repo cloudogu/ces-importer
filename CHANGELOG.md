@@ -5,10 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- [#71] retry writing fqdn to global-config on conflict-error
+
+## [v0.0.6] - 2025-06-20
 ### Fixed
+- [#66] fix missing subject in mails
+- [#66] fix mails don't have log files attached
+- [#66] fix too long token error when log lines are too long
 - [#67] race condition while waiting for pvc resizes
 - [#69] always run data and config migration before exiting because of errors
-- [#71] retry writing fqdn to global-config on conflict-error
+- [#74] use changeFQDN value from configuration
 
 ## [v0.0.5] - 2025-06-18
 ### Fixed

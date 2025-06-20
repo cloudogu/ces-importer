@@ -160,7 +160,7 @@ func TestRun(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), tt.in.ctxTimeout)
 			defer cancel()
 
-			err := Run(ctx, tt.in.timestamp(), tt.in.regularCron, migrationRunnerMock)
+			err := Run(ctx, tt.in.timestamp(), tt.in.regularCron, true, migrationRunnerMock)
 
 			assert.Equal(t, tt.expErr, err != nil)
 			if err != nil {

@@ -9,12 +9,14 @@ import (
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
+	"maps"
 	"mime/multipart"
 	"mime/quotedprintable"
 	"net/smtp"
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -114,11 +116,9 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 	var body bytes.Buffer
 	multipartWriter := multipart.NewWriter(&body)
 
-	from := fmt.Sprintf("From: %s\r\n", s.config.From)
-
 	// Write headers
 	headers := make(map[string]string)
-	headers["From"] = from
+	headers["From"] = s.config.From
 	headers["To"] = strings.Join(s.config.To, ", ")
 	headers["Subject"] = buildSubject(migrationSuccessful)
 	headers["MIME-Version"] = "1.0"
@@ -126,9 +126,11 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 	headers["Message-ID"] = buildMessageId(targetInstance)
 	headers["Date"] = getDate()
 
-	for k, v := range headers {
-		body.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
+	for _, key := range slices.Sorted(maps.Keys(headers)) {
+		body.WriteString(fmt.Sprintf("%s: %s\r\n", key, headers[key]))
 	}
+
+	// empty line needed between header and content
 	body.WriteString("\r\n")
 
 	err = s.writeBodyText(ctx, multipartWriter, migrationResult, start, end, isFinal)
