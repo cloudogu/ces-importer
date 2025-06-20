@@ -86,7 +86,7 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []migration.K
 	}
 
 	for _, kv := range dc {
-		slog.Debug("Setting dogu config", "key", kv.Key)
+		slog.Debug("Setting dogu config", "key", kv.Key, "dogu", doguName)
 		newDoguConfig, err := registryDoguConfig.Set(regConfig.Key(kv.Key), regConfig.Value(kv.Value))
 		registryDoguConfig = regConfig.DoguConfig{
 			DoguName: doguName,

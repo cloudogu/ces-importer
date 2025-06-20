@@ -143,7 +143,7 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 			slog.Error("failed to add attachment to mail", "err", err)
 			continue
 		}
-		slog.Debug("Added attachment to mail: %s", "file", file)
+		slog.Debug("added attachment to mail", "file", file)
 	}
 
 	if err := multipartWriter.Close(); err != nil {
