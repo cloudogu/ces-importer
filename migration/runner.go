@@ -139,6 +139,8 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 		err = m.maintenanceModeHandler.Enable(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to enable maintenance mode: %w", err)
+		} else {
+			defer m.disableMaintenanceMode(ctx)
 		}
 	}
 
@@ -159,13 +161,6 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 		slog.Error(fmt.Sprintf("migration failed: %s", runPanic))
 	}
 
-	if (runError != nil || runPanic != nil) && isFinalMigration {
-		if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
-			retError = errors.Join(runError, err)
-			slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
-		}
-	}
-
 	if err := m.doguStarter.StartAll(ctx); err != nil {
 		retError = errors.Join(runError, err)
 		slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
@@ -183,4 +178,10 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 	}
 
 	return retError
+}
+
+func (m Migrator) disableMaintenanceMode(ctx context.Context) {
+	if err := m.maintenanceModeHandler.Disable(ctx); err != nil {
+		slog.Error(fmt.Sprintf("failed to disabled maintenance mode: %v", err))
+	}
 }
