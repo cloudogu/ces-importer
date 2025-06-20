@@ -30,10 +30,11 @@ func run() int {
 
 	slog.Debug("Successfully read job configuration")
 
-	logInitializer := logging.NewLogInitializer(jobConfig.Logging.Level, "import-job")
-	err = logInitializer.Initialize()
-	if err != nil {
-		slog.Error("failed to initialize logger", "cause", err)
+	if lErr := logging.InitStructuredLogger(
+		logging.WithLevel(jobConfig.Logging.Level),
+		logging.WithComponent("import-job"),
+	); lErr != nil {
+		slog.Error("failed to initialize logger", "cause", lErr)
 		return 1
 	}
 

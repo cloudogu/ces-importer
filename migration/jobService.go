@@ -4,7 +4,6 @@
 package migration
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -40,22 +39,27 @@ var getStreamerBackoff = wait.Backoff{
 // It takes a context and resource version and returns a watch interface for receiving events
 type getWatcherFunc func(ctx context.Context, jobName string) (watchAPI.Interface, error)
 
+// GetLogWriterFunc is a function type to receive to current io.Writer to write the logs to.
+type GetLogWriterFunc func() io.Writer
+
 // JobServiceDependencies contains all the dependencies required to create a JobService
 // It includes dependencies for job creation, job client for interacting with Kubernetes jobs,
 // and pod client for accessing pod information and logs
 type JobServiceDependencies struct {
 	JobProviderDependencies
-	JobClient jobClient
-	PodClient podClient
+	JobClient    jobClient
+	PodClient    podClient
+	GetLogWriter GetLogWriterFunc
 }
 
 // JobService orchestrates the creation, execution, and monitoring of Kubernetes jobs
 // It provides functionality to run jobs, watch their status, and retrieve their logs
 type JobService struct {
-	jobClient                   // For interacting with Kubernetes jobs API
-	jobCreator                  // For creating job specifications
-	getWatcher  getWatcherFunc  // Function to create job status watchers
-	getStreamer getStreamerFunc // Function to retrieve log streamers
+	jobClient                     // For interacting with Kubernetes jobs API
+	jobCreator                    // For creating job specifications
+	getWatcher   getWatcherFunc   // Function to create job status watchers
+	getStreamer  getStreamerFunc  // Function to retrieve log streamers
+	getLogWriter GetLogWriterFunc // Function to get the Writer to send logs to
 }
 
 // watchAdapter adapts the jobClient.Watch function to implement the watch.Interface
@@ -80,10 +84,11 @@ func NewJobService(deps JobServiceDependencies) (*JobService, error) {
 	}
 
 	return &JobService{
-		jobClient:   deps.JobClient,
-		jobCreator:  provider,
-		getWatcher:  createGetWatcherFunc(deps.JobClient),
-		getStreamer: createGetStreamerFunc(deps.PodClient),
+		jobClient:    deps.JobClient,
+		jobCreator:   provider,
+		getWatcher:   createGetWatcherFunc(deps.JobClient),
+		getStreamer:  createGetStreamerFunc(deps.PodClient),
+		getLogWriter: deps.GetLogWriter,
 	}, nil
 }
 
@@ -306,14 +311,9 @@ func (j JobService) streamLogs(ctx context.Context, jobName string) {
 		}
 	}(logs)
 
-	scanner := bufio.NewScanner(logs)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-	}
-
-	if err := scanner.Err(); err != nil {
-		slog.Error("Error reading logs for job.", "error", err)
+	_, cErr := io.Copy(j.getLogWriter(), logs)
+	if cErr != nil {
+		slog.Error("Error reading logs for job.", "error", cErr)
 	}
 
 	slog.Info("Finished streaming logs for job.", "name", jobName)

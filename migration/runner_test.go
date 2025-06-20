@@ -41,8 +41,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, nil, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(nil)
@@ -63,7 +63,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -94,8 +94,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, nil, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(nil)
@@ -116,7 +116,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -139,8 +139,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 
 		mMailSender := NewMockMailSender(t)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(assert.AnError)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(assert.AnError)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -158,7 +158,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -185,8 +185,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -205,7 +205,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -233,8 +233,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -253,7 +253,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -282,8 +282,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -302,7 +302,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -332,8 +332,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -352,7 +352,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -383,8 +383,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -403,7 +403,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -434,8 +434,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -455,7 +455,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -486,8 +486,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, false, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 		mJobRunner.EXPECT().Run(testCtx).Return(assert.AnError)
@@ -508,7 +508,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
@@ -542,8 +542,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mMailSender := NewMockMailSender(t)
 		mMailSender.EXPECT().Send(testCtx, true, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		mlogIntializer := NewMockLogInitializer(t)
-		mlogIntializer.EXPECT().InitializeWithLogFile().Return(nil)
+		mlogIntializer := NewMockLogInitializerFunc(t)
+		mlogIntializer.EXPECT().Execute().Return(nil)
 
 		mJobRunner := NewMockJobRunner(t)
 
@@ -563,7 +563,7 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
-			logInitializer:         mlogIntializer,
+			initializeLogger:       mlogIntializer.Execute,
 		}
 
 		err := m.RunMigration(testCtx)
