@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
@@ -50,18 +51,23 @@ func NewImportExecuter(cfg configuration.Job, apiService *exporter.Service, k8sC
 
 func (j ImportExecuter) Start(ctx context.Context) error {
 	slog.Info("Starting data and configuration sync.")
+	var syncError error
 
 	if err := j.dataSyncer.SyncData(ctx); err != nil {
-		return fmt.Errorf("failed to sync data: %w", err)
+		syncError = errors.Join(syncError, err)
+	} else {
+		slog.Info("Dogu data has been synced successfully.")
 	}
-
-	slog.Info("Dogu data has been synced.")
 
 	if err := j.configSyncer.SyncConfig(ctx); err != nil {
-		return fmt.Errorf("failed to sync configuration: %w", err)
+		syncError = errors.Join(syncError, err)
+	} else {
+		slog.Info("Configuration has been synced successfully.")
 	}
 
-	slog.Info("Configuration has been synced.")
+	if syncError != nil {
+		return syncError
+	}
 
 	if !migration.TriggerFQDNChange(ctx) {
 		slog.Info("No FQDN change triggered.")

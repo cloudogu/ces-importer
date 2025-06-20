@@ -56,8 +56,7 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 	var wg sync.WaitGroup
 
 	var err error
-	errorsChan := make(chan error)
-	defer close(errorsChan)
+	errorsChan := make(chan error, len(exporterDogus))
 
 	for _, exporterDogu := range exporterDogus {
 		if slices.Contains(d.excludedDogus, exporterDogu.Name) {
@@ -74,22 +73,23 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 
 		if exporterDogu.Volume.SizeInBytes > importerDogu.Volume.SizeInBytes {
 			wg.Add(1)
-			go func() {
+			go func(expDogu, impDogu migration.Dogu) {
 				defer wg.Done()
-				if resizeErr := d.resize(ctx, importerDogu.Name, exporterDogu.Volume.SizeInBytes); resizeErr != nil {
-					errorsChan <- fmt.Errorf("failed to resize dogu %s: %w", exporterDogu.Name, resizeErr)
+				if resizeErr := d.resize(ctx, impDogu.Name, expDogu.Volume.SizeInBytes); resizeErr != nil {
+					errorsChan <- fmt.Errorf("failed to resize dogu %s: %w", expDogu.Name, resizeErr)
 				}
-			}()
+			}(exporterDogu, importerDogu)
 		}
 	}
 
 	go func() {
-		for resizeErr := range errorsChan {
-			err = errors.Join(err, resizeErr)
-		}
+		wg.Wait() // wait for *all* resize goroutines
+		close(errorsChan)
 	}()
 
-	wg.Wait()
+	for resizeErr := range errorsChan {
+		err = errors.Join(err, resizeErr)
+	}
 
 	return err
 }
