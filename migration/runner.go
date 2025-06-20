@@ -46,9 +46,7 @@ type MailSender interface {
 	Send(ctx context.Context, isFinal bool, migrationResult error, startTime time.Time, endTime time.Time) error
 }
 
-type LogInitializer interface {
-	InitializeWithLogFile() error
-}
+type LogInitializerFunc func() error
 
 type Migrator struct {
 	exportModeValidator    ExportModeValidator
@@ -60,7 +58,7 @@ type Migrator struct {
 	jobRunner              JobRunner
 	doguStopper            DoguStopper
 	doguStarter            DoguStarter
-	logInitializer         LogInitializer
+	initializeLogger       LogInitializerFunc
 }
 
 type MigratorDependencies struct {
@@ -70,7 +68,7 @@ type MigratorDependencies struct {
 	DoguVolumeResizer
 	MaintenanceModeHandler
 	MailSender
-	LogInitializer
+	LogInitializerFunc
 	JobRunner
 	DoguStopper
 	DoguStarter
@@ -87,12 +85,12 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 		jobRunner:              dependencies.JobRunner,
 		doguStopper:            dependencies.DoguStopper,
 		doguStarter:            dependencies.DoguStarter,
-		logInitializer:         dependencies.LogInitializer,
+		initializeLogger:       dependencies.LogInitializerFunc,
 	}
 }
 
 func (m Migrator) RunMigration(ctx context.Context) (err error) {
-	err = m.logInitializer.InitializeWithLogFile()
+	err = m.initializeLogger()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize logger: %w", err)
 	}

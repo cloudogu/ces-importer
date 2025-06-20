@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"log/slog"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -82,14 +81,7 @@ func TestJobService_Run(t *testing.T) {
 
 		expLogs := "test-Log"
 
-		// Save the original stdout
-		old := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
-
-		defer func() {
-			os.Stdout = old
-		}()
+		var buf bytes.Buffer
 
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -126,20 +118,17 @@ func TestJobService_Run(t *testing.T) {
 		getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil)
 
 		sut := &JobService{
-			jobClient:   jobClientMock,
-			jobCreator:  jobCreatorMock,
-			getWatcher:  getWatcherMock.Execute,
-			getStreamer: getStreamerMock.Execute,
+			jobClient:    jobClientMock,
+			jobCreator:   jobCreatorMock,
+			getWatcher:   getWatcherMock.Execute,
+			getStreamer:  getStreamerMock.Execute,
+			getLogWriter: func() io.Writer { return &buf },
 		}
 
 		err := sut.Run(ctx)
 
 		assert.NoError(t, err)
 
-		err = w.Close()
-		require.NoError(t, err)
-		var buf bytes.Buffer
-		_, err = buf.ReadFrom(r)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), expLogs)
 	})
@@ -326,10 +315,11 @@ func TestJobService_Run(t *testing.T) {
 				getStreamerMock.EXPECT().Execute(job.Name, &corev1.PodLogOptions{Follow: true}).Return(streamerMock, nil).Maybe()
 
 				sut := &JobService{
-					jobClient:   jobClientMock,
-					jobCreator:  jobCreatorMock,
-					getWatcher:  getWatcherMock.Execute,
-					getStreamer: getStreamerMock.Execute,
+					jobClient:    jobClientMock,
+					jobCreator:   jobCreatorMock,
+					getWatcher:   getWatcherMock.Execute,
+					getStreamer:  getStreamerMock.Execute,
+					getLogWriter: func() io.Writer { return &bytes.Buffer{} },
 				}
 
 				go func() {

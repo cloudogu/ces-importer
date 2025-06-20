@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- [#66] fix missing subject in mails
+- [#66] fix mails don't have log files attached
+- [#66] fix too long token error when log lines are too long
 - [#67] race condition while waiting for pvc resizes
 - [#69] always run data and config migration before exiting because of errors
 
