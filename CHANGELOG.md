@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - [#67] race condition while waiting for pvc resizes
 - [#69] always run data and config migration before exiting because of errors
+- [#75] only disable maintenance mode if it was enabled before
 
 ## [v0.0.5] - 2025-06-18
 ### Fixed
