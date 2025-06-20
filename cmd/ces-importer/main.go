@@ -55,7 +55,7 @@ func main() {
 	defer close(migrationDone)
 
 	go func() {
-		if mErr := migration.Run(ctx, cfg.FinalTimestamp, cfg.RegularCron, migrator); mErr != nil {
+		if mErr := migration.Run(ctx, cfg.FinalTimestamp, cfg.RegularCron, cfg.ChangeFQDN, migrator); mErr != nil {
 			slog.Error("failed to run migration", "cause", mErr.Error())
 		}
 

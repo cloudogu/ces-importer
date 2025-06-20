@@ -149,6 +149,66 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		// Verify that the volumes are set up correctly
 		assert.Equal(t, 4, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume
 		assert.Equal(t, 4, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount
+
+		// Verify env for fqdn change is NOT set
+		assert.Equal(t, 1, len(job.Spec.Template.Spec.Containers[0].Env))
+		assert.Equal(t, "API_KEY", job.Spec.Template.Spec.Containers[0].Env[0].Name)
+		assert.Equal(t, "test-api-key", job.Spec.Template.Spec.Containers[0].Env[0].Value)
+	})
+
+	t.Run("should create import job with FQDN Change successfully", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+		ctx = SetFinalMigration(ctx)
+		ctx = SetTriggerFQDNChange(ctx)
+
+		pvcClient := newMockPvcClient(t)
+		pvcClient.EXPECT().GetDoguVolumes(ctx).Return([]doguPVC{
+			{doguName: "jenkins", pvcName: "jenkins-data"},
+			{doguName: "cas", pvcName: "cas-data"},
+		}, nil)
+
+		provider := jobProvider{
+			jobSpec: jobSpec{
+				imageURL:         "registry.example.com/test-repo:latest",
+				imagePullPolicy:  "IfNotPresent",
+				imagePullSecrets: []v1.LocalObjectReference{{Name: "test-secret"}},
+				restartPolicy:    v1.RestartPolicyNever,
+				env:              []v1.EnvVar{{Name: "API_KEY", Value: "test-api-key"}},
+				jobConfigMap:     "test-config-map",
+				serviceAccount:   "test-service-account",
+			},
+			pvcClient: pvcClient,
+			sshConfig: configuration.SSH{
+				User:              "test-user",
+				PrivateSSHKeyPath: "/path/to/key",
+				SecretName:        "test-secret",
+				SecretDataKey:     "test-key",
+			},
+			doguVolumeBasePath: "/volumes",
+		}
+
+		// when
+		job, err := provider.createImportJob(ctx)
+
+		// then
+		assert.NoError(t, err)
+		assert.NotNil(t, job)
+
+		assert.Contains(t, job.Name, jobName)
+		assert.Equal(t, fmt.Sprintf("%s-container", jobName), job.Spec.Template.Spec.Containers[0].Name)
+		assert.Equal(t, "registry.example.com/test-repo:latest", job.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, v1.PullPolicy("IfNotPresent"), job.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+		assert.Equal(t, "test-service-account", job.Spec.Template.Spec.ServiceAccountName)
+
+		// Verify that the volumes are set up correctly
+		assert.Equal(t, 4, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume
+		assert.Equal(t, 4, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount
+
+		// Verify env for fqdn change is set
+		assert.Equal(t, 2, len(job.Spec.Template.Spec.Containers[0].Env))
+		assert.Equal(t, "TRIGGER_FQDN_CHANGE", job.Spec.Template.Spec.Containers[0].Env[1].Name)
+		assert.Equal(t, "true", job.Spec.Template.Spec.Containers[0].Env[1].Value)
 	})
 
 	t.Run("should return error when GetDoguVolumes fails", func(t *testing.T) {

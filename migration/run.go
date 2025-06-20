@@ -14,7 +14,7 @@ type migrationRunner interface {
 }
 
 // Run is the main function to run the migration initiating the delta and final migration
-func Run(ctx context.Context, finalTimestampStr, regularCron string, runner migrationRunner) error {
+func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner) error {
 	var migrationRunning atomic.Bool
 
 	finalTimestamp, err := ParseFinalTimestamp(finalTimestampStr)
@@ -56,7 +56,7 @@ func Run(ctx context.Context, finalTimestampStr, regularCron string, runner migr
 
 	go func() {
 		defer close(doneFinalMigration)
-		doneFinalMigration <- runFinalMigration(ctx, finalTimestamp, runner, &migrationRunning)
+		doneFinalMigration <- runFinalMigration(ctx, finalTimestamp, runner, &migrationRunning, changeFQDN)
 	}()
 
 	select {
@@ -97,13 +97,20 @@ func runDeltaMigration(finalTimestamp FinalTimestamp, runner migrationRunner, mi
 	}
 }
 
-func runFinalMigration(ctx context.Context, finalTimestamp FinalTimestamp, migrator migrationRunner, migrationRunning *atomic.Bool) error {
+func runFinalMigration(ctx context.Context, finalTimestamp FinalTimestamp, migrator migrationRunner, migrationRunning *atomic.Bool, changeFQDN bool) error {
 	finalTimestamp.WaitUntilReady(ctx, func() bool {
 		return !migrationRunning.Load()
 	})
 
 	slog.Info("Starting final migration")
 	finalContext := SetFinalMigration(ctx)
+
+	if changeFQDN {
+		slog.Info("Triggering fqdn change")
+		finalContext = SetTriggerFQDNChange(finalContext)
+	} else {
+		slog.Info("No fqdn change triggered")
+	}
 
 	return migrator.RunMigration(finalContext)
 }
