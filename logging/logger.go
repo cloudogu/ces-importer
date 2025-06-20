@@ -26,38 +26,42 @@ type logger struct {
 	level      slog.Level
 	attributes []slog.Attr
 	writer     io.Writer
-	err        error
 }
 
-type LoggerOption func(*logger)
+type LoggerOption func(*logger) error
 
 func WithLevel(level string) LoggerOption {
-	return func(l *logger) {
+	return func(l *logger) error {
 		var logLevel slog.Level
 
 		if err := logLevel.UnmarshalText([]byte(level)); err != nil {
-			l.err = errors.Join(l.err, fmt.Errorf("failed to parse log level, fallback to INFO: %w", err))
+			return fmt.Errorf("failed to parse log level, fallback to INFO: %w", err)
 		}
 
 		l.level = logLevel
+
+		return nil
 	}
 }
 
 func WithComponent(component string) LoggerOption {
-	return func(l *logger) {
+	return func(l *logger) error {
 		l.attributes = append(l.attributes, slog.String("component", component))
+
+		return nil
 	}
 }
 
 func WithFile(file string) LoggerOption {
-	return func(l *logger) {
+	return func(l *logger) error {
 		logFile, err := os.OpenFile(file, logFilesMode, logFilesPerm)
 		if err != nil {
-			l.err = errors.Join(l.err, fmt.Errorf("failed to open log file: %w", err))
-			return
+			return fmt.Errorf("failed to open log file: %w", err)
 		}
 
 		l.writer = io.MultiWriter(l.writer, logFile)
+
+		return nil
 	}
 }
 
@@ -68,8 +72,12 @@ func InitStructuredLogger(options ...LoggerOption) error {
 		writer:     os.Stdout,
 	}
 
+	var err error
+
 	for _, option := range options {
-		option(l)
+		if oErr := option(l); oErr != nil {
+			err = errors.Join(err, oErr)
+		}
 	}
 
 	textHandler := slog.NewTextHandler(l.writer, &slog.HandlerOptions{
@@ -81,8 +89,8 @@ func InitStructuredLogger(options ...LoggerOption) error {
 	slog.SetDefault(slog.New(handler))
 	slog.Info("Configured logger", "level", l.level.String())
 
-	if l.err != nil {
-		return l.err
+	if err != nil {
+		return fmt.Errorf("failed to set options: %w", err)
 	}
 
 	// Set writer from logger

@@ -16,6 +16,8 @@ func TestWithLevel(t *testing.T) {
 		name     string
 		level    string
 		expected string
+		expErr   bool
+		errMsg   string
 	}{
 		{
 			name:     "level is set to DEBUG",
@@ -41,13 +43,22 @@ func TestWithLevel(t *testing.T) {
 			name:     "Fallback to INFO on parsing error",
 			level:    "INVALID",
 			expected: "INFO",
+			expErr:   true,
+			errMsg:   "failed to parse log level",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defaultLogger := &logger{}
-			WithLevel(tt.level)(defaultLogger)
+
+			err := WithLevel(tt.level)(defaultLogger)
+
+			if tt.expErr {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, tt.errMsg)
+				return
+			}
 
 			assert.Equal(t, tt.expected, defaultLogger.level.String())
 		})
@@ -64,7 +75,8 @@ func TestWithFile(t *testing.T) {
 		defer func() { _ = testFile.Close() }()
 
 		defaultLogger := &logger{writer: &byteBuffer}
-		WithFile(testFile.Name())(defaultLogger)
+		err = WithFile(testFile.Name())(defaultLogger)
+		assert.NoError(t, err)
 
 		_, err = fmt.Fprint(defaultLogger.writer, "test")
 		assert.NoError(t, err)
@@ -86,17 +98,18 @@ func TestWithFile(t *testing.T) {
 		defer func() { _ = testFile.Close() }()
 
 		defaultLogger := &logger{writer: os.Stdout}
-		WithFile(testFile.Name())(defaultLogger)
+		err = WithFile(testFile.Name())(defaultLogger)
 
-		assert.Error(t, defaultLogger.err)
-		assert.ErrorContains(t, defaultLogger.err, "failed to open log file")
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "failed to open log file")
 	})
 }
 
 func TestWithComponent(t *testing.T) {
 	defaultLogger := &logger{}
-	WithComponent("test")(defaultLogger)
+	err := WithComponent("test")(defaultLogger)
 
+	assert.NoError(t, err)
 	assert.Len(t, defaultLogger.attributes, 1)
 	assert.Equal(t, "component=test", defaultLogger.attributes[0].String())
 }
