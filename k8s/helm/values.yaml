@@ -76,7 +76,7 @@ config:
     #     - "EXCLUDE_PATTERN_2"
     exclude: []
     # verbose sets the migrator to verbose logging
-    verbose: true
+    verbose: false
   smtp:
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
     server: smtp.mailserver.com
