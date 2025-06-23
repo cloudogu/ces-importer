@@ -172,7 +172,7 @@ func (f *fqdnManager) Update(ctx context.Context, c ConfigChange) error {
 
 	slog.Debug("Set new fqdn in global config")
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.OnError(retry.DefaultRetry, retriable, func() error {
 		if _, sErr := f.globalConfigRepo.SaveOrMerge(ctx, globalConfig); sErr != nil {
 			return sErr
 		}
