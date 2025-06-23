@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.0.0] - 2025-06-23
+- 🎉🎉 First release 🎉🎉
+
+### Fixed
+- [#71] retry writing fqdn to global-config on conflict-error
+
 ## [v0.0.6] - 2025-06-20
 ### Fixed
 - [#66] fix missing subject in mails
