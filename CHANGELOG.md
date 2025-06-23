@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.0.1] - 2025-06-23
+### Fixed
+- [#79] use "false" as default verbose-logging flag
+- [#81] retry globalConfig SaveOrMerge for every error instead of single Kubernetes ConflictError
+
 ## [v1.0.0] - 2025-06-23
 - 🎉🎉 First release 🎉🎉
 

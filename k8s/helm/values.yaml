@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 1.0.0
+    tag: 1.0.1
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer-migration-job
-    tag: 1.0.0
+    tag: 1.0.1
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -63,7 +63,7 @@ config:
     # maintenanceModeMessage is the message to been shown, when the maintenance mode gets activated at the source system.
     maintenanceModeMessage:
       # title to be shown in the maintenance mode message.
-      title: "Migration in progess."
+      title: "Migration in progress."
       # text to be shown in the maintenance mode message.
       text: "The migration of your instance is in progress."
   job:
@@ -76,7 +76,7 @@ config:
     #     - "EXCLUDE_PATTERN_2"
     exclude: []
     # verbose sets the migrator to verbose logging
-    verbose: true
+    verbose: false
   smtp:
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
     server: smtp.mailserver.com
