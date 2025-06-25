@@ -11,7 +11,6 @@ import (
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
 	"github.com/cloudogu/k8s-registry-lib/repository"
-	"k8s.io/client-go/rest"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -45,7 +44,28 @@ func main() {
 		panic(fmt.Errorf("failed to initialize logger: %w", lErr))
 	}
 
-	migrator, err := createMigrator(clusterConfig, cfg, initLog)
+	exportAPIService := exporter.NewServiceFromConfig(
+		exporter.APIHost(cfg.ExporterHost),
+		exporter.APIKey(cfg.ExporterApiKey),
+		exporter.SkipTLSVerification(cfg.SkipTLSVerify),
+	)
+
+	k8sClientSet, err := importer.CreateK8SClientSet(clusterConfig, cfg.General.Namespace)
+	if err != nil {
+		panic(fmt.Errorf("failed to create clients for kubernetes: %v", err))
+	}
+
+	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.Component, k8sClientSet.Dogu, exportAPIService.SystemInfoService)
+	if err != nil {
+		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
+	}
+
+	err = runPreflightCheck(ctx, exportAPIService, cfg, systemInfoProvider, k8sClientSet.Secret)
+	if err != nil {
+		panic(fmt.Errorf("preflight check failed: %w", err))
+	}
+
+	migrator, err := createMigrator(k8sClientSet, cfg, initLog, exportAPIService, systemInfoProvider)
 	if err != nil {
 		panic(fmt.Errorf("failed to create migrator: %w", err))
 	}
@@ -85,19 +105,8 @@ func main() {
 	slog.Info("exiting")
 }
 
-func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator, initLog migration.LogInitializerFunc) (*migration.Migrator, error) {
-	exportAPIService := exporter.NewServiceFromConfig(
-		exporter.APIHost(cfg.ExporterHost),
-		exporter.APIKey(cfg.ExporterApiKey),
-		exporter.SkipTLSVerification(cfg.SkipTLSVerify),
-	)
-
+func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordinator, initLog migration.LogInitializerFunc, exportAPIService *exporter.Service, systemInfoProvider *systeminfo.Provider) (*migration.Migrator, error) {
 	exportAPIService.MaintenanceModeService.SetMessage(cfg.Migration.MaintenanceModeMessage.Title, cfg.Migration.MaintenanceModeMessage.Text)
-
-	k8sClientSet, err := importer.CreateK8SClientSet(k8sRestConfig, cfg.General.Namespace)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create clients for kubernetes: %v", err)
-	}
 
 	jobService, err := migration.NewJobService(migration.JobServiceDependencies{
 		JobProviderDependencies: migration.JobProviderDependencies{
@@ -121,11 +130,6 @@ func createMigrator(k8sRestConfig *rest.Config, cfg configuration.Coordinator, i
 	}
 
 	exportModeValidator := migration.NewExportModeValidatorApiClient(exportAPIService.ExportModeService)
-
-	systemInfoProvider, err := systeminfo.NewSystemInfoProvider(k8sClientSet.Component, k8sClientSet.Dogu, exportAPIService.SystemInfoService)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create systemInfo provider: %w", err)
-	}
 
 	systemInfoValidator := systeminfo.NewValidator(cfg.General.ExcludedDogus)
 
