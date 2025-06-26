@@ -1,0 +1,1 @@
+> The user manual for the CES importer can be found as part of the automatic migration user manual at [docs.cloudogu.com](https://docs.cloudogu.com/en/usermanual/automatic_migration/how_to_guides/install_importer/).
