@@ -60,7 +60,8 @@ func main() {
 		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
 	}
 
-	err = runPreflightCheck(ctx, exportAPIService, cfg, systemInfoProvider, k8sClientSet.Secret)
+	preflightExecuter := newPreflightExecuter(exportAPIService.HealthService, systemInfoProvider, k8sClientSet.Secret)
+	err = preflightExecuter.runPreflightCheck(ctx, cfg)
 	if err != nil {
 		panic(fmt.Errorf("preflight check failed: %w", err))
 	}
