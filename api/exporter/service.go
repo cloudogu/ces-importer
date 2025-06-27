@@ -6,6 +6,7 @@ type Service struct {
 	*ExportDoguService
 	*ExportModeService
 	*SystemInfoService
+	*HealthService
 }
 
 func NewService(client apiClient) *Service {
@@ -15,6 +16,7 @@ func NewService(client apiClient) *Service {
 		ExportDoguService:      NewExportDoguService(client),
 		ExportModeService:      NewExportModeService(client),
 		SystemInfoService:      NewSystemInfoService(client),
+		HealthService:          NewHealthService(client),
 	}
 }
 
