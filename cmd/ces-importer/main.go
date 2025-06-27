@@ -65,6 +65,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("preflight check failed: %w", err))
 	}
+	slog.Info("preflight check was successful")
 
 	migrator, err := createMigrator(k8sClientSet, cfg, initLog, exportAPIService, systemInfoProvider)
 	if err != nil {

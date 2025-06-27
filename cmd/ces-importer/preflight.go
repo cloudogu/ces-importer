@@ -60,8 +60,10 @@ func (p *PreflightExecuter) runPreflightCheck(ctx context.Context, cfg configura
 	slog.Info("Running preflight migration checks:")
 	// check api
 	healthy, exporterApiErr := p.healthClient.GetIsHealthy(ctx)
-	if exporterApiErr != nil || !healthy {
+	if exporterApiErr != nil {
 		result = errors.Join(result, fmt.Errorf("unable to determine exporter health status: %w", exporterApiErr))
+	} else if !healthy {
+		result = errors.Join(result, fmt.Errorf("exporter health status is unhealthy"))
 	} else {
 		slog.Info("Successfully reached exporter api")
 	}
