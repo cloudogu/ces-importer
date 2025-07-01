@@ -78,7 +78,7 @@ type Migration struct {
 	// ExecutePreflightCheck controls whether the preflight check will be executed.
 	// The preflight checks the exporter api, ssh access and k8s access
 	// Default: True
-	ExecutePreflightCheck bool
+	ExecutePreflightCheck bool `yaml:"executePreflightCheck"`
 }
 
 // MaintenanceModeMessage is the message to be shown at the source system when the maintenance mode gets activated.
