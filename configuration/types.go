@@ -75,6 +75,10 @@ type Migration struct {
 	ChangeFQDN bool `yaml:"changeFQDN"`
 	// MaintenanceModeMessage is the message to be shown at the source system when the maintenance mode gets activated.
 	MaintenanceModeMessage *MaintenanceModeMessage `yaml:"maintenanceModeMessage" validate:"required_with=FinalTimestamp"`
+	// ExecutePreflightCheck controls whether the preflight check will be executed.
+	// The preflight checks the exporter api, ssh access and k8s access
+	// Default: True
+	ExecutePreflightCheck bool
 }
 
 // MaintenanceModeMessage is the message to be shown at the source system when the maintenance mode gets activated.
