@@ -66,6 +66,9 @@ config:
       title: "Migration in progress."
       # text to be shown in the maintenance mode message.
       text: "The migration of your instance is in progress."
+    # executePreflightCheck controls whether the preflight check will be executed.
+    # Default: True
+    executePreflightCheck: true
   job:
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:

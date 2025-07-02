@@ -5,3 +5,4 @@ changeFQDN: true
 maintenanceModeMessage:
   title: "Migration completed."
   text: "The migration of your instance has been completed."
+executePreflightCheck: true

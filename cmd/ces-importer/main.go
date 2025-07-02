@@ -60,12 +60,14 @@ func main() {
 		panic(fmt.Errorf("failed to create systemInfo provider: %w", err))
 	}
 
-	preflightExecuter := newPreflightExecuter(exportAPIService.HealthService, systemInfoProvider, k8sClientSet.Secret)
-	err = preflightExecuter.runPreflightCheck(ctx, cfg)
-	if err != nil {
-		panic(fmt.Errorf("preflight check failed: %w", err))
+	if cfg.Migration.ExecutePreflightCheck {
+		preflightExecuter := newPreflightExecuter(exportAPIService.HealthService, systemInfoProvider, k8sClientSet.Secret)
+		err = preflightExecuter.runPreflightCheck(ctx, cfg)
+		if err != nil {
+			panic(fmt.Errorf("preflight check failed: %w", err))
+		}
+		slog.Info("preflight check was successful")
 	}
-	slog.Info("preflight check was successful")
 
 	migrator, err := createMigrator(k8sClientSet, cfg, initLog, exportAPIService, systemInfoProvider)
 	if err != nil {

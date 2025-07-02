@@ -47,6 +47,7 @@ func TestReadCoordinatorConfig(t *testing.T) {
 				Title: "Migration completed.",
 				Text:  "The migration of your instance has been completed.",
 			},
+			ExecutePreflightCheck: true,
 		}, cfg.Migration)
 
 		// ssh
