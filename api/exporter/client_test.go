@@ -86,7 +86,7 @@ func Test_client_DoGetRequest(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "received unexpected response to")
-		assert.ErrorContains(t, err, "oh noez, something bad happened")
+		assert.NotContains(t, err.Error(), "oh noez, something bad happened")
 	})
 }
 
@@ -263,6 +263,6 @@ func Test_client_DoPostRequest(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "received unexpected response to")
-		assert.ErrorContains(t, err, "oh noez, something bad happened")
+		assert.NotContains(t, err.Error(), "oh noez, something bad happened")
 	})
 }
