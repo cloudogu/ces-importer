@@ -55,11 +55,11 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("will build subject", func(t *testing.T) {
-		successSubject := buildSubject(true)
-		failureSubject := buildSubject(false)
+		successSubject := buildSubject(true, "source")
+		failureSubject := buildSubject(false, "source")
 
-		assert.Equal(t, "Migration war erfolgreich.", successSubject)
-		assert.Equal(t, "Migration war nicht erfolgreich.", failureSubject)
+		assert.Equal(t, "Die Migration der Instanz source war erfolgreich.", successSubject)
+		assert.Equal(t, "Die Migration der Instanz source war nicht erfolgreich.", failureSubject)
 	})
 }
 
@@ -79,10 +79,10 @@ func TestSendMigrationResult(t *testing.T) {
 		senderFunc := NewMockSenderService(t)
 		senderFunc.EXPECT().Execute("server:25", mock.Anything, "from", []string{"a@test.de", "b@test.de"}, mock.Anything).Run(func(addr string, a smtp.Auth, from string, to []string, msg []byte) {
 			body := string(msg)
-			assert.Contains(t, body, "Subject: Migration war erfolgreich.\r\n")
+			assert.Contains(t, body, "Subject: Die Migration der Instanz source war erfolgreich.\r\n")
 			assert.Contains(t, body, "MIME-Version: 1.0\r\n")
 			assert.Contains(t, body, "Content-Type: multipart/mixed; boundary=")
-			assert.Contains(t, body, "Die finale Migration von der Instanz source zu der Instanz target war erfol=\r\ngreich.\r\n\r\nStartzeitpunkt: 13:01\r\nEndzeitpunkt: 13:06\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
+			assert.Contains(t, body, "Die finale Migration von der Instanz https://source zu der Instanz https://=\r\ntarget war erfolgreich.\r\n\r\nStartzeitpunkt: 01.01.0000 13:01 (UTC +0000)\r\nEndzeitpunkt: 01.01.0000 13:06 (UTC +0000)\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
 			assert.Contains(t, body, "Content-Disposition: attachment; filename=\"a\"\r\nContent-Transfer-Encoding: base64\r\nContent-Type: application/octet-stream\r\n\r\n")
 		}).Return(nil)
 
@@ -404,7 +404,7 @@ func TestSender_writeBodyText(t *testing.T) {
 
 		require.NoError(t, err)
 
-		assert.Contains(t, body.String(), "Die finale Migration von der Instanz instance-a zu der Instanz instance-b w=\r\nar erfolgreich.\r\n\r\nStartzeitpunkt: 13:01\r\nEndzeitpunkt: 13:06\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
+		assert.Contains(t, body.String(), "Die finale Migration von der Instanz https://instance-a zu der Instanz http=\r\ns://instance-b war erfolgreich.\r\n\r\nStartzeitpunkt: 01.01.0000 13:01 (UTC +0000)\r\nEndzeitpunkt: 01.01.0000 13:06 (UTC +0000)\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
 	})
 
 	t.Run("write body text for delta migration with error", func(t *testing.T) {
@@ -428,6 +428,6 @@ func TestSender_writeBodyText(t *testing.T) {
 
 		require.NoError(t, err)
 
-		assert.Contains(t, body.String(), "Die partielle Migration von der Instanz instance-a zu der Instanz instance-=\r\nb war nicht erfolgreich.\r\n\r\nStartzeitpunkt: 13:01\r\nEndzeitpunkt: 13:06\r\n\r\nDie Fehlermeldung ist: migration-error\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
+		assert.Contains(t, body.String(), "Die Delta-Migration von der Instanz https://instance-a zu der Instanz https=\r\n://instance-b war nicht erfolgreich.\r\n\r\nStartzeitpunkt: 01.01.0000 13:01 (UTC +0000)\r\nEndzeitpunkt: 01.01.0000 13:06 (UTC +0000)\r\n\r\nDie Fehlermeldung ist: migration-error\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
 	})
 }
