@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - [#88] remove html error pages from error responses
+- [#92] Log sync errors when they occur
 
 ### Added
 - [#86] preflight check can now be configured
