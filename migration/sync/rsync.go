@@ -99,12 +99,14 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
 		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
 		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get qualified dogu name from dogu %s: %v", dogu.Name, err))
 			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))
 			continue
 		}
 		// set the current dogu as export dogu in exporter
 		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, string(doguName.SimpleName))
 		if err != nil {
+			slog.Error(fmt.Sprintf("failed to set dogu %s as export dogu: %v", dogu.Name, err))
 			result = errors.Join(result, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
 			continue
 		}
@@ -116,6 +118,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		doguImportDir := path.Join(rs.doguVolumeBasePath, string(doguName.SimpleName))
 		subDirs, err := getSubDirs(doguImportDir)
 		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get subDirs for dogu %s: %v", dogu.Name, err))
 			result = errors.Join(result, fmt.Errorf("failed to get subDirs for dogu %s: %w", dogu.Name, err))
 			continue
 		}
@@ -127,11 +130,12 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 			exporterSourcePath := path.Clean(path.Join(doguExport.VolumePath, subDir)) + "/"
 
 			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern); err != nil {
+				slog.Error(fmt.Sprintf("failed to sync source %s to destination %s: %v", exporterSourcePath, importerDestination, err))
 				result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSourcePath, importerDestination, err))
 			}
 		}
 
-		slog.Info("Syncing for dogu successful", "doguName", dogu.Name)
+		slog.Info("Syncing for dogu finished", "doguName", dogu.Name)
 	}
 	return result
 }
