@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - [#86] preflight check can now be configured
+- [#94] add metadata mapping for logLevel
 
 ### Changed
 - [#90] adjust mail-text for migration-result-mail
