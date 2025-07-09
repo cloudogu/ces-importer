@@ -40,7 +40,7 @@ func TestNewSystemInfoClient(t *testing.T) {
 }
 
 func TestSystemInfoClient_GetSystemInfo(t *testing.T) {
-	exmapleJson := `{
+	exampleJson := `{
 	  "fqdn": "exporter.example.com",
 	  "isMultinode": true,
 	  "dogus": [
@@ -73,7 +73,7 @@ func TestSystemInfoClient_GetSystemInfo(t *testing.T) {
 
 	t.Run("should get system info successfully", func(t *testing.T) {
 		mApiClient := newMockApiClient(t)
-		mApiClient.EXPECT().DoGetRequest(testCtx, "/system-info").Return([]byte(exmapleJson), nil)
+		mApiClient.EXPECT().DoGetRequest(testCtx, "/system-info").Return([]byte(exampleJson), nil)
 
 		emc := &SystemInfoService{
 			apiClient: mApiClient,

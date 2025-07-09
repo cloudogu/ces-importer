@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.1.0] - 2025-07-09
+### Fixed
+- [#88] remove html error pages from error responses
+- [#92] Log sync errors when they occur
+
+### Added
+- [#86] preflight check can now be configured
+
+### Changed
+- [#90] adjust mail-text for migration-result-mail
+
 ## [v1.0.1] - 2025-06-23
 ### Fixed
 - [#79] use "false" as default verbose-logging flag

@@ -27,13 +27,13 @@ const (
 )
 
 const (
-	typeMigrationFinal   = "finale"
-	typeMigrationPartial = "partielle"
+	typeMigrationFinal   = "finale Migration"
+	typeMigrationPartial = "Delta-Migration"
 )
 
 const (
-	mailSubject      = "Migration war %s."
-	mailBody         = "Die %s Migration von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\n%sAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
+	mailSubject      = "Die Migration der Instanz %s war %s."
+	mailBody         = "Die %s von der Instanz %s zu der Instanz %s war %s.\n\nStartzeitpunkt: %v\nEndzeitpunkt: %v\n\n%sAlle weiteren Informationen finden Sie in der Log-Datei im Anhang."
 	errorMsgTemplate = "Die Fehlermeldung ist: %s\n\n"
 )
 
@@ -120,7 +120,7 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 	headers := make(map[string]string)
 	headers["From"] = s.config.From
 	headers["To"] = strings.Join(s.config.To, ", ")
-	headers["Subject"] = buildSubject(migrationSuccessful)
+	headers["Subject"] = buildSubject(migrationSuccessful, s.sourceInstance)
 	headers["MIME-Version"] = "1.0"
 	headers["Content-Type"] = "multipart/mixed; boundary=" + multipartWriter.Boundary()
 	headers["Message-ID"] = buildMessageId(targetInstance)
@@ -173,12 +173,12 @@ func (s *Sender) server() string {
 	return fmt.Sprintf("%s:%d", s.config.Server, s.config.Port)
 }
 
-func buildSubject(success bool) string {
+func buildSubject(success bool, sourceInstance string) string {
 	result := stateMigrationSuccess
 	if !success {
 		result = stateMigrationFailure
 	}
-	return fmt.Sprintf(mailSubject, result)
+	return fmt.Sprintf(mailSubject, sourceInstance, result)
 }
 
 func (s *Sender) getTargetInstance(ctx context.Context) (string, error) {
@@ -216,11 +216,11 @@ func (s *Sender) writeBodyText(ctx context.Context, writer *multipart.Writer, mi
 	bodyText := fmt.Sprintf(
 		mailBody,
 		migrationType,
-		s.sourceInstance,
-		targetInstance,
+		formatAsUrl(s.sourceInstance),
+		formatAsUrl(targetInstance),
 		result,
-		start.Format("15:04"),
-		end.Format("15:04"),
+		start.Format("02.01.2006 15:04 (MST -0700)"),
+		end.Format("02.01.2006 15:04 (MST -0700)"),
 		errorMsg,
 	)
 
@@ -284,4 +284,8 @@ func buildMessageId(fqdn string) string {
 // getDate returns the current date time formatted for the email related date fields. This format uses the date RFC 1123 formatting which matches the date format used for the email `date` field as described by RFC 5322 and other relevant mail RFCs .
 func getDate() string {
 	return time.Now().Format(time.RFC1123)
+}
+
+func formatAsUrl(instance string) string {
+	return fmt.Sprintf("https://%s", instance)
 }

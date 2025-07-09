@@ -103,8 +103,10 @@ func (c *Client) DoGetRequest(ctx context.Context, path string) (result []byte, 
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
-			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+		slog.Debug(fmt.Sprintf("received unexpected response to %s (wanted %d got %d): %s", requestUrl, http.StatusOK, response.StatusCode, string(responseMsg)))
+
+		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d)",
+			requestUrl, http.StatusOK, response.StatusCode)
 	}
 
 	slog.Debug(fmt.Sprintf("Successfully called %s with response %s", requestUrl, string(responseMsg)))
@@ -139,8 +141,10 @@ func (c *Client) DoPostRequest(ctx context.Context, path string, body io.Reader)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d): %s",
-			requestUrl, http.StatusOK, response.StatusCode, string(responseMsg))
+		slog.Debug(fmt.Sprintf("received unexpected response to %s (wanted %d got %d): %s", requestUrl, http.StatusOK, response.StatusCode, string(responseMsg)))
+
+		return result, fmt.Errorf("received unexpected response to %s (wanted %d got %d)",
+			requestUrl, http.StatusOK, response.StatusCode)
 	}
 
 	slog.Debug(fmt.Sprintf("Successfully called %s with response %s", requestUrl, string(responseMsg)))

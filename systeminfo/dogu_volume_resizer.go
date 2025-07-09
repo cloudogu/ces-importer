@@ -65,6 +65,7 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 
 		importerDoguIndex := slices.IndexFunc(importerDogus, func(dogu migration.Dogu) bool { return dogu.Name == exporterDogu.Name })
 		if importerDoguIndex < 0 {
+			slog.Error(fmt.Sprintf("failed to find dogu %s in the importing system", exporterDogu.Name))
 			err = errors.Join(err, fmt.Errorf("failed to find dogu %s in the importing system", exporterDogu.Name))
 			continue
 		}
