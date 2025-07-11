@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
+	"strings"
 )
 
 const (
-	globalCfgFQDNKey     = "/fqdn"
-	globalCfgCertTypeKey = "/certificate/type"
-	globalCfgCertKey     = "/certificate/server.crt"
-	globalCfgPrivateKey  = "/certificate/server.key"
+	globalCfgFQDNKey     = "fqdn"
+	globalCfgCertTypeKey = "certificate/type"
+	globalCfgCertKey     = "certificate/server.crt"
+	globalCfgPrivateKey  = "certificate/server.key"
 )
 
 type backuper interface {
@@ -76,7 +77,8 @@ func createChangeRequest(globalCfg migration.GlobalConfig) (Change, error) {
 	var change Change
 
 	for _, kv := range globalCfg {
-		switch kv.Key {
+		sanitizedKey := strings.TrimPrefix(kv.Key, "/")
+		switch sanitizedKey {
 		case globalCfgFQDNKey:
 			change.FQDN = kv.Value
 		case globalCfgCertTypeKey:
