@@ -29,18 +29,24 @@ type healthClient interface {
 	GetIsHealthy(ctx context.Context) (bool, error)
 }
 
-type testSSHConnection func(ctx context.Context, cfg configuration.Coordinator, secretClient secretClient) error
+type exportDoguClient interface {
+	SetExportDogu(ctx context.Context, doguName string) (*migration.DoguExport, error)
+}
+
+type testSSHConnection func(ctx context.Context, cfg configuration.Coordinator, secretClient secretClient, exportDoguClient exportDoguClient) error
 
 type PreflightExecuter struct {
 	healthClient     healthClient
+	exportDoguClient exportDoguClient
 	systemInfoGetter systemInfoGetter
 	secretClient     secretClient
 	testSSHConnection
 }
 
-func newPreflightExecuter(healthClient healthClient, systemInfoGetter systemInfoGetter, secretClient secretClient) *PreflightExecuter {
+func newPreflightExecuter(healthClient healthClient, exportDoguClient exportDoguClient, systemInfoGetter systemInfoGetter, secretClient secretClient) *PreflightExecuter {
 	return &PreflightExecuter{
 		healthClient:      healthClient,
+		exportDoguClient:  exportDoguClient,
 		systemInfoGetter:  systemInfoGetter,
 		secretClient:      secretClient,
 		testSSHConnection: sshConnectionTest,
@@ -68,7 +74,7 @@ func (p *PreflightExecuter) runPreflightCheck(ctx context.Context, cfg configura
 		slog.Info("Successfully reached exporter api")
 	}
 
-	sshError := p.testSSHConnection(ctx, cfg, p.secretClient)
+	sshError := p.testSSHConnection(ctx, cfg, p.secretClient, p.exportDoguClient)
 	if sshError != nil {
 		result = errors.Join(result, fmt.Errorf("unable to test ssh connection: %w", sshError))
 	} else {
@@ -86,7 +92,14 @@ func (p *PreflightExecuter) runPreflightCheck(ctx context.Context, cfg configura
 }
 
 // testSSHConnection creates an ssh connection to the exporting system and performs an echo command to test the connection
-func sshConnectionTest(ctx context.Context, cfg configuration.Coordinator, secretClient secretClient) error {
+func sshConnectionTest(ctx context.Context, cfg configuration.Coordinator, secretClient secretClient, exportDoguClient exportDoguClient) error {
+	// set an export dogu in the source instance
+	doguName := "cas"
+	_, err := exportDoguClient.SetExportDogu(ctx, doguName)
+	if err != nil {
+		return fmt.Errorf("unable to set dogu %s as export dogu: %w", doguName, err)
+	}
+
 	// get ssh private key from k8s secret
 	secret, err := secretClient.Get(ctx, cfg.SSH.SecretName, metav1.GetOptions{})
 	if err != nil {
