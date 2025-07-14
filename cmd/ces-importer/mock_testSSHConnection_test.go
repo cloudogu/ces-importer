@@ -23,17 +23,17 @@ func (_m *mockTestSSHConnection) EXPECT() *mockTestSSHConnection_Expecter {
 	return &mockTestSSHConnection_Expecter{mock: &_m.Mock}
 }
 
-// Execute provides a mock function with given fields: ctx, cfg, secretClient2
-func (_m *mockTestSSHConnection) Execute(ctx context.Context, cfg configuration.Coordinator, secretClient2 secretClient) error {
-	ret := _m.Called(ctx, cfg, secretClient2)
+// Execute provides a mock function with given fields: ctx, cfg, secretClient2, exportDoguClient3
+func (_m *mockTestSSHConnection) Execute(ctx context.Context, cfg configuration.Coordinator, secretClient2 secretClient, exportDoguClient3 exportDoguClient) error {
+	ret := _m.Called(ctx, cfg, secretClient2, exportDoguClient3)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, configuration.Coordinator, secretClient) error); ok {
-		r0 = rf(ctx, cfg, secretClient2)
+	if rf, ok := ret.Get(0).(func(context.Context, configuration.Coordinator, secretClient, exportDoguClient) error); ok {
+		r0 = rf(ctx, cfg, secretClient2, exportDoguClient3)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -50,13 +50,14 @@ type mockTestSSHConnection_Execute_Call struct {
 //   - ctx context.Context
 //   - cfg configuration.Coordinator
 //   - secretClient2 secretClient
-func (_e *mockTestSSHConnection_Expecter) Execute(ctx interface{}, cfg interface{}, secretClient2 interface{}) *mockTestSSHConnection_Execute_Call {
-	return &mockTestSSHConnection_Execute_Call{Call: _e.mock.On("Execute", ctx, cfg, secretClient2)}
+//   - exportDoguClient3 exportDoguClient
+func (_e *mockTestSSHConnection_Expecter) Execute(ctx interface{}, cfg interface{}, secretClient2 interface{}, exportDoguClient3 interface{}) *mockTestSSHConnection_Execute_Call {
+	return &mockTestSSHConnection_Execute_Call{Call: _e.mock.On("Execute", ctx, cfg, secretClient2, exportDoguClient3)}
 }
 
-func (_c *mockTestSSHConnection_Execute_Call) Run(run func(ctx context.Context, cfg configuration.Coordinator, secretClient2 secretClient)) *mockTestSSHConnection_Execute_Call {
+func (_c *mockTestSSHConnection_Execute_Call) Run(run func(ctx context.Context, cfg configuration.Coordinator, secretClient2 secretClient, exportDoguClient3 exportDoguClient)) *mockTestSSHConnection_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(configuration.Coordinator), args[2].(secretClient))
+		run(args[0].(context.Context), args[1].(configuration.Coordinator), args[2].(secretClient), args[3].(exportDoguClient))
 	})
 	return _c
 }
@@ -66,7 +67,7 @@ func (_c *mockTestSSHConnection_Execute_Call) Return(_a0 error) *mockTestSSHConn
 	return _c
 }
 
-func (_c *mockTestSSHConnection_Execute_Call) RunAndReturn(run func(context.Context, configuration.Coordinator, secretClient) error) *mockTestSSHConnection_Execute_Call {
+func (_c *mockTestSSHConnection_Execute_Call) RunAndReturn(run func(context.Context, configuration.Coordinator, secretClient, exportDoguClient) error) *mockTestSSHConnection_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }
