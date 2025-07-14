@@ -61,7 +61,7 @@ func main() {
 	}
 
 	if cfg.Migration.ExecutePreflightCheck {
-		preflightExecuter := newPreflightExecuter(exportAPIService.HealthService, systemInfoProvider, k8sClientSet.Secret)
+		preflightExecuter := newPreflightExecuter(exportAPIService.HealthService, exportAPIService.ExportDoguService, systemInfoProvider, k8sClientSet.Secret)
 		err = preflightExecuter.runPreflightCheck(ctx, cfg)
 		if err != nil {
 			panic(fmt.Errorf("preflight check failed: %w", err))
