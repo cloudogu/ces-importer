@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.0] - 2025-07-15
+### Fixed
+- [#98] preflight check now works in mn
+- [#94] add metadata mapping for logLevel
+
 ## [v1.1.1] - 2025-07-14
 ### Fixed 
 - [#96] remove leading slashes from config keys when changing fqdn
@@ -17,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - [#86] preflight check can now be configured
+- [#94] add metadata mapping for logLevel
 
 ### Changed
 - [#90] adjust mail-text for migration-result-mail

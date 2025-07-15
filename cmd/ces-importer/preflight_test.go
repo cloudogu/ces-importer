@@ -14,8 +14,9 @@ func TestNewPreflightExecuter(t *testing.T) {
 		hc := newMockHealthClient(t)
 		sig := newMockSystemInfoGetter(t)
 		sc := newMockSecretClient(t)
+		edc := newMockExportDoguClient(t)
 
-		pe := newPreflightExecuter(hc, sig, sc)
+		pe := newPreflightExecuter(hc, edc, sig, sc)
 
 		require.Equal(t, hc, pe.healthClient)
 		require.Equal(t, sig, pe.systemInfoGetter)
@@ -32,7 +33,7 @@ func TestRunPreflightCheck(t *testing.T) {
 		sig.EXPECT().GetImporterSystemInfo(mock.Anything).Return(nil, nil)
 
 		sshct := newMockTestSSHConnection(t)
-		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		pe := PreflightExecuter{
 			healthClient:     hc,
@@ -62,7 +63,7 @@ func TestRunPreflightCheck(t *testing.T) {
 		sig.EXPECT().GetImporterSystemInfo(mock.Anything).Return(nil, nil)
 
 		sshct := newMockTestSSHConnection(t)
-		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		pe := PreflightExecuter{
 			healthClient:     hc,
@@ -86,6 +87,37 @@ func TestRunPreflightCheck(t *testing.T) {
 		assert.ErrorContains(t, err, "unable to determine exporter health status")
 	})
 
+	t.Run("should error on unhealthy exporter", func(t *testing.T) {
+		hc := newMockHealthClient(t)
+		hc.EXPECT().GetIsHealthy(mock.Anything).Return(false, nil)
+
+		sig := newMockSystemInfoGetter(t)
+		sig.EXPECT().GetImporterSystemInfo(mock.Anything).Return(nil, nil)
+
+		sshct := newMockTestSSHConnection(t)
+		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		pe := PreflightExecuter{
+			healthClient:     hc,
+			systemInfoGetter: sig,
+			secretClient:     nil,
+
+			testSSHConnection: sshct.Execute,
+		}
+		cfg := configuration.Coordinator{
+			Logging:      configuration.Logging{},
+			API:          configuration.API{},
+			Migration:    configuration.Migration{},
+			SSH:          configuration.SSH{},
+			JobConfig:    configuration.JobConfig{},
+			JobContainer: configuration.JobContainer{},
+			Smtp:         configuration.Smtp{},
+			General:      configuration.General{},
+		}
+		err := pe.runPreflightCheck(context.Background(), cfg)
+		assert.ErrorContains(t, err, "exporter health status is unhealthy")
+	})
+
 	t.Run("should error on getting system info", func(t *testing.T) {
 		hc := newMockHealthClient(t)
 		hc.EXPECT().GetIsHealthy(mock.Anything).Return(true, nil)
@@ -94,7 +126,7 @@ func TestRunPreflightCheck(t *testing.T) {
 		sig.EXPECT().GetImporterSystemInfo(mock.Anything).Return(nil, assert.AnError)
 
 		sshct := newMockTestSSHConnection(t)
-		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		pe := PreflightExecuter{
 			healthClient:      hc,
@@ -125,7 +157,7 @@ func TestRunPreflightCheck(t *testing.T) {
 		sig.EXPECT().GetImporterSystemInfo(mock.Anything).Return(nil, nil)
 
 		sshct := newMockTestSSHConnection(t)
-		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError)
+		sshct.EXPECT().Execute(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError)
 
 		pe := PreflightExecuter{
 			healthClient:      hc,
