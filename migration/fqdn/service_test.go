@@ -213,6 +213,7 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
+				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(nil)
@@ -232,7 +233,6 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
-				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(nil)
@@ -252,6 +252,7 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
+				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(assert.AnError)
@@ -267,6 +268,7 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
+				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(nil)
@@ -283,7 +285,6 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
-				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(nil)
@@ -302,7 +303,6 @@ func TestService_ChangeFQDN(t *testing.T) {
 
 				getter.EXPECT().GetConfig(mock.Anything).Return(createExporterConfig(validExporterConfig), nil)
 
-				cChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 				fChanger.EXPECT().Update(mock.Anything, mock.Anything).Return(assert.AnError)
 
 				cChanger.EXPECT().Restore(mock.Anything).Return(nil)
