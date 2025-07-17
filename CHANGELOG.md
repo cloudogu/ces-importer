@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
-- [#100] update fqdn before certificate to prevent race-condition updating while global-config
+- [#100] update fqdn before certificate to prevent race-condition while updating global-config
 
 ## [v1.2.0] - 2025-07-15
 ### Fixed
