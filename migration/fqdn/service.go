@@ -206,12 +206,12 @@ func (s *Service) deleteBackup(ctx context.Context) error {
 }
 
 func (s *Service) update(ctx context.Context, c Change) error {
-	if err := s.cert.Update(ctx, c.SecretChange); err != nil {
-		return fmt.Errorf("failed to update certificate: %w", err)
-	}
-
 	if err := s.fqdn.Update(ctx, c.ConfigChange); err != nil {
 		return fmt.Errorf("failed to update fqdn: %w", err)
+	}
+
+	if err := s.cert.Update(ctx, c.SecretChange); err != nil {
+		return fmt.Errorf("failed to update certificate: %w", err)
 	}
 
 	return nil
