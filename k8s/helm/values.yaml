@@ -59,7 +59,7 @@ config:
     # changeFQDN triggers the fqdn and certificate import.
     # This is only taken into account if it is a final migration.
     # Default: false
-    changeFQDN: false
+    changeFQDN: true
     # maintenanceModeMessage is the message to been shown, when the maintenance mode gets activated at the source system.
     maintenanceModeMessage:
       # title to be shown in the maintenance mode message.
