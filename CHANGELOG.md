@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.2] - 2025-08-28
+### Changed
+- [#102] only migrate alternative FQDNs on fqdn-change in finale migration
+
 ## [v1.2.1] - 2025-07-17
 ### Fixed
 - [#100] update fqdn before certificate to prevent race-condition while updating global-config

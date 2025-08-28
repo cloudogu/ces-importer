@@ -3,9 +3,11 @@ package fqdn
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/mock"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/stretchr/testify/assert"
@@ -20,19 +22,21 @@ func removeLeadingSlash(path string) string {
 }
 
 var (
-	mockGlobalCfgFQDNKey     = regConfig.Key(removeLeadingSlash(globalCfgFQDNKey))
-	mockGlobalCfgCertTypeKey = regConfig.Key(removeLeadingSlash(globalCfgCertTypeKey))
+	mockGlobalCfgFQDNKey             = regConfig.Key(removeLeadingSlash(globalCfgFQDNKey))
+	mockGlobalCfgAlternativeFQDNsKey = regConfig.Key(removeLeadingSlash(globalCfgAlternativeFQDNsKey))
+	mockGlobalCfgCertTypeKey         = regConfig.Key(removeLeadingSlash(globalCfgCertTypeKey))
 )
 
 // createFQDNConfigMap creates a test ConfigMap with the given name and data
-func createFQDNConfigMap(name string, fqdn, certType string) *corev1.ConfigMap {
+func createFQDNConfigMap(name string, fqdn, alternativeFQDNs, certType string) *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Data: map[string]string{
-			fqdnKey:     fqdn,
-			certTypeKey: certType,
+			fqdnKey:             fqdn,
+			alternativeFQDNsKey: alternativeFQDNs,
+			certTypeKey:         certType,
 		},
 	}
 	return configMap
@@ -51,8 +55,9 @@ func createFQDNNotFoundError() error {
 // createTestFQDNBackup creates a test backup for FQDN
 func createTestFQDNBackup() ConfigChange {
 	return ConfigChange{
-		FQDN:     "example.com",
-		CertType: "self-signed",
+		FQDN:             "example.com",
+		AlternativeFQDNs: "alt1.example.org, alt2.example.net:alt2-cert-secret",
+		CertType:         "self-signed",
 	}
 }
 
@@ -75,7 +80,7 @@ func (m *mockFQDNManager) Backup(ctx context.Context) error {
 	backup := createTestFQDNBackup()
 
 	// Create a backup ConfigMap
-	backupConfigMap := createFQDNConfigMap(fqdnBackupConfigMapName, backup.FQDN, backup.CertType)
+	backupConfigMap := createFQDNConfigMap(fqdnBackupConfigMapName, backup.FQDN, backup.AlternativeFQDNs, backup.CertType)
 
 	// Mock the repo.Create call
 	_, err := m.repo.Create(ctx, backupConfigMap, metav1.CreateOptions{})
@@ -101,8 +106,9 @@ func TestFQDNBackup(t *testing.T) {
 			name: "Success - Backup fqdn - create new config map",
 			setupMock: func(mockRepo *mockConfigMapRepository, mockGlobalRepo *mockGlobalConfigRepo) {
 				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
-					mockGlobalCfgFQDNKey:     "old.example.com",
-					mockGlobalCfgCertTypeKey: "signed",
+					mockGlobalCfgFQDNKey:             "old.example.com",
+					mockGlobalCfgAlternativeFQDNsKey: "old1.example.org, old2.example.net:old2-cert-secret",
+					mockGlobalCfgCertTypeKey:         "signed",
 				}), nil)
 
 				mockRepo.EXPECT().Create(mock.Anything, mock.Anything, mock.Anything).Return(&corev1.ConfigMap{}, nil)
@@ -113,8 +119,9 @@ func TestFQDNBackup(t *testing.T) {
 			name: "Success - Backup fqdn - update config map",
 			setupMock: func(mockRepo *mockConfigMapRepository, mockGlobalRepo *mockGlobalConfigRepo) {
 				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
-					mockGlobalCfgFQDNKey:     "old.example.com",
-					mockGlobalCfgCertTypeKey: "signed",
+					mockGlobalCfgFQDNKey:             "old.example.com",
+					mockGlobalCfgAlternativeFQDNsKey: "old1.example.org, old2.example.net:old2-cert-secret",
+					mockGlobalCfgCertTypeKey:         "signed",
 				}), nil)
 
 				mockRepo.EXPECT().Create(mock.Anything, mock.Anything, mock.Anything).Return(nil, createFQDNAlreadyExistsError())
@@ -124,6 +131,32 @@ func TestFQDNBackup(t *testing.T) {
 				}, nil)
 
 				mockRepo.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).Return(&corev1.ConfigMap{}, nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "Success - Backup alternativeFQDNs - update config map",
+			setupMock: func(mockRepo *mockConfigMapRepository, mockGlobalRepo *mockGlobalConfigRepo) {
+				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
+					mockGlobalCfgFQDNKey:             "old.example.com",
+					mockGlobalCfgAlternativeFQDNsKey: "old1.example.org, old2.example.net:old2-cert-secret",
+					mockGlobalCfgCertTypeKey:         "signed",
+				}), nil)
+
+				mockRepo.EXPECT().Create(mock.Anything, mock.Anything, mock.Anything).Return(nil, createFQDNAlreadyExistsError())
+				mockRepo.EXPECT().Get(mock.Anything, fqdnBackupConfigMapName, mock.Anything).Return(&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: fqdnBackupConfigMapName},
+					Data:       map[string]string{},
+				}, nil)
+
+				mockRepo.EXPECT().Update(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, configMap *corev1.ConfigMap, options metav1.UpdateOptions) (*corev1.ConfigMap, error) {
+					require.Equal(t, fqdnBackupConfigMapName, configMap.Name)
+					require.Equal(t, "old.example.com", configMap.Data[fqdnKey])
+					require.Equal(t, "old1.example.org, old2.example.net:old2-cert-secret", configMap.Data[alternativeFQDNsKey])
+					require.Equal(t, "signed", configMap.Data[certTypeKey])
+
+					return &corev1.ConfigMap{}, nil
+				})
 			},
 			expectedError: false,
 		},
@@ -250,13 +283,15 @@ func TestFQDNRestore(t *testing.T) {
 						Name: fqdnBackupConfigMapName,
 					},
 					Data: map[string]string{
-						fqdnKey:     "new.example.com",
-						certTypeKey: "new-self-signed",
+						fqdnKey:             "new.example.com",
+						alternativeFQDNsKey: "new1.example.org, new2.example.net:new2-cert-secret",
+						certTypeKey:         "new-self-signed",
 					},
 				}, nil)
 
 				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
 					fqdnKey:              "old.example.com",
+					alternativeFQDNsKey:  "old1.example.org, old2.example.net:old2-cert-secret",
 					globalCfgCertTypeKey: "signed",
 				}), nil)
 
@@ -280,8 +315,9 @@ func TestFQDNRestore(t *testing.T) {
 						Name: fqdnBackupConfigMapName,
 					},
 					Data: map[string]string{
-						fqdnKey:     "new.example.com",
-						certTypeKey: "new-self-signed",
+						fqdnKey:             "new.example.com",
+						alternativeFQDNsKey: "new1.example.org, new2.example.net:new2-cert-secret",
+						certTypeKey:         "new-self-signed",
 					},
 				}, nil)
 
@@ -331,14 +367,29 @@ func TestFQDNUpdate(t *testing.T) {
 		errorContains string
 	}{
 		{
-			name: "Success - Update FQDN and certificate type",
+			name: "Success - Update FQDN and certificate type and alternative FQDNs",
 			setupMock: func(mockGlobalRepo *mockGlobalConfigRepo) {
 				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
-					mockGlobalCfgFQDNKey:     "old.example.com",
-					mockGlobalCfgCertTypeKey: "signed",
+					mockGlobalCfgFQDNKey:             "old.example.com",
+					mockGlobalCfgAlternativeFQDNsKey: "old1.example.org, old2.example.net:old2-cert-secret",
+					mockGlobalCfgCertTypeKey:         "signed",
 				}), nil)
 
-				mockGlobalRepo.EXPECT().SaveOrMerge(mock.Anything, mock.Anything).Return(regConfig.GlobalConfig{}, nil)
+				mockGlobalRepo.EXPECT().SaveOrMerge(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
+					fqdn, exists := config.Get(mockGlobalCfgFQDNKey)
+					require.True(t, exists)
+					require.Equal(t, "example.com", fqdn.String())
+
+					alternativeFQDNs, exists := config.Get(mockGlobalCfgAlternativeFQDNsKey)
+					require.True(t, exists)
+					require.Equal(t, "alternative.com, alternative2.com:cert-secret", alternativeFQDNs.String())
+
+					certType, exists := config.Get(mockGlobalCfgCertTypeKey)
+					require.True(t, exists)
+					require.Equal(t, "self-signed", certType.String())
+
+					return regConfig.GlobalConfig{}, nil
+				})
 			},
 			expectedError: false,
 		},
@@ -352,6 +403,18 @@ func TestFQDNUpdate(t *testing.T) {
 		},
 		{
 			name: "Error - Setting new fqdn",
+			setupMock: func(mockGlobalRepo *mockGlobalConfigRepo) {
+				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
+					mockGlobalCfgFQDNKey:     "old.example.com",
+					"alternativeFQDNs/test":  "old1.example.org, old2.example.net:old2-cert-secret",
+					mockGlobalCfgCertTypeKey: "signed",
+				}), nil)
+			},
+			expectedError: true,
+			errorContains: "failed to set new alternativeFQDNs in global config",
+		},
+		{
+			name: "Error - Setting new alternativeFQDNs",
 			setupMock: func(mockGlobalRepo *mockGlobalConfigRepo) {
 				mockGlobalRepo.EXPECT().Get(mock.Anything).Return(regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
 					"fqdn/test":              "old.example.com",
@@ -402,8 +465,9 @@ func TestFQDNUpdate(t *testing.T) {
 
 			// Create test ConfigChange
 			change := ConfigChange{
-				FQDN:     "example.com",
-				CertType: "self-signed",
+				FQDN:             "example.com",
+				AlternativeFQDNs: "alternative.com, alternative2.com:cert-secret",
+				CertType:         "self-signed",
 			}
 
 			// Call Update
