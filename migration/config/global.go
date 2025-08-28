@@ -3,9 +3,10 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
-	"log/slog"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -13,6 +14,7 @@ var globalConfigKeysToKeep = []string{
 	"k8s/*",
 	"proxy/*",
 	"fqdn",
+	"alternativeFQDNs",
 	"maintenance",
 }
 

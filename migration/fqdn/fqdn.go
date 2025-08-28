@@ -3,17 +3,19 @@ package fqdn
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-	"log/slog"
 )
 
 const (
 	fqdnBackupConfigMapName = "ecosystem-fqdn-backup"
 	fqdnKey                 = "fqdn"
+	alternativeFQDNsKey     = "alternativeFQDNs"
 	certTypeKey             = "certificate-type"
 )
 
@@ -24,8 +26,9 @@ type fqdnManager struct {
 
 // ConfigChange represents the fqdn and certificate type that should be changed.
 type ConfigChange struct {
-	FQDN     string
-	CertType string
+	FQDN             string
+	CertType         string
+	AlternativeFQDNs string
 }
 
 func createFQDNBackup(globalConfig regConfig.GlobalConfig) (ConfigChange, error) {
@@ -39,9 +42,15 @@ func createFQDNBackup(globalConfig regConfig.GlobalConfig) (ConfigChange, error)
 		return ConfigChange{}, fmt.Errorf("could not find certificate/type in global config")
 	}
 
+	alternativeFQDNs, ok := globalConfig.Get(globalCfgAlternativeFQDNsKey)
+	if !ok {
+		alternativeFQDNs = ""
+	}
+
 	return ConfigChange{
-		FQDN:     fqdn.String(),
-		CertType: certType.String(),
+		FQDN:             fqdn.String(),
+		AlternativeFQDNs: alternativeFQDNs.String(),
+		CertType:         certType.String(),
 	}, nil
 }
 
@@ -49,8 +58,9 @@ func createFQDNBackupConfigMap(backup ConfigChange) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: fqdnBackupConfigMapName},
 		Data: map[string]string{
-			fqdnKey:     backup.FQDN,
-			certTypeKey: backup.CertType,
+			fqdnKey:             backup.FQDN,
+			alternativeFQDNsKey: backup.AlternativeFQDNs,
+			certTypeKey:         backup.CertType,
 		},
 	}
 }
@@ -109,6 +119,7 @@ func (f *fqdnManager) updateBackup(ctx context.Context, b ConfigChange) error {
 
 		backupCM.Data[certTypeKey] = b.CertType
 		backupCM.Data[fqdnKey] = b.FQDN
+		backupCM.Data[alternativeFQDNsKey] = b.AlternativeFQDNs
 
 		_, err = f.repo.Update(ctx, backupCM, metav1.UpdateOptions{})
 		if err != nil {
@@ -137,8 +148,9 @@ func (f *fqdnManager) restore(ctx context.Context) error {
 	slog.Debug("Got backup for fqdn", "name", fqdnBackupConfigMapName)
 
 	change := ConfigChange{
-		FQDN:     backup.Data[fqdnKey],
-		CertType: backup.Data[certTypeKey],
+		FQDN:             backup.Data[fqdnKey],
+		AlternativeFQDNs: backup.Data[alternativeFQDNsKey],
+		CertType:         backup.Data[certTypeKey],
 	}
 
 	err = f.Update(ctx, change)
@@ -163,6 +175,11 @@ func (f *fqdnManager) Update(ctx context.Context, c ConfigChange) error {
 	globalConfig.Config, err = globalConfig.Set(globalCfgFQDNKey, regConfig.Value(c.FQDN))
 	if err != nil {
 		return fmt.Errorf("failed to set new fqdn in global config: %w", err)
+	}
+
+	globalConfig.Config, err = globalConfig.Set(globalCfgAlternativeFQDNsKey, regConfig.Value(c.AlternativeFQDNs))
+	if err != nil {
+		return fmt.Errorf("failed to set new alternativeFQDNs in global config: %w", err)
 	}
 
 	globalConfig.Config, err = globalConfig.Set(globalCfgCertTypeKey, regConfig.Value(c.CertType))

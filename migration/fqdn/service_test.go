@@ -2,10 +2,11 @@ package fqdn
 
 import (
 	"context"
+	"testing"
+
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type exporterConfigTestCase uint8
@@ -25,6 +26,7 @@ func createExporterConfig(tc exporterConfigTestCase) *migration.Configuration {
 	case validExporterConfig:
 		globalConfigValues = []migration.KeyValue{
 			{Key: globalCfgFQDNKey, Value: "test.com"},
+			{Key: globalCfgAlternativeFQDNsKey, Value: "alt1.example.com, alt2.example.com:alt2-secret"},
 			{Key: globalCfgCertTypeKey, Value: "self-signed"},
 			{Key: globalCfgCertKey, Value: "certificate"},
 			{Key: globalCfgPrivateKey, Value: "privateKey"},
