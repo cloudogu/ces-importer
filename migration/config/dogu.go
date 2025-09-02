@@ -12,7 +12,10 @@ import (
 	"path"
 )
 
-const localConfigPathTemplate = "%s/localConfig/local.yaml"
+const (
+	localConfigPathTemplate = "%s/localConfig/local.yaml"
+	nginxDoguName           = "nginx"
+)
 
 var getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
 	doguPath := fmt.Sprintf(localConfigPathTemplate, dogu)
@@ -31,15 +34,7 @@ func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 
 	for _, dc := range config {
 		if dc.Name == nginxDoguName {
-			nginxStaticConfig := createDoguConfigForNginxStatic(dc)
-			if err := dci.importDoguConfig(ctx, nginxStaticConfig); err != nil {
-				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxStaticConfig.Name, err)
-			}
-
-			nginxIngressConfig := createDoguConfigForNginxIngress(dc)
-			if err := dci.importDoguConfig(ctx, nginxIngressConfig); err != nil {
-				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", nginxIngressConfig.Name, err)
-			}
+			continue
 		} else {
 			if err := dci.importDoguConfig(ctx, dc); err != nil {
 				return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)

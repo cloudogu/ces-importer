@@ -10,9 +10,7 @@ import (
 )
 
 const (
-	doguNginx        = "official/nginx"
-	doguNginxStatic  = "k8s/nginx-static"
-	doguNginxIngress = "k8s/nginx-ingress"
+	doguNginx = "official/nginx"
 )
 
 type Validator struct {
@@ -69,7 +67,6 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 
 		// Handle nginx as a special case
 		if exDogu.Name == doguNginx {
-			result = validateNginxDogus(imDoguMap, result)
 			continue
 		}
 
@@ -99,19 +96,6 @@ func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.D
 
 	// Remove validated dogu from map
 	delete(imDoguMap, exDogu.Name)
-	return result
-}
-
-// validateNginxDogus validates the special case of nginx-related dogus
-func validateNginxDogus(imDoguMap map[string]migration.Dogu, result error) error {
-	nginxMnDogus := []string{doguNginxStatic, doguNginxIngress}
-	for _, name := range nginxMnDogus {
-		imDogu := imDoguMap[name]
-		if imDogu.Name == "" {
-			result = errors.Join(result, fmt.Errorf("dogu %s is not installed \n", name))
-		}
-		delete(imDoguMap, name)
-	}
 	return result
 }
 
