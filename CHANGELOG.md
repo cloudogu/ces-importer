@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.3] - 2025-09-03
+### Fixed
+- [#105] wrong namespace for ignored monitoring dogu
+
 ## [v1.2.2] - 2025-08-28
 ### Changed
 - [#102] only migrate alternative FQDNs on fqdn-change in finale migration

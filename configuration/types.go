@@ -3,14 +3,15 @@ package configuration
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 var (
 	excludedDogus = []string{
-		"official/monitoring",
+		"premium/monitoring",
 		"premium/backup",
 		"official/registrator",
 	}
