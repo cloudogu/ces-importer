@@ -94,7 +94,7 @@ func (p *PreflightExecuter) runPreflightCheck(ctx context.Context, cfg configura
 // testSSHConnection creates an ssh connection to the exporting system and performs an echo command to test the connection
 func sshConnectionTest(ctx context.Context, cfg configuration.Coordinator, secretClient secretClient, exportDoguClient exportDoguClient) error {
 	// set an export dogu in the source instance
-	doguName := "nginx-static"
+	doguName := "cas"
 	_, err := exportDoguClient.SetExportDogu(ctx, doguName)
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Could not set dogu %s as export dogu. If the exporting system is not a multinode system, this might lead to further errors. Otherwise this can be ignored.", doguName))
