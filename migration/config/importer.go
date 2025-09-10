@@ -65,8 +65,6 @@ func (ci *ConfigImporter) SyncConfig(ctx context.Context) error {
 		return fmt.Errorf("failed to get configuration from exporter: %w", err)
 	}
 
-	mergeNginxExternalsConfigIntoGlobalConfig(config)
-
 	if err := ci.globalConfigImporter.importGlobalConfig(ctx, config.GlobalConfig); err != nil {
 		return fmt.Errorf("failed to import global configuration: %w", err)
 	}

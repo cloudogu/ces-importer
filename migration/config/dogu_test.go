@@ -489,8 +489,6 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 
 	t.Run("should import dogu configs", func(t *testing.T) {
 		doguNameCas := doguCommons.SimpleName("cas")
-		doguNameNginxStatic := doguCommons.SimpleName("nginx-static")
-		doguNameNginxIngress := doguCommons.SimpleName("nginx-ingress")
 
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{
@@ -509,28 +507,6 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 			return expectedNormalDoguCfg, nil
 		})
 
-		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(nil)
-		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{}), nil)
-		mockNormalRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedNormalDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedNormalDoguCfg, nil
-		})
-
-		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxIngress).Return(nil)
-		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{}), nil)
-		mockNormalRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedNormalDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedNormalDoguCfg, nil
-		})
-
 		mockSensitiveRepo := newMockDoguConfigRepo(t)
 		expectedSensitiveDoguCfg := regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{
 			"sensitive": "geheim",
@@ -538,28 +514,6 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 
 		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
 		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
-		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedSensitiveDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedSensitiveDoguCfg, nil
-		})
-
-		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(nil)
-		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{}), nil)
-		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedSensitiveDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedSensitiveDoguCfg, nil
-		})
-
-		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameNginxIngress).Return(nil)
-		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{}), nil)
 		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
 			assert.Equal(t, testCtx, ctx)
 
@@ -655,116 +609,5 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, "failed to import dogu config for dogu 'cas':")
-	})
-
-	t.Run("should fail to import dogu configs for nginx-ingress", func(t *testing.T) {
-		doguNameNginxStatic := doguCommons.SimpleName("nginx-static")
-		doguNameNginxIngress := doguCommons.SimpleName("nginx-ingress")
-
-		mockNormalRepo := newMockDoguConfigRepo(t)
-		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{
-			"key1":        "value1",
-			"sub/key/foo": "bar",
-		})
-
-		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(nil)
-		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{}), nil)
-		mockNormalRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedNormalDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedNormalDoguCfg, nil
-		})
-
-		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxIngress).Return(assert.AnError)
-
-		mockSensitiveRepo := newMockDoguConfigRepo(t)
-		expectedSensitiveDoguCfg := regConfig.CreateDoguConfig(doguNameNginxIngress, map[regConfig.Key]regConfig.Value{
-			"sensitive": "geheim",
-		})
-
-		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(nil)
-		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameNginxStatic, map[regConfig.Key]regConfig.Value{}), nil)
-		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
-			assert.Equal(t, testCtx, ctx)
-
-			diff := expectedSensitiveDoguCfg.Diff(config.Config)
-			assert.Len(t, diff, 0)
-
-			return expectedSensitiveDoguCfg, nil
-		})
-
-		tempDir := t.TempDir()
-		localConfigFile := tempDir + "/local.yaml"
-
-		originalGetLocalConfigFileForDogu := getLocalConfigFileForDogu
-		getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
-			return localConfigFile
-		}
-		defer func() {
-			getLocalConfigFileForDogu = originalGetLocalConfigFileForDogu
-		}()
-
-		cfg := []migration.DoguConfig{
-			{
-				Name: "nginx",
-				NormalConfig: []migration.KeyValue{
-					{"key1", "value1"},
-					{"sub/key/foo", "bar"},
-				},
-				SensitiveConfig: []migration.KeyValue{
-					{"sensitive", "geheim"},
-				},
-				LocalConfig: []migration.KeyValue{
-					{"local", "lokal"},
-				},
-			},
-		}
-
-		ci := &cesDoguConfigImporter{
-			doguConfigRepo:          mockNormalRepo,
-			sensitiveDoguConfigRepo: mockSensitiveRepo,
-		}
-
-		err := ci.importDoguConfigs(testCtx, cfg)
-
-		require.Error(t, err)
-		assert.ErrorIs(t, err, assert.AnError)
-		assert.ErrorContains(t, err, "failed to import dogu config for dogu 'nginx-ingress':")
-	})
-
-	t.Run("should fail to import dogu configs for nginx-static", func(t *testing.T) {
-		doguNameNginxStatic := doguCommons.SimpleName("nginx-static")
-
-		mockNormalRepo := newMockDoguConfigRepo(t)
-		mockNormalRepo.EXPECT().Delete(testCtx, doguNameNginxStatic).Return(assert.AnError)
-
-		cfg := []migration.DoguConfig{
-			{
-				Name: "nginx",
-				NormalConfig: []migration.KeyValue{
-					{"key1", "value1"},
-					{"sub/key/foo", "bar"},
-				},
-				SensitiveConfig: []migration.KeyValue{
-					{"sensitive", "geheim"},
-				},
-				LocalConfig: []migration.KeyValue{
-					{"local", "lokal"},
-				},
-			},
-		}
-
-		ci := &cesDoguConfigImporter{
-			doguConfigRepo: mockNormalRepo,
-		}
-
-		err := ci.importDoguConfigs(testCtx, cfg)
-
-		require.Error(t, err)
-		assert.ErrorIs(t, err, assert.AnError)
-		assert.ErrorContains(t, err, "failed to import dogu config for dogu 'nginx-static':")
 	})
 }
