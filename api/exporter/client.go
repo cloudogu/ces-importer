@@ -3,14 +3,17 @@ package exporter
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 const exporterBasePath = "/ces-exporter"
+const customCAPath = "/etc/custom-certs/ca.crt"
 
 type Client struct {
 	baseUrl    string
@@ -36,18 +39,7 @@ func WithInsecure() HTTPClientOption {
 	return func(client *http.Client) {
 		slog.Debug("Skip TLS certificate verification for API requests")
 
-		var transportConfig *http.Transport
-
-		if client.Transport == nil {
-			transportConfig = &http.Transport{}
-		} else {
-			clientTransportConfig, ok := client.Transport.(*http.Transport)
-			if !ok {
-				transportConfig = &http.Transport{}
-			} else {
-				transportConfig = clientTransportConfig
-			}
-		}
+		transportConfig := getTransportConfig(client)
 
 		if transportConfig.TLSClientConfig == nil {
 			transportConfig.TLSClientConfig = &tls.Config{}
@@ -57,6 +49,54 @@ func WithInsecure() HTTPClientOption {
 
 		client.Transport = transportConfig
 	}
+}
+
+// WithCustomCAs configures the HTTP Client to add custom CAs to the root CA.
+// Custom CAs need to be supplied in the ces-importer-custom-cas configmap
+func WithCustomCAs() HTTPClientOption {
+	return func(client *http.Client) {
+		caCert, err := os.ReadFile(customCAPath)
+		if err != nil {
+			slog.Info("Skipping custom CAs as none were provided in /etc/custom-certs/ca.crt")
+			return
+		}
+
+		// use system cert pool if it exists
+		rootCAs, err := x509.SystemCertPool()
+		if err != nil {
+			rootCAs = x509.NewCertPool()
+		}
+
+		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+			slog.Warn("Could not add custom CAs to root CAs. They might already be included.")
+			return
+		}
+
+		tlsConfig := &tls.Config{
+			RootCAs: rootCAs,
+		}
+
+		transportConfig := getTransportConfig(client)
+		transportConfig.TLSClientConfig = tlsConfig
+		client.Transport = transportConfig
+	}
+}
+
+// getTransportConfig gets the HTTP Clients transport config or a new one, if the client does not have one
+func getTransportConfig(client *http.Client) *http.Transport {
+	var transportConfig *http.Transport
+
+	if client.Transport == nil {
+		transportConfig = &http.Transport{}
+	} else {
+		clientTransportConfig, ok := client.Transport.(*http.Transport)
+		if !ok {
+			transportConfig = &http.Transport{}
+		} else {
+			transportConfig = clientTransportConfig
+		}
+	}
+	return transportConfig
 }
 
 // NewClient creates a Client for easy API access with the given HTTP Client. This allows for generically modifying the

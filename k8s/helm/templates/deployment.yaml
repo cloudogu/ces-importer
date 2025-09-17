@@ -24,6 +24,10 @@ spec:
             name: {{ include "ces-importer.name" . }}-config
         - name: migration-log
           emptyDir: {}
+        - name: custom-ca
+          configMap:
+            name: {{ include "ces-importer.name" . }}-custom-ca
+            optional: true
       containers:
         - env:
             - name: MAIL_PASSWORD
@@ -49,6 +53,9 @@ spec:
               readOnly: true
             - mountPath: /home/ces-importer/migration-log
               name: migration-log
+            - mountPath: /etc/custom-certs
+              name: custom-ca
+              readOnly: true
           image: "{{ .Values.main.image.registry }}/{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"
           imagePullPolicy: {{ .Values.main.imagePullPolicy | default "IfNotPresent" }}
           name: main

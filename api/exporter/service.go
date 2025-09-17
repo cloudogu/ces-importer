@@ -29,6 +29,8 @@ func NewServiceFromConfig(host APIHost, key APIKey, skipTLSVerification SkipTLSV
 
 	if skipTLSVerification {
 		options = append(options, WithInsecure())
+	} else {
+		options = append(options, WithCustomCAs())
 	}
 
 	return NewService(NewClient(string(host), string(key), options...))
