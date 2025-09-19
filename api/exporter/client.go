@@ -52,7 +52,7 @@ func WithInsecure() HTTPClientOption {
 }
 
 // WithCustomCAs configures the HTTP Client to add custom CAs to the root CA.
-// Custom CAs need to be supplied in the ces-importer-custom-cas configmap
+// Custom CAs are supplied in the ces-importer-custom-cas configmap
 func WithCustomCAs() HTTPClientOption {
 	return func(client *http.Client) {
 		caCert, err := os.ReadFile(customCAPath)
@@ -68,7 +68,7 @@ func WithCustomCAs() HTTPClientOption {
 		}
 
 		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-			slog.Warn("Could not add custom CAs to root CAs. They might already be included.")
+			slog.Warn("Could not add custom CAs. They might already be included.")
 			return
 		}
 
@@ -79,6 +79,7 @@ func WithCustomCAs() HTTPClientOption {
 		transportConfig := getTransportConfig(client)
 		transportConfig.TLSClientConfig = tlsConfig
 		client.Transport = transportConfig
+		slog.Info("Added custom TLS CAs to exporter API requests.")
 	}
 }
 
