@@ -68,7 +68,7 @@ config:
       text: "The migration of your instance is in progress."
     # executePreflightCheck controls whether the preflight check will be executed.
     # Default: True
-    executePreflightCheck: true
+    executePreflightCheck: false
   job:
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
@@ -96,6 +96,7 @@ config:
     from: importer@cloudogu.com
     # List of recipient email addresses
     to: []
+    useTLS: false
 controllerManager:
   image:
     tag: 0.0.1

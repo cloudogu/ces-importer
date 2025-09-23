@@ -13,7 +13,7 @@ import (
 )
 
 const exporterBasePath = "/ces-exporter"
-const customCAPath = "/etc/custom-certs/ca.crt"
+const customCAPath = "/etc/custom-certs/exporter-ca.crt"
 
 type Client struct {
 	baseUrl    string

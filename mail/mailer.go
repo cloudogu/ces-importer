@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -38,6 +40,7 @@ const (
 )
 
 const GLOBAL_CONFIG_FQDN_KEY = "fqdn"
+const customCAPath = "/etc/custom-certs/mail-ca.crt"
 
 type globalConfigRepo interface {
 	Get(ctx context.Context) (config.GlobalConfig, error)
@@ -63,10 +66,17 @@ type Sender struct {
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
+	var senderService SenderService
+	if config.UseTls {
+		senderService = sendMailWithTls
+	} else {
+		senderService = smtp.SendMail
+	}
+
 	return &Sender{
 		config,
 		sourceInstance,
-		smtp.SendMail,
+		senderService,
 		os.ReadFile,
 		attachments,
 		globalConfigRepo,
@@ -157,6 +167,66 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 		s.config.To,
 		body.Bytes(),
 	)
+}
+
+func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	// addr contains the server and port
+	serverName := strings.Split(addr, ":")[0]
+
+	caCert, err := os.ReadFile(customCAPath)
+	if err != nil {
+		slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
+	}
+
+	// use system cert pool if it exists
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+		slog.Warn("Could not add custom CAs. They might already be included.")
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:    rootCAs,
+		ServerName: serverName,
+	}
+
+	conn, err := tls.Dial("tcp", addr, tlsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to connect to mail server: %w", err)
+	}
+	defer conn.Close()
+
+	c, err := smtp.NewClient(conn, serverName)
+	if err != nil {
+		return fmt.Errorf("failed to create smtp client: %w", err)
+	}
+	defer c.Quit()
+
+	if err = c.Mail(from); err != nil {
+		return fmt.Errorf("failed to create message on mail server: %w", err)
+	}
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return fmt.Errorf("failed to add recipient %s message: %w", addr, err)
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return fmt.Errorf("failed to  get writer from mail server: %w", err)
+	}
+	_, err = w.Write(msg)
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+	err = w.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close message writer: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Sender) auth() smtp.Auth {
