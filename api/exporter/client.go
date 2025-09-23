@@ -66,7 +66,6 @@ func WithCustomCAs() HTTPClientOption {
 		if err != nil {
 			rootCAs = x509.NewCertPool()
 		}
-
 		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
 			slog.Warn("Could not add custom CAs. They might already be included.")
 			return
