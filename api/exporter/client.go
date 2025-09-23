@@ -13,7 +13,7 @@ import (
 )
 
 const exporterBasePath = "/ces-exporter"
-const customCAPath = "/etc/custom-certs/exporter-ca.crt"
+const customCAPath = "/etc/custom-certs/exporter/exporter.crt"
 
 type Client struct {
 	baseUrl    string
@@ -57,7 +57,7 @@ func WithCustomCAs() HTTPClientOption {
 	return func(client *http.Client) {
 		caCert, err := os.ReadFile(customCAPath)
 		if err != nil {
-			slog.Info("Skipping custom CAs as none were provided in /etc/custom-certs/ca.crt")
+			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
 			return
 		}
 

@@ -30,7 +30,7 @@ spec:
             optional: true
         - name: mail-ca
           configMap:
-            name: {{ include "ces-importer.name" . }}-mail-ca
+            name: {{ .Values.config.smtp.tlsConfigmapName }}
             optional: true
       containers:
         - env:
@@ -57,10 +57,10 @@ spec:
               readOnly: true
             - mountPath: /home/ces-importer/migration-log
               name: migration-log
-            - mountPath: /etc/custom-certs
+            - mountPath: /etc/custom-certs/exporter
               name: exporter-ca
               readOnly: true
-            - mountPath: /etc/custom-certs
+            - mountPath: /etc/custom-certs/mail
               name: mail-ca
               readOnly: true
           image: "{{ .Values.main.image.registry }}/{{ .Values.main.image.repository }}:{{ .Values.main.image.tag }}"

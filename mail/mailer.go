@@ -40,7 +40,7 @@ const (
 )
 
 const GLOBAL_CONFIG_FQDN_KEY = "fqdn"
-const customCAPath = "/etc/custom-certs/mail-ca.crt"
+const customCAPath = "/etc/custom-certs/mail/mail.crt"
 
 type globalConfigRepo interface {
 	Get(ctx context.Context) (config.GlobalConfig, error)
@@ -170,6 +170,7 @@ func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, 
 }
 
 func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	slog.Debug("sending mail with TLS enabled")
 	// addr contains the server and port
 	serverName := strings.Split(addr, ":")[0]
 
@@ -185,7 +186,7 @@ func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []b
 	}
 
 	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-		slog.Warn("Could not add custom CAs. They might already be included.")
+		slog.Debug("Could not add custom CAs. They might already be included.")
 	}
 
 	tlsConfig := &tls.Config{

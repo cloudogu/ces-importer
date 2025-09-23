@@ -189,7 +189,7 @@ type Smtp struct {
 	// SecretDataKey specifies the key inside the secret containing the SMTP password.
 	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
 	// UseTls configures the mail service to use tls
-	UseTls bool `yaml:"useTls"`
+	UseTls bool `yaml:"useTLS"`
 }
 
 // General ces importer config
