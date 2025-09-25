@@ -1,5 +1,7 @@
 package exporter
 
+import "github.com/cloudogu/ces-importer/configuration"
+
 type Service struct {
 	*MaintenanceModeService
 	*ConfigService
@@ -24,14 +26,14 @@ type APIHost string
 type APIKey string
 type SkipTLSVerification bool
 
-func NewServiceFromConfig(host APIHost, key APIKey, skipTLSVerification SkipTLSVerification) *Service {
+func NewServiceFromConfig(cfg configuration.API) *Service {
 	var options []HTTPClientOption
 
-	if skipTLSVerification {
+	if cfg.SkipTLSVerify {
 		options = append(options, WithInsecure())
 	} else {
-		options = append(options, WithCustomCAs())
+		options = append(options, WithCustomCAs(cfg))
 	}
 
-	return NewService(NewClient(string(host), string(key), options...))
+	return NewService(NewClient(string(cfg.ExporterHost), string(cfg.ExporterApiKey), options...))
 }

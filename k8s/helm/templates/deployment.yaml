@@ -26,7 +26,7 @@ spec:
           emptyDir: {}
         - name: exporter-ca
           configMap:
-            name: {{ include "ces-importer.name" . }}-exporter-ca
+            name: {{ .Values.config.api.tlsConfigmapName }}
             optional: true
         - name: mail-ca
           configMap:

@@ -45,9 +45,7 @@ func main() {
 	}
 
 	exportAPIService := exporter.NewServiceFromConfig(
-		exporter.APIHost(cfg.ExporterHost),
-		exporter.APIKey(cfg.ExporterApiKey),
-		exporter.SkipTLSVerification(cfg.SkipTLSVerify),
+		cfg.API,
 	)
 
 	k8sClientSet, err := importer.CreateK8SClientSet(clusterConfig, cfg.General.Namespace)

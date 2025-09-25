@@ -40,7 +40,8 @@ const (
 )
 
 const GLOBAL_CONFIG_FQDN_KEY = "fqdn"
-const customCAPath = "/etc/custom-certs/mail/mail.crt"
+
+var customCAPath = "/etc/custom-certs/mail/%s"
 
 type globalConfigRepo interface {
 	Get(ctx context.Context) (config.GlobalConfig, error)
@@ -67,11 +68,13 @@ type Sender struct {
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
 	var senderService SenderService
-	if config.UseTls {
+	if config.SkipTLSVerify {
 		senderService = sendMailWithTls
 	} else {
 		senderService = smtp.SendMail
 	}
+
+	customCAPath = fmt.Sprintf(customCAPath, config.TLSCertificateName)
 
 	return &Sender{
 		config,
@@ -198,13 +201,23 @@ func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []b
 	if err != nil {
 		return fmt.Errorf("failed to connect to mail server: %w", err)
 	}
-	defer conn.Close()
+	defer func(conn *tls.Conn) {
+		err := conn.Close()
+		if err != nil {
+			slog.Error(fmt.Sprintf("Failed to close tls connection to mail server: %v", err))
+		}
+	}(conn)
 
 	c, err := smtp.NewClient(conn, serverName)
 	if err != nil {
 		return fmt.Errorf("failed to create smtp client: %w", err)
 	}
-	defer c.Quit()
+	defer func(c *smtp.Client) {
+		err := c.Quit()
+		if err != nil {
+			slog.Error(fmt.Sprintf("Failed to quit smtp mail client: %v", err))
+		}
+	}(c)
 
 	if err = c.Mail(from); err != nil {
 		return fmt.Errorf("failed to create message on mail server: %w", err)

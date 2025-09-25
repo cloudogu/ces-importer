@@ -41,9 +41,7 @@ func run() int {
 	slog.Debug("Successfully initialized logger")
 
 	exportAPIService := exporter.NewServiceFromConfig(
-		exporter.APIHost(jobConfig.ExporterHost),
-		exporter.APIKey(jobConfig.ExporterApiKey),
-		exporter.SkipTLSVerification(jobConfig.SkipTLSVerify),
+		jobConfig.API,
 	)
 	slog.Debug("Successfully created service for exporter API")
 

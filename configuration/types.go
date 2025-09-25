@@ -56,6 +56,8 @@ type API struct {
 	SecretName string `yaml:"secretName" validate:"required,k8sSecretName"`
 	// SecretDataKey specifies the key inside the secret containing the exporter API key.
 	SecretDataKey string `yaml:"secretDataKey" validate:"required,k8sSecretDataKey"`
+	// TLSCertificateName is the name of the mounted TLS CA. It corresponds to api.tlsConfigmapKey in values.yaml
+	TLSCertificateName string `yaml:"tlsConfigmapKey"`
 }
 
 // Migration contains the configuration data for the migration schedule.
@@ -188,8 +190,10 @@ type Smtp struct {
 	SecretName string `yaml:"secretName" validate:"required_with=Server,len=0|k8sSecretName"`
 	// SecretDataKey specifies the key inside the secret containing the SMTP password.
 	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
-	// UseTls configures the mail service to use tls
-	UseTls bool `yaml:"useTLS"`
+	// SkipTLSVerify configures the mail service to use tls
+	SkipTLSVerify bool `yaml:"skipTLSVerify"`
+	// TLSCertificateName is the name of the mounted TLS CA. It corresponds to mail.tlsConfigmapKey in values.yaml
+	TLSCertificateName string `yaml:"tlsConfigmapKey"`
 }
 
 // General ces importer config
