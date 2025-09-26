@@ -147,8 +147,8 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		assert.Equal(t, "test-service-account", job.Spec.Template.Spec.ServiceAccountName)
 
 		// Verify that the volumes are set up correctly
-		assert.Equal(t, 4, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume
-		assert.Equal(t, 4, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount
+		assert.Equal(t, 5, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume + 1 tls ca volume
+		assert.Equal(t, 5, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount + 1 tls ca mount
 
 		// Verify env for fqdn change is NOT set
 		assert.Equal(t, 1, len(job.Spec.Template.Spec.Containers[0].Env))
@@ -202,8 +202,8 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		assert.Equal(t, "test-service-account", job.Spec.Template.Spec.ServiceAccountName)
 
 		// Verify that the volumes are set up correctly
-		assert.Equal(t, 4, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume
-		assert.Equal(t, 4, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount
+		assert.Equal(t, 5, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume + 1 tls ca volume
+		assert.Equal(t, 5, len(job.Spec.Template.Spec.Containers[0].VolumeMounts)) // 1 config mount + 2 dogu mounts + 1 ssh key mount + 1 tls ca mount
 
 		// Verify env for fqdn change is set
 		assert.Equal(t, 2, len(job.Spec.Template.Spec.Containers[0].Env))

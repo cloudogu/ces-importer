@@ -58,6 +58,8 @@ type API struct {
 	SecretDataKey string `yaml:"secretDataKey" validate:"required,k8sSecretDataKey"`
 	// TLSCertificateName is the name of the mounted TLS CA. It corresponds to api.tlsConfigmapKey in values.yaml
 	TLSCertificateName string `yaml:"tlsConfigmapKey"`
+	// TLSCertificateConfigMapName is the name of the config map containing the API TLS certificate
+	TLSCertificateConfigMapName string `yaml:"tlsConfigmapName"`
 }
 
 // Migration contains the configuration data for the migration schedule.

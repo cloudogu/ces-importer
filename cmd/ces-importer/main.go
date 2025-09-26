@@ -114,6 +114,7 @@ func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordina
 		JobProviderDependencies: migration.JobProviderDependencies{
 			JobContainerConfig: cfg.JobContainer,
 			SSHConfig:          cfg.SSH,
+			APIConfig:          cfg.API,
 			APIKey:             cfg.API.ExporterApiKey,
 			DoguVolumeBasePath: cfg.JobConfig.DoguVolumeBasePath,
 			PVCClient:          migration.NewPVCGetter(k8sClientSet.Pvc),
