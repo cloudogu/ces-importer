@@ -7,9 +7,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"maps"
 	"mime/multipart"
@@ -21,6 +20,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/k8s-registry-lib/config"
 )
 
 const (
@@ -68,7 +70,7 @@ type Sender struct {
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
 	var senderService SenderService
-	if config.SkipTLSVerify {
+	if config.UseTls {
 		senderService = sendMailWithTls
 	} else {
 		senderService = smtp.SendMail
@@ -177,24 +179,9 @@ func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []b
 	// addr contains the server and port
 	serverName := strings.Split(addr, ":")[0]
 
-	caCert, err := os.ReadFile(customCAPath)
+	tlsConfig, err := createTLSConfig(serverName)
 	if err != nil {
-		slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
-	}
-
-	// use system cert pool if it exists
-	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		rootCAs = x509.NewCertPool()
-	}
-
-	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-		slog.Debug("Could not add custom CAs. They might already be included.")
-	}
-
-	tlsConfig := &tls.Config{
-		RootCAs:    rootCAs,
-		ServerName: serverName,
+		return fmt.Errorf("failed to create TLS config: %w", err)
 	}
 
 	conn, err := tls.Dial("tcp", addr, tlsConfig)
@@ -241,6 +228,36 @@ func sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []b
 	}
 
 	return nil
+}
+
+func createTLSConfig(serverName string) (*tls.Config, error) {
+	caCert, err := os.ReadFile(customCAPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
+
+			return &tls.Config{
+				ServerName: serverName,
+			}, nil
+		} else if err != nil {
+			return nil, fmt.Errorf("failed to read custom CA file: %w", err)
+		}
+	}
+
+	// use system cert pool if it exists
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+		slog.Warn("Could not add custom CAs. They might already be included.")
+	}
+
+	return &tls.Config{
+		ServerName: serverName,
+		RootCAs:    rootCAs,
+	}, nil
 }
 
 func (s *Sender) auth() smtp.Auth {

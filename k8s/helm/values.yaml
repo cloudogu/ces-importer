@@ -100,8 +100,11 @@ config:
     from: importer@cloudogu.com
     # List of recipient email addresses
     to: []
-    # skipTLSVerify configures the mail server to use TLS
+    # useTLS configures the mail server to use TLS
     # Disable, if the mail server does not support TLS, otherwise this will lead to errors
+    # default: false
+    useTLS: false
+    # skipTLSVerify configures the mail service to skip TLS verification when using TLS
     # default: false
     skipTLSVerify: false
     # Name of the config map containing the tls CA

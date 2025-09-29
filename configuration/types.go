@@ -192,7 +192,9 @@ type Smtp struct {
 	SecretName string `yaml:"secretName" validate:"required_with=Server,len=0|k8sSecretName"`
 	// SecretDataKey specifies the key inside the secret containing the SMTP password.
 	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
-	// SkipTLSVerify configures the mail service to use tls
+	// UseTls configures the mail service to use TLS
+	UseTls bool `yaml:"useTLS"`
+	// SkipTLSVerify configures the mail service to skip TLS verification when using TLS
 	SkipTLSVerify bool `yaml:"skipTLSVerify"`
 	// TLSCertificateName is the name of the mounted TLS CA. It corresponds to mail.tlsConfigmapKey in values.yaml
 	TLSCertificateName string `yaml:"tlsConfigmapKey"`

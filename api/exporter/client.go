@@ -6,12 +6,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/cloudogu/ces-importer/configuration"
 )
 
 const exporterBasePath = "/ces-exporter"
@@ -53,11 +54,15 @@ func WithInsecure() HTTPClientOption {
 	}
 }
 
+var getCustomCAFileName = func(fileName string) string {
+	return fmt.Sprintf(customCAPath, fileName)
+}
+
 // WithCustomCAs configures the HTTP Client to add custom CAs to the root CA.
 // Custom CAs are supplied in the ces-importer-custom-cas configmap
 func WithCustomCAs(cfg configuration.API) HTTPClientOption {
 	return func(client *http.Client) {
-		caCert, err := os.ReadFile(fmt.Sprintf(customCAPath, cfg.TLSCertificateName))
+		caCert, err := os.ReadFile(getCustomCAFileName(cfg.TLSCertificateName))
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
 			return
