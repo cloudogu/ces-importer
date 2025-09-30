@@ -6,8 +6,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
-	"github.com/cloudogu/k8s-registry-lib/config"
 	"log/slog"
 	"maps"
 	"mime/multipart"
@@ -19,6 +17,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/cloudogu/ces-importer/configuration"
+	"github.com/cloudogu/k8s-registry-lib/config"
 )
 
 const (
@@ -38,6 +39,8 @@ const (
 )
 
 const GLOBAL_CONFIG_FQDN_KEY = "fqdn"
+
+var customCAPath = "/etc/custom-certs/mail/%s"
 
 type globalConfigRepo interface {
 	Get(ctx context.Context) (config.GlobalConfig, error)
@@ -63,10 +66,20 @@ type Sender struct {
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
+	var senderService SenderService
+	if config.UseTls {
+		ts := &tlsSender{config: config}
+		senderService = ts.sendMailWithTls
+	} else {
+		senderService = smtp.SendMail
+	}
+
+	customCAPath = fmt.Sprintf(customCAPath, config.TLSCertificateName)
+
 	return &Sender{
 		config,
 		sourceInstance,
-		smtp.SendMail,
+		senderService,
 		os.ReadFile,
 		attachments,
 		globalConfigRepo,

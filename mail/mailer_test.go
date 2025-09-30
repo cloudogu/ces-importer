@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
-	regConfig "github.com/cloudogu/k8s-registry-lib/config"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"log/slog"
 	"mime/multipart"
 	"net/smtp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cloudogu/ces-importer/configuration"
+	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSender(t *testing.T) {
