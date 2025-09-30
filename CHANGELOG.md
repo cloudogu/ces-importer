@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.0] - 2025-09-30
+### Added
+- [#108] add configuration for custom TLS CAs
+
 ## [v1.2.4] - 2025-09-10
 ### Changed
 - [#104] use cas-dogu for connection-check (nginx-dogu is obsolete)

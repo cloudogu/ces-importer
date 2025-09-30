@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -264,5 +266,28 @@ func Test_client_DoPostRequest(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "received unexpected response to")
 		assert.NotContains(t, err.Error(), "oh noez, something bad happened")
+	})
+}
+
+func TestWithCustomCAs(t *testing.T) {
+	t.Run("should return client with custom CAs", func(t *testing.T) {
+		origFunc := getCustomCAFileName
+		defer func() {
+			getCustomCAFileName = origFunc
+		}()
+		getCustomCAFileName = func(fileName string) string {
+			return filepath.Join("../../testdata/api/", fileName)
+		}
+
+		cfg := configuration.API{
+			TLSCertificateName: "test.crt",
+		}
+
+		optFunc := WithCustomCAs(cfg)
+
+		client := http.DefaultClient
+		optFunc(client)
+
+		assert.NotNil(t, client.Transport.(*http.Transport).TLSClientConfig.RootCAs)
 	})
 }

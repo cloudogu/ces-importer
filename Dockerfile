@@ -87,7 +87,7 @@ ARG GID
 LABEL \
     maintainer="hello@cloudogu.com" \
     NAME="${BINARY}" \
-    VERSION="1.2.4"
+    VERSION="1.3.0"
 
 WORKDIR /
 

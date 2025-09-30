@@ -130,6 +130,37 @@ func createSSHPrivateKeyMount(secretName, secretDataKey, privateSSHKeyPath strin
 	}
 }
 
+// createApiTlsCaMount creates a volume mount for the custom TLS CAs
+func createApiTlsCaMount(cmName, caMountPath string) volumeMounts {
+	// permissions := int32(0400)
+	slog.Info(cmName)
+	optional := true
+	caVolumeName := "tls-ca-volume"
+
+	caVolume := v1.Volume{
+		Name: caVolumeName,
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: cmName,
+				},
+				Optional: &optional,
+			},
+		},
+	}
+
+	caVolumeMount := v1.VolumeMount{
+		Name:      caVolumeName,
+		MountPath: caMountPath,
+		ReadOnly:  true,
+	}
+
+	return volumeMounts{
+		volumes: []v1.Volume{caVolume},
+		mounts:  []v1.VolumeMount{caVolumeMount},
+	}
+}
+
 type jobSpec struct {
 	imageURL         string
 	imagePullPolicy  v1.PullPolicy
@@ -144,6 +175,7 @@ type jobSpec struct {
 type JobProviderDependencies struct {
 	JobContainerConfig configuration.JobContainer
 	SSHConfig          configuration.SSH
+	APIConfig          configuration.API
 	APIKey             string
 	DoguVolumeBasePath string
 	PVCClient          pvcClient
@@ -160,6 +192,7 @@ func newJobProvider(deps JobProviderDependencies) (*jobProvider, error) {
 	return &jobProvider{
 		jobSpec:            jSpec,
 		sshConfig:          deps.SSHConfig,
+		apiConfig:          deps.APIConfig,
 		pvcClient:          deps.PVCClient,
 		doguVolumeBasePath: deps.DoguVolumeBasePath,
 	}, nil
@@ -287,6 +320,7 @@ type jobProvider struct {
 	jobSpec
 	pvcClient
 	sshConfig          configuration.SSH
+	apiConfig          configuration.API
 	doguVolumeBasePath string
 }
 
@@ -305,8 +339,9 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 	jobConfigVolumeMount := createConfigVolumeMount(j.jobConfigMap)
 	doguVolumeMounts := createDoguVolumeMounts(j.doguVolumeBasePath, pvcList)
 	sshKeyVolumeMount := createSSHPrivateKeyMount(j.sshConfig.SecretName, j.sshConfig.SecretDataKey, j.sshConfig.PrivateSSHKeyPath)
+	tlsCAVolumeMount := createApiTlsCaMount(j.apiConfig.TLSCertificateConfigMapName, "/etc/custom-certs/exporter")
 
-	jobVolumeMounts := collectVolumeMounts(jobConfigVolumeMount, doguVolumeMounts, sshKeyVolumeMount)
+	jobVolumeMounts := collectVolumeMounts(jobConfigVolumeMount, doguVolumeMounts, sshKeyVolumeMount, tlsCAVolumeMount)
 
 	unixTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
 
