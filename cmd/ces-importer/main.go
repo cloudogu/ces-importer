@@ -3,6 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/cloudogu/ces-importer/api/exporter"
 	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/configuration"
@@ -10,13 +16,9 @@ import (
 	"github.com/cloudogu/ces-importer/mail"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/cloudogu/ces-importer/systeminfo"
+	"github.com/cloudogu/k8s-registry-lib/dogu"
 	"github.com/cloudogu/k8s-registry-lib/repository"
-	"log/slog"
-	"os"
-	"os/signal"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"syscall"
-	"time"
 )
 
 func main() {
@@ -136,7 +138,9 @@ func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordina
 
 	systemInfoValidator := systeminfo.NewValidator(cfg.General.ExcludedDogus)
 
-	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.Dogu, k8sClientSet.Pvc, cfg.General.ExcludedDogus)
+	doguDescriptorRepo := dogu.NewLocalDoguDescriptorRepository(k8sClientSet.ConfigMap)
+
+	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.Dogu, k8sClientSet.Pvc, doguDescriptorRepo, cfg.General.ExcludedDogus)
 
 	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.ConfigMap)
 
