@@ -11,6 +11,7 @@ import (
 	"github.com/cloudogu/cesapp-lib/core"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -370,6 +371,16 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 				},
 			},
 		}
+
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		expectedDogu := &core.Dogu{Volumes: []core.Volume{
+			{
+				NeedsBackup: true,
+			},
+		}}
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, mock.Anything).Return(expectedDogu, nil).Times(2)
+
 		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(dogu, nil)
 		mDoguClient.EXPECT().Update(testCtx, dogu, metav1.UpdateOptions{}).RunAndReturn(func(ctx context.Context, dogu *doguv2.Dogu, options metav1.UpdateOptions) (*doguv2.Dogu, error) {
 			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
@@ -394,9 +405,10 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 		}, nil)
 
 		resizer := &DoguVolumeResizer{
-			doguClient:    mDoguClient,
-			pvcClient:     mPvcClient,
-			excludedDogus: []string{"excluded/dogu"},
+			doguClient:         mDoguClient,
+			pvcClient:          mPvcClient,
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+			excludedDogus:      []string{"excluded/dogu"},
 		}
 
 		waitSecondsBetweenRetries = 0
@@ -454,7 +466,7 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to find dogu official/otherDogu in the importing system")
-		assert.ErrorContains(t, err, "failed to resize dogu simpleName: dogu simpleName name is not a qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
+		assert.ErrorContains(t, err, "failed to check if dogu has volume needing backup for dogu simpleName: failed to get qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
 	})
 }
 
