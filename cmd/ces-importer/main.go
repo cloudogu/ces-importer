@@ -140,7 +140,7 @@ func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordina
 
 	doguDescriptorRepo := dogu.NewLocalDoguDescriptorRepository(k8sClientSet.ConfigMap)
 
-	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.Dogu, k8sClientSet.Pvc, doguDescriptorRepo, cfg.General.ExcludedDogus)
+	doguVolumeResizer := systeminfo.NewDoguVolumeResizer(k8sClientSet.Dogu, k8sClientSet.Pvc, doguDescriptorRepo, cfg.ExcludedDogus)
 
 	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.ConfigMap)
 
