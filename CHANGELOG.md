@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.0.1] - 2025-12-03
+### Fixed 
+- [#110] only try to resize pvcs if they have data that needs to be imported
+
 ## [v2.0.0] - 2025-10-10
 ### Changed
 - [#104] use cas-dogu for connection-check (nginx-dogu is obsolete)
