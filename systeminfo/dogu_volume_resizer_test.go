@@ -2,15 +2,20 @@ package systeminfo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"testing"
+
+	cescommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/migration"
+	"github.com/cloudogu/cesapp-lib/core"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func Test_defaultDoguVolumeResizer_resize(t *testing.T) {
@@ -366,6 +371,16 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 				},
 			},
 		}
+
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		expectedDogu := &core.Dogu{Volumes: []core.Volume{
+			{
+				NeedsBackup: true,
+			},
+		}}
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, mock.Anything).Return(expectedDogu, nil).Times(2)
+
 		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(dogu, nil)
 		mDoguClient.EXPECT().Update(testCtx, dogu, metav1.UpdateOptions{}).RunAndReturn(func(ctx context.Context, dogu *doguv2.Dogu, options metav1.UpdateOptions) (*doguv2.Dogu, error) {
 			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
@@ -390,9 +405,10 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 		}, nil)
 
 		resizer := &DoguVolumeResizer{
-			doguClient:    mDoguClient,
-			pvcClient:     mPvcClient,
-			excludedDogus: []string{"excluded/dogu"},
+			doguClient:         mDoguClient,
+			pvcClient:          mPvcClient,
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+			excludedDogus:      []string{"excluded/dogu"},
 		}
 
 		waitSecondsBetweenRetries = 0
@@ -450,7 +466,7 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to find dogu official/otherDogu in the importing system")
-		assert.ErrorContains(t, err, "failed to resize dogu simpleName: dogu simpleName name is not a qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
+		assert.ErrorContains(t, err, "failed to check if dogu has volume needing backup for dogu simpleName: failed to get qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
 	})
 }
 
@@ -458,12 +474,133 @@ func TestNewDoguVolumeResizer(t *testing.T) {
 	t.Run("should create new DoguVolumeResizer", func(t *testing.T) {
 		mDoguClient := newMockDoguClient(t)
 		mPvcClient := newMockPvcClient(t)
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
 
-		dvr := NewDoguVolumeResizer(mDoguClient, mPvcClient, []string{"test1", "test2"})
+		dvr := NewDoguVolumeResizer(mDoguClient, mPvcClient, mDoguDescriptorDoguRepo, []string{"test1", "test2"})
 
 		assert.NotNil(t, dvr)
 		assert.Equal(t, mDoguClient, dvr.doguClient)
 		assert.Equal(t, mPvcClient, dvr.pvcClient)
+		assert.Equal(t, mDoguDescriptorDoguRepo, dvr.doguDescriptorRepo)
 		assert.Equal(t, append([]string{"test1", "test2"}, doguNginx), dvr.excludedDogus)
+	})
+}
+
+func TestDoguVolumeResizer_hasVolumeWithBackup(t *testing.T) {
+	testCtx := context.Background()
+	t.Run("should check if volume needs backup, return true if one volume needs backup", func(t *testing.T) {
+		importerDogu := migration.Dogu{
+			Name:    "official/ldap",
+			Version: "1.2.3",
+			Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+		}
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		version, err := core.ParseVersion("1.2.3")
+		require.NoError(t, err)
+		expectedDogu := &core.Dogu{Volumes: []core.Volume{
+			{
+				NeedsBackup: false,
+			},
+			{
+				NeedsBackup: true,
+			},
+		}}
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, cescommons.NewSimpleNameVersion("ldap", version)).Return(expectedDogu, nil)
+
+		dvr := &DoguVolumeResizer{
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+		}
+		result, err := dvr.hasVolumeWithBackup(testCtx, importerDogu)
+
+		require.NoError(t, err)
+		assert.True(t, result)
+	})
+
+	t.Run("should check if volume needs backup, return false if no volume needs backup", func(t *testing.T) {
+		importerDogu := migration.Dogu{
+			Name:    "official/ldap",
+			Version: "1.2.3",
+			Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+		}
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		version, err := core.ParseVersion("1.2.3")
+		require.NoError(t, err)
+		expectedDogu := &core.Dogu{Volumes: []core.Volume{
+			{
+				NeedsBackup: false,
+			},
+			{
+				NeedsBackup: false,
+			},
+		}}
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, cescommons.NewSimpleNameVersion("ldap", version)).Return(expectedDogu, nil)
+
+		dvr := &DoguVolumeResizer{
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+		}
+		result, err := dvr.hasVolumeWithBackup(testCtx, importerDogu)
+
+		require.NoError(t, err)
+		assert.False(t, result)
+	})
+
+	t.Run("should check if volume needs backup, throw error if dogu version can't be parsed", func(t *testing.T) {
+		importerDogu := migration.Dogu{
+			Name:    "official/ldap",
+			Version: "abc",
+			Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+		}
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+
+		dvr := &DoguVolumeResizer{
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+		}
+		result, err := dvr.hasVolumeWithBackup(testCtx, importerDogu)
+
+		require.Error(t, err)
+		assert.False(t, result)
+		assert.ErrorContains(t, err, "failed to parse importer dogu version:")
+	})
+
+	t.Run("should check if volume needs backup, throw error if dogu can't be returned from repo", func(t *testing.T) {
+		importerDogu := migration.Dogu{
+			Name:    "ldap",
+			Version: "1.2.3",
+			Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+		}
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+
+		dvr := &DoguVolumeResizer{
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+		}
+		result, err := dvr.hasVolumeWithBackup(testCtx, importerDogu)
+
+		require.Error(t, err)
+		assert.False(t, result)
+		assert.ErrorContains(t, err, "failed to get qualified dogu name")
+	})
+
+	t.Run("should check if volume needs backup, return false if no volume needs backup", func(t *testing.T) {
+		importerDogu := migration.Dogu{
+			Name:    "official/ldap",
+			Version: "1.2.3",
+			Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+		}
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		version, err := core.ParseVersion("1.2.3")
+		require.NoError(t, err)
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, cescommons.NewSimpleNameVersion("ldap", version)).Return(nil, errors.New("error retrieving dogu"))
+
+		dvr := &DoguVolumeResizer{
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+		}
+		result, err := dvr.hasVolumeWithBackup(testCtx, importerDogu)
+
+		require.Error(t, err)
+		assert.False(t, result)
+		assert.ErrorContains(t, err, "failed to get dogu desciptor")
 	})
 }
