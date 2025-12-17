@@ -2,7 +2,9 @@ package importer
 
 import (
 	"fmt"
+
 	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
+	blueprintLibClient "github.com/cloudogu/k8s-blueprint-lib/v2/client"
 	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
 	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"k8s.io/client-go/kubernetes"
@@ -16,18 +18,20 @@ var (
 	getEcoSystemClient  = doguLibClient.NewForConfig
 	getComponentsClient = componentEcoClient.NewForConfig
 	getBackupClient     = backupEcosystem.NewForConfig
+	getBlueprintClient  = blueprintLibClient.NewClientSet
 )
 
 type K8sClients struct {
-	Pvc            corev1.PersistentVolumeClaimInterface
-	Pod            corev1.PodInterface
-	Job            batchv1.JobInterface
-	ConfigMap      corev1.ConfigMapInterface
-	Secret         corev1.SecretInterface
-	Dogu           doguLibClient.DoguInterface
-	DoguControl    *DoguControl
-	Component      componentEcoClient.ComponentInterface
-	BackupSchedule backupEcosystem.BackupScheduleInterface
+	Pvc              corev1.PersistentVolumeClaimInterface
+	Pod              corev1.PodInterface
+	Job              batchv1.JobInterface
+	ConfigMap        corev1.ConfigMapInterface
+	Secret           corev1.SecretInterface
+	Dogu             doguLibClient.DoguInterface
+	DoguControl      *DoguControl
+	BlueprintControl *BlueprintControl
+	Component        componentEcoClient.ComponentInterface
+	BackupSchedule   backupEcosystem.BackupScheduleInterface
 }
 
 func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClients, error) {
@@ -52,6 +56,12 @@ func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClient
 	k8sDoguClient := ecoSystemClient.Dogus(namespace)
 	doguControl := NewDoguControl(k8sDoguClient)
 
+	k8sBlueprintClient, err := getBlueprintClient(k8sRestConfig, k8sClientSet)
+	if err != nil {
+		return K8sClients{}, fmt.Errorf("failed to create blueprint client: %w", err)
+	}
+	blueprintControl := NewBlueprintControl(k8sBlueprintClient.EcosystemV1Alpha1().Blueprints(namespace))
+
 	v1Alpha1Client, err := getComponentsClient(k8sRestConfig)
 	if err != nil {
 		return K8sClients{}, fmt.Errorf("failed to create component client: %w", err)
@@ -67,14 +77,15 @@ func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClient
 	backupScheduleClient := backupClient.BackupSchedules(namespace)
 
 	return K8sClients{
-		Pvc:            k8sPVCClient,
-		Pod:            k8sPodClient,
-		Job:            k8sJobClient,
-		ConfigMap:      k8sConfigMapClient,
-		Secret:         k8sSecretClient,
-		Dogu:           k8sDoguClient,
-		DoguControl:    doguControl,
-		Component:      k8sComponentClient,
-		BackupSchedule: backupScheduleClient,
+		Pvc:              k8sPVCClient,
+		Pod:              k8sPodClient,
+		Job:              k8sJobClient,
+		ConfigMap:        k8sConfigMapClient,
+		Secret:           k8sSecretClient,
+		Dogu:             k8sDoguClient,
+		DoguControl:      doguControl,
+		BlueprintControl: blueprintControl,
+		Component:        k8sComponentClient,
+		BackupSchedule:   backupScheduleClient,
 	}, nil
 }
