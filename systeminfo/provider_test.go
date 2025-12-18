@@ -3,6 +3,8 @@ package systeminfo
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/cloudogu/ces-importer/migration"
 	componentv1 "github.com/cloudogu/k8s-component-lib/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"
@@ -12,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
 )
 
 func TestGetSystemInfo(t *testing.T) {

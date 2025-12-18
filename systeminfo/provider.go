@@ -3,6 +3,7 @@ package systeminfo
 import (
 	"context"
 	"fmt"
+
 	"github.com/cloudogu/ces-importer/migration"
 	componentv1 "github.com/cloudogu/k8s-component-lib/api/v1"
 	doguv2 "github.com/cloudogu/k8s-dogu-lib/v2/api/v2"

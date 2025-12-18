@@ -3,13 +3,14 @@ package migration
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"log/slog"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMigrator_RunMigration(t *testing.T) {
@@ -53,6 +54,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -63,6 +70,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
+			blueprintStopper:       mBlueprintStopper,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -106,6 +115,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -116,6 +131,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -195,6 +212,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -205,6 +227,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -243,6 +267,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -253,6 +282,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -292,6 +323,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -302,6 +338,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
+			blueprintStopper:       mBlueprintStopper,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -342,6 +380,11 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -352,6 +395,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -393,6 +438,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -403,6 +454,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
+			blueprintStopper:       mBlueprintStopper,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -445,6 +498,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -455,6 +514,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -498,6 +559,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -508,6 +575,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
+			blueprintStopper:       mBlueprintStopper,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -553,6 +622,12 @@ func TestMigrator_RunMigration(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStopper := NewMockBlueprintStopper(t)
+		mBlueprintStopper.EXPECT().StopBlueprint(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			exportModeValidator:    mExportModeValidator,
 			systemInfoProvider:     mSystemInfoProvider,
@@ -563,6 +638,8 @@ func TestMigrator_RunMigration(t *testing.T) {
 			jobRunner:              mJobRunner,
 			doguStopper:            mDoguStopper,
 			doguStarter:            mDoguStarter,
+			blueprintStopper:       mBlueprintStopper,
+			blueprintStarter:       mBlueprintStarter,
 			initializeLogger:       mlogIntializer.Execute,
 		}
 
@@ -598,10 +675,14 @@ func TestMigrator_cleanup(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
 		}
 
 		m.cleanup(testCtx, startTime, true, runErr, nil)
@@ -631,15 +712,56 @@ func TestMigrator_cleanup(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(assert.AnError)
 
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
 		}
 
 		m.cleanup(testCtx, startTime, false, runErr, nil)
 
 		assert.Contains(t, sb.String(), "failed to start all dogus:")
+	})
+
+	t.Run("should log error on delta migration with error in starting blueprints", func(t *testing.T) {
+		testCtx := context.Background()
+		startTime := time.Now()
+		runErr := fmt.Errorf("test")
+
+		originalLogger := slog.Default()
+		sb := new(strings.Builder)
+		testLogger := slog.New(slog.NewTextHandler(sb, nil))
+		slog.SetDefault(testLogger)
+
+		defer func() {
+			slog.SetDefault(originalLogger)
+		}()
+
+		mMaintenanceModeHandler := NewMockMaintenanceModeHandler(t)
+
+		mMailSender := NewMockMailSender(t)
+		mMailSender.EXPECT().Send(testCtx, false, runErr, startTime, mock.Anything).Return(nil)
+
+		mDoguStarter := NewMockDoguStarter(t)
+		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
+
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(assert.AnError)
+
+		m := &Migrator{
+			maintenanceModeHandler: mMaintenanceModeHandler,
+			mailSender:             mMailSender,
+			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
+		}
+
+		m.cleanup(testCtx, startTime, false, runErr, nil)
+
+		assert.Contains(t, sb.String(), "failed to start blueprint:")
 	})
 
 	t.Run("should log error on delta migration with error in sending mail", func(t *testing.T) {
@@ -664,10 +786,14 @@ func TestMigrator_cleanup(t *testing.T) {
 		mDoguStarter := NewMockDoguStarter(t)
 		mDoguStarter.EXPECT().StartAll(testCtx).Return(nil)
 
+		mBlueprintStarter := NewMockBlueprintStarter(t)
+		mBlueprintStarter.EXPECT().StartBlueprint(testCtx).Return(nil)
+
 		m := &Migrator{
 			maintenanceModeHandler: mMaintenanceModeHandler,
 			mailSender:             mMailSender,
 			doguStarter:            mDoguStarter,
+			blueprintStarter:       mBlueprintStarter,
 		}
 
 		m.cleanup(testCtx, startTime, false, runErr, nil)

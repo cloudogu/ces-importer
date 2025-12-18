@@ -41,12 +41,13 @@ func (bc *BlueprintControl) StopBlueprint(ctx context.Context) error {
 		return fmt.Errorf("failed to list all blueprints: %w", err)
 	}
 	for _, blueprint := range list.Items {
-		b := true
-		err := bc.startStop(ctx, blueprint.Name, &b)
+		changed, err := bc.startStop(ctx, blueprint.Name, true)
 		if err != nil {
 			return fmt.Errorf("failed to stop blueprint: %w", err)
 		}
-		bc.stoppedBlueprints = append(bc.stoppedBlueprints, blueprint.Name)
+		if changed {
+			bc.stoppedBlueprints = append(bc.stoppedBlueprints, blueprint.Name)
+		}
 	}
 	slog.Debug("Received list with blueprints", "length", len(list.Items))
 	return nil
@@ -56,8 +57,7 @@ func (bc *BlueprintControl) StopBlueprint(ctx context.Context) error {
 func (bc *BlueprintControl) StartBlueprint(ctx context.Context) error {
 	slog.Info("Starting all blueprints")
 	for _, blueprintName := range bc.stoppedBlueprints {
-		b := false
-		err := bc.startStop(ctx, blueprintName, &b)
+		_, err := bc.startStop(ctx, blueprintName, false)
 		if err != nil {
 			return fmt.Errorf("failed to start blueprint: %w", err)
 		}
@@ -66,26 +66,26 @@ func (bc *BlueprintControl) StartBlueprint(ctx context.Context) error {
 }
 
 // Helper for start or stop blueprint, do nothing if desired state matches current-state
-func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string, shouldStop *bool) error {
+func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string, shouldStop bool) (bool, error) {
 	blueprint, err := bc.blueprintCli.Get(ctx, blueprintName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			slog.Warn("Cannot start/stop blueprint because it does not exist", "blueprint", blueprintName)
-			return nil // if there is no longer a deployment, there is no longer a problem ¯\_(ツ)_/¯
+			return false, nil // if there is no longer a deployment, there is no longer a problem ¯\_(ツ)_/¯
 		}
-		return fmt.Errorf("failed to get blueprint %s: %w", blueprintName, err)
+		return false, fmt.Errorf("failed to get blueprint %s: %w", blueprintName, err)
 	}
 
-	if blueprint.Spec.Stopped == shouldStop {
-		return nil
+	if *blueprint.Spec.Stopped == shouldStop {
+		return false, nil
 	}
 
-	blueprint.Spec.Stopped = shouldStop
+	blueprint.Spec.Stopped = &shouldStop
 	_, err = bc.blueprintCli.Update(ctx, blueprint, metav1.UpdateOptions{})
 
 	if err != nil {
-		return fmt.Errorf("failed to update blueprint %s (shouldStop: %t): %w", blueprintName, shouldStop, err)
+		return false, fmt.Errorf("failed to update blueprint %s (shouldStop: %t): %w", blueprintName, shouldStop, err)
 	}
 
-	return nil
+	return true, nil
 }
