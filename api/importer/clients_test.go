@@ -1,8 +1,8 @@
 package importer
 
 import (
-	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
-	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
+	backupEcosystem "github.com/cloudogu/k8s-backup-lib/api/ecosystem"
+	componentEcoClient "github.com/cloudogu/k8s-component-lib/client"
 	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes"

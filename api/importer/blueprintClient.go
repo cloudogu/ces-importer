@@ -8,16 +8,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	blueprintv2 "github.com/cloudogu/k8s-blueprint-lib/v2/api/v2"
+	blueprintv3 "github.com/cloudogu/k8s-blueprint-lib/v3/api/v3"
 )
 
 type BlueprintInterface interface {
 	// Get takes name of the blueprint, and returns the corresponding blueprint object, and an error if there is any.
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*blueprintv2.Blueprint, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*blueprintv3.Blueprint, error)
 	// List takes label and field selectors, and returns the list of Blueprints that match those selectors.
-	List(ctx context.Context, opts metav1.ListOptions) (*blueprintv2.BlueprintList, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*blueprintv3.BlueprintList, error)
 	// Update takes the representation of a blueprint and updates it. Returns the server's representation of the blueprint, and an error, if there is any.
-	Update(ctx context.Context, blueprint *blueprintv2.Blueprint, opts metav1.UpdateOptions) (*blueprintv2.Blueprint, error)
+	Update(ctx context.Context, blueprint *blueprintv3.Blueprint, opts metav1.UpdateOptions) (*blueprintv3.Blueprint, error)
 }
 
 type BlueprintControl struct {
