@@ -33,31 +33,31 @@ func NewBlueprintControl(blueprintCli BlueprintInterface) *BlueprintControl {
 	}
 }
 
-// StopAll stopps all dogus in the importer system.
-func (dc *BlueprintControl) StopBlueprint(ctx context.Context) error {
+// StopBlueprint stopps all blueprints in the importer system.
+func (bc *BlueprintControl) StopBlueprint(ctx context.Context) error {
 	slog.Info("Stopping all blueprints")
-	list, err := dc.blueprintCli.List(ctx, metav1.ListOptions{})
+	list, err := bc.blueprintCli.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list all blueprints: %w", err)
 	}
 	for _, blueprint := range list.Items {
 		b := true
-		err := dc.startStop(ctx, blueprint.Name, &b)
+		err := bc.startStop(ctx, blueprint.Name, &b)
 		if err != nil {
 			return fmt.Errorf("failed to stop blueprint: %w", err)
 		}
-		dc.stoppedBlueprints = append(dc.stoppedBlueprints, blueprint.Name)
+		bc.stoppedBlueprints = append(bc.stoppedBlueprints, blueprint.Name)
 	}
 	slog.Debug("Received list with blueprints", "length", len(list.Items))
 	return nil
 }
 
-// StartBlueprint start all blueprint, which are stopped by this BlueprintControl
-func (dc *BlueprintControl) StartBlueprint(ctx context.Context) error {
+// StartBlueprint start all blueprints, which are stopped by this BlueprintControl
+func (bc *BlueprintControl) StartBlueprint(ctx context.Context) error {
 	slog.Info("Starting all blueprints")
-	for _, blueprintName := range dc.stoppedBlueprints {
+	for _, blueprintName := range bc.stoppedBlueprints {
 		b := false
-		err := dc.startStop(ctx, blueprintName, &b)
+		err := bc.startStop(ctx, blueprintName, &b)
 		if err != nil {
 			return fmt.Errorf("failed to start blueprint: %w", err)
 		}
@@ -65,8 +65,9 @@ func (dc *BlueprintControl) StartBlueprint(ctx context.Context) error {
 	return nil
 }
 
-func (dc *BlueprintControl) startStop(ctx context.Context, blueprintName string, shouldStop *bool) error {
-	blueprint, err := dc.blueprintCli.Get(ctx, blueprintName, metav1.GetOptions{})
+// Helper for start or stop blueprint, do nothing if desired state matches current-state
+func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string, shouldStop *bool) error {
+	blueprint, err := bc.blueprintCli.Get(ctx, blueprintName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			slog.Warn("Cannot start/stop blueprint because it does not exist", "blueprint", blueprintName)
@@ -80,7 +81,7 @@ func (dc *BlueprintControl) startStop(ctx context.Context, blueprintName string,
 	}
 
 	blueprint.Spec.Stopped = shouldStop
-	_, err = dc.blueprintCli.Update(ctx, blueprint, metav1.UpdateOptions{})
+	_, err = bc.blueprintCli.Update(ctx, blueprint, metav1.UpdateOptions{})
 
 	if err != nil {
 		return fmt.Errorf("failed to update blueprint %s (shouldStop: %t): %w", blueprintName, shouldStop, err)
