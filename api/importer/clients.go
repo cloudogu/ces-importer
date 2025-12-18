@@ -3,9 +3,9 @@ package importer
 import (
 	"fmt"
 
-	backupEcosystem "github.com/cloudogu/k8s-backup-operator/pkg/api/ecosystem"
-	blueprintLibClient "github.com/cloudogu/k8s-blueprint-lib/v2/client"
-	componentEcoClient "github.com/cloudogu/k8s-component-operator/pkg/api/ecosystem"
+	backupEcosystem "github.com/cloudogu/k8s-backup-lib/api/ecosystem"
+	blueprintLibClient "github.com/cloudogu/k8s-blueprint-lib/v3/client"
+	componentEcoClient "github.com/cloudogu/k8s-component-lib/client"
 	doguLibClient "github.com/cloudogu/k8s-dogu-lib/v2/client"
 	"k8s.io/client-go/kubernetes"
 	batchv1 "k8s.io/client-go/kubernetes/typed/batch/v1"
