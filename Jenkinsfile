@@ -56,7 +56,7 @@ parallel(
                         sh "make unit-test"
                         junit allowEmptyResults: true, testResults: 'target/unit-tests/*-tests.xml'
                     }
-
+                    /* // golangci-linter is currently not available for go1.25
                     stage('Static Analysis') {
                         def commitSha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
 
@@ -68,6 +68,7 @@ parallel(
                             }
                         }
                     }
+                    */
                 }
 
                 stage('SonarQube') {
