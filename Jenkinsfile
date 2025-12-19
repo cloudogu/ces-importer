@@ -9,7 +9,7 @@ git.committerEmail = 'cesmarvin@cloudogu.com'
 gitflow = new GitFlow(this, git)
 github = new GitHub(this, git)
 changelog = new Changelog(this)
-goVersion = "1.24.2"
+goVersion = "1.25.5"
 
 // Configuration of repository
 String repositoryName = "ces-importer"
