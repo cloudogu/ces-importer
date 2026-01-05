@@ -160,6 +160,8 @@ func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordina
 		JobRunner:              jobService,
 		DoguStopper:            k8sClientSet.DoguControl,
 		DoguStarter:            k8sClientSet.DoguControl,
+		BlueprintStopper:       k8sClientSet.BlueprintControl,
+		BlueprintStarter:       k8sClientSet.BlueprintControl,
 		MailSender:             mailSender,
 		LogInitializerFunc:     initLog,
 	}

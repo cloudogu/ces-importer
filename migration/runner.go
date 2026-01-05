@@ -33,6 +33,14 @@ type DoguStarter interface {
 	StartAll(ctx context.Context) error
 }
 
+type BlueprintStopper interface {
+	StopBlueprint(ctx context.Context) error
+}
+
+type BlueprintStarter interface {
+	StartBlueprint(ctx context.Context) error
+}
+
 type JobRunner interface {
 	Run(ctx context.Context) error
 }
@@ -58,6 +66,8 @@ type Migrator struct {
 	jobRunner              JobRunner
 	doguStopper            DoguStopper
 	doguStarter            DoguStarter
+	blueprintStopper       BlueprintStopper
+	blueprintStarter       BlueprintStarter
 	initializeLogger       LogInitializerFunc
 }
 
@@ -72,6 +82,8 @@ type MigratorDependencies struct {
 	JobRunner
 	DoguStopper
 	DoguStarter
+	BlueprintStopper
+	BlueprintStarter
 }
 
 func NewMigrator(dependencies MigratorDependencies) *Migrator {
@@ -85,6 +97,8 @@ func NewMigrator(dependencies MigratorDependencies) *Migrator {
 		jobRunner:              dependencies.JobRunner,
 		doguStopper:            dependencies.DoguStopper,
 		doguStarter:            dependencies.DoguStarter,
+		blueprintStopper:       dependencies.BlueprintStopper,
+		blueprintStarter:       dependencies.BlueprintStarter,
 		initializeLogger:       dependencies.LogInitializerFunc,
 	}
 }
@@ -121,6 +135,11 @@ func (m Migrator) RunMigration(ctx context.Context) (err error) {
 	err = m.systemInfoValidator.Validate(ctx, exporterInfo, importerInfo)
 	if err != nil {
 		return fmt.Errorf("failed to validate system info: %w", err)
+	}
+
+	err = m.blueprintStopper.StopBlueprint(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to stop blueprint: %w", err)
 	}
 
 	err = m.doguVolumeResizer.ResizeDogusIfNeeded(ctx, exporterInfo.Dogus, importerInfo.Dogus)
@@ -167,6 +186,11 @@ func (m Migrator) cleanup(ctx context.Context, startTime time.Time, isFinalMigra
 	if err := m.doguStarter.StartAll(ctx); err != nil {
 		retError = errors.Join(runError, err)
 		slog.Error(fmt.Sprintf("failed to start all dogus: %s", err.Error()))
+	}
+
+	if err := m.blueprintStarter.StartBlueprint(ctx); err != nil {
+		retError = errors.Join(runError, err)
+		slog.Error(fmt.Sprintf("failed to start blueprint: %s", err.Error()))
 	}
 
 	endTime := time.Now()
