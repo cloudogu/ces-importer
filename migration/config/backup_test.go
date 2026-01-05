@@ -2,8 +2,11 @@ package configuration
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/cloudogu/ces-importer/migration"
-	backupv1 "github.com/cloudogu/k8s-backup-operator/pkg/api/v1"
+	backupv1 "github.com/cloudogu/k8s-backup-lib/api/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -12,8 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
-	"time"
 )
 
 func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {

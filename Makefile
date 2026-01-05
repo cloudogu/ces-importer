@@ -4,10 +4,10 @@ ARTIFACT_ID_JOB=${ARTIFACT_ID_IMPORTER}-migration-job
 # set default to main application
 ARTIFACT_ID=${ARTIFACT_ID_IMPORTER}
 
-MAKEFILES_VERSION=10.2.0
-VERSION=2.0.1
+MAKEFILES_VERSION=10.5.0
+VERSION=2.1.0
 
-GOTAG=1.24.2
+GOTAG=1.25.5
 GO_BUILD_FLAGS?=-mod=vendor -a -tags netgo $(LDFLAGS) -installsuffix cgo -o $(BINARY) ./cmd/ces-importer
 .DEFAULT_GOAL:=help
 

@@ -54,6 +54,14 @@ rules:
     - get
     - list
     - update
+- apiGroups:
+    - k8s.cloudogu.com
+  resources:
+    - blueprints
+  verbs:
+    - get
+    - list
+    - update
   # allow for dogu resizing
 - apiGroups: [""]
   resources:
