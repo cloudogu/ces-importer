@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	blueprintv3 "github.com/cloudogu/k8s-blueprint-lib/v3/api/v3"
@@ -78,7 +79,7 @@ func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string,
 		return false, fmt.Errorf("failed to get blueprint %s: %w", blueprintName, err)
 	}
 
-	if *blueprint.Spec.Stopped == shouldStop {
+	if ptr.Deref(blueprint.Spec.Stopped, false) == shouldStop {
 		return false, nil
 	}
 
