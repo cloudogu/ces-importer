@@ -6,8 +6,6 @@ import (
 	"log/slog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/ptr"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	blueprintv3 "github.com/cloudogu/k8s-blueprint-lib/v3/api/v3"
@@ -64,6 +62,8 @@ func (bc *BlueprintControl) StartBlueprint(ctx context.Context) error {
 			return fmt.Errorf("failed to start blueprint: %w", err)
 		}
 	}
+	// If all blueprints have been started or the blueprints to be started no longer exist, clean up the list.
+	bc.stoppedBlueprints = bc.stoppedBlueprints[:0]
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string,
 		return false, fmt.Errorf("failed to get blueprint %s: %w", blueprintName, err)
 	}
 
-	if ptr.Deref(blueprint.Spec.Stopped, false) == shouldStop {
+	if *blueprint.Spec.Stopped == shouldStop {
 		return false, nil
 	}
 
