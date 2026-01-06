@@ -2,10 +2,11 @@ package systeminfo
 
 import (
 	"context"
+	"testing"
+
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestNewValidator(t *testing.T) {
@@ -79,7 +80,7 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{}
 		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
-		require.ErrorContains(t, err, "dogu testdogu is installed in version 9.9.9 but needs to have version 1.2.3")
+		require.ErrorContains(t, err, "version discrepancy for dogu testdogu. Source instance version: 1.2.3, Target instance version: 9.9.9")
 	})
 
 	t.Run("should return error dogu not installed", func(t *testing.T) {
@@ -189,7 +190,7 @@ func TestValidateSystemInfo(t *testing.T) {
 
 		v := Validator{}
 		err := v.Validate(context.Background(), &exsysInfo, &imSysInfo)
-		require.ErrorContains(t, err, "component testcomponent is installed in version 9.9.9 but needs to have version 1.2.3")
+		require.ErrorContains(t, err, "version discrepancy for component testcomponent. Source instance version: 1.2.3, Target instance version: 9.9.9")
 	})
 
 	t.Run("should error on dogu not installed in exporting system", func(t *testing.T) {
