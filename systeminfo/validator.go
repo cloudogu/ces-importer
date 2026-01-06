@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/migration"
 	"log/slog"
 	"slices"
+
+	"github.com/cloudogu/ces-importer/migration"
 )
 
 const (
@@ -91,7 +92,7 @@ func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.D
 
 	// Validate version
 	if imDogu.Version != exDogu.Version {
-		result = errors.Join(result, fmt.Errorf("dogu %s is installed in version %s but needs to have version %s \n", exDogu.Name, imDogu.Version, exDogu.Version))
+		result = errors.Join(result, fmt.Errorf("version discrepancy for dogu %s. Source instance version: %s, Target instance version: %s \n", exDogu.Name, exDogu.Version, imDogu.Version))
 	}
 
 	// Remove validated dogu from map
@@ -114,7 +115,7 @@ func validateComponents(imInfo *migration.SystemInfo, exInfo *migration.SystemIn
 
 		// validate that the version is correct
 		if !(imComponent.Version == c.Version) {
-			result = errors.Join(result, fmt.Errorf("component %s is installed in version %s but needs to have version %s \n", c.Name, imComponent.Version, c.Version))
+			result = errors.Join(result, fmt.Errorf("version discrepancy for component %s. Source instance version: %s, Target instance version: %s \n", c.Name, c.Version, imComponent.Version))
 		}
 	}
 	return result
