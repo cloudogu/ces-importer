@@ -102,6 +102,11 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 //
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, start time.Time, end time.Time) error {
+	if !s.config.Enabled {
+		slog.Info("Sending mail is disabled in configuration. Not sending mail.")
+		return nil
+	}
+
 	if s.config.Server == "" || s.config.Port <= 0 {
 		slog.Warn("SMTP server not configured. Not sending mail.", "server", s.config.Server, "port", s.config.Port)
 		return nil

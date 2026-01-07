@@ -21,6 +21,7 @@ import (
 func TestSender(t *testing.T) {
 	t.Run("create auth if username and password are set", func(t *testing.T) {
 		config := configuration.Smtp{
+			Enabled:  true,
 			Username: "user",
 			Password: "pw",
 		}
@@ -34,7 +35,9 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("return nil auth if empty", func(t *testing.T) {
-		config := configuration.Smtp{}
+		config := configuration.Smtp{
+			Enabled: true,
+		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
 		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
@@ -45,8 +48,9 @@ func TestSender(t *testing.T) {
 
 	t.Run("will create server address", func(t *testing.T) {
 		config := configuration.Smtp{
-			Port:   123,
-			Server: "server",
+			Enabled: true,
+			Port:    123,
+			Server:  "server",
 		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
@@ -67,6 +71,7 @@ func TestSender(t *testing.T) {
 func TestSendMigrationResult(t *testing.T) {
 	t.Run("send migration result", func(t *testing.T) {
 		config := configuration.Smtp{
+			Enabled:  true,
 			Server:   "server",
 			Port:     25,
 			Username: "username",
@@ -112,9 +117,10 @@ func TestSendMigrationResult(t *testing.T) {
 
 	t.Run("should send migration result with unauthenticated server", func(t *testing.T) {
 		config := configuration.Smtp{
-			Server: "server",
-			Port:   25,
-			From:   "from",
+			Enabled: true,
+			Server:  "server",
+			Port:    25,
+			From:    "from",
 			To: []string{
 				"a@test.de",
 				"b@test.de",
@@ -148,6 +154,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 	t.Run("should fail to send migration result for error getting target-instance", func(t *testing.T) {
 		config := configuration.Smtp{
+			Enabled:  true,
 			Server:   "server",
 			Port:     25,
 			Username: "username",
@@ -188,6 +195,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 	t.Run("should fail to send migration result for error getting target-instance while writing body-text", func(t *testing.T) {
 		config := configuration.Smtp{
+			Enabled:  true,
 			Server:   "server",
 			Port:     25,
 			Username: "username",
@@ -236,6 +244,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 	t.Run("should not fail to send migration result for error reading attachment-file", func(t *testing.T) {
 		config := configuration.Smtp{
+			Enabled:  true,
 			Server:   "server",
 			Port:     25,
 			Username: "username",
@@ -284,7 +293,8 @@ func TestSendMigrationResult(t *testing.T) {
 		}()
 
 		config := configuration.Smtp{
-			Port: 25,
+			Enabled: true,
+			Port:    25,
 		}
 		sender := CreateSender(config, "source", []string{"a", "b"}, nil)
 
@@ -307,7 +317,8 @@ func TestSendMigrationResult(t *testing.T) {
 		}()
 
 		config := configuration.Smtp{
-			Server: "myserver",
+			Enabled: true,
+			Server:  "myserver",
 		}
 		sender := CreateSender(config, "source", []string{"a", "b"}, nil)
 
@@ -385,7 +396,9 @@ func TestSender_writeBodyText(t *testing.T) {
 	testCtx := context.Background()
 
 	t.Run("write body text for successful final migration", func(t *testing.T) {
-		config := configuration.Smtp{}
+		config := configuration.Smtp{
+			Enabled: true,
+		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(testCtx).Return(
 			regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
@@ -409,7 +422,9 @@ func TestSender_writeBodyText(t *testing.T) {
 	})
 
 	t.Run("write body text for delta migration with error", func(t *testing.T) {
-		config := configuration.Smtp{}
+		config := configuration.Smtp{
+			Enabled: true,
+		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(testCtx).Return(
 			regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
