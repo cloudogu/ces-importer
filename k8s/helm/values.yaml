@@ -86,7 +86,7 @@ config:
     verbose: false
   smtp:
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
-    server: smtp.mailserver.com
+    server: smtp.example.com
     # The port the SMTP server listens on (25, 587 for TLS, 1025 for MailHog/dev)
     port: 25
     # Optional: username for SMTP authentication (leave empty if not required)
