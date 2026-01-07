@@ -69,6 +69,26 @@ func TestSender(t *testing.T) {
 }
 
 func TestSendMigrationResult(t *testing.T) {
+	t.Run("don't send a result email if email dispatch is disabled", func(t *testing.T) {
+		config := configuration.Smtp{
+			Enabled: false,
+		}
+
+		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
+
+		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
+		senderFunc := NewMockSenderService(t)
+		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+			return senderFunc.Execute(addr, a, from, to, msg)
+		}
+
+		timeA, _ := time.Parse("15:04", "13:01")
+		timeB := timeA.Add(5 * time.Minute)
+
+		err := sender.Send(context.Background(), true, nil, timeA, timeB)
+		require.NoError(t, err)
+		senderFunc.AssertNotCalled(t, "Execute")
+	})
 	t.Run("send migration result", func(t *testing.T) {
 		config := configuration.Smtp{
 			Enabled:  true,
