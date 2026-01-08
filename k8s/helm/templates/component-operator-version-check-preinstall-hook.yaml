@@ -1,0 +1,35 @@
+{{- /* checks if the component operator is installed in the given version */ -}}
+{{- $minComponentOperatorVersion := "1.124.0" }}
+{{- $componentOperatorVersion := "" }}
+
+{{- $deployments := lookup "apps/v1" "Deployment" "" "" }}
+{{- if $deployments }}
+  {{- range $deployments.items }}
+    {{- $componentName := index .metadata.labels "k8s.cloudogu.com/component.name" | default "" }}
+    {{- if eq $componentName "k8s-component-operator" }}
+      {{- $componentOperatorVersion = index .metadata.labels "k8s.cloudogu.com/component.version" | default "" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- /* validation */ -}}
+{{- if not $componentOperatorVersion }}
+  {{- fail "k8s-component-operator Deployment not found. Please install k8s-component-operator first." }}
+{{- else if not (semverCompare (printf ">=%s" $minComponentOperatorVersion) $componentOperatorVersion) }}
+  {{- fail (printf "k8s-component-operator version %s is installed, but version >= %s is required" $componentOperatorVersion $minComponentOperatorVersion) }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ces-importer.name" . }}-component-operator-check
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  status: |
+    k8s-component-operator version check passed
+    Found version: {{ $componentOperatorVersion }}
+    Required version: >= {{ $minComponentOperatorVersion }}
