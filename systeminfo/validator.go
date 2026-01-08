@@ -92,7 +92,7 @@ func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.D
 
 	// Validate version
 	if imDogu.Version != exDogu.Version {
-		result = errors.Join(result, fmt.Errorf("version discrepancy for dogu %s. Source instance version: %s, Target instance version: %s \n", exDogu.Name, exDogu.Version, imDogu.Version))
+		result = errors.Join(result, fmt.Errorf("version discrepancy for dogu %s. Source instance version: %s, Target instance version: %s", exDogu.Name, exDogu.Version, imDogu.Version))
 	}
 
 	// Remove validated dogu from map
