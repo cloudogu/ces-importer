@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added 
 - [#116] make mail delivery after import optional
-  - added new configuration option in values.yaml: `Values.mail.delivery.enabled` with default value `false`
+  - added new configuration option in values.yaml: `config.smtp.enabled` with default value `false`
 
 ## [v2.1.0] - 2026-01-05
 ### Changed
