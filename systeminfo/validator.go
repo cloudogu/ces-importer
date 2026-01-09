@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/cloudogu/ces-importer/migration"
+	"strings"
 )
 
 const (
@@ -59,10 +60,17 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 		imDoguMap[d.Name] = d
 	}
 
+	// dogus are excluded based on name regardless of namespace
+	for i, doguName := range v.excludedDogus {
+		v.excludedDogus[i] = getDoguNameWithoutNamespace(doguName)
+	}
+
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
+		exDoguName := getDoguNameWithoutNamespace(exDogu.Name)
+
 		// Skip excluded dogus
-		if slices.Contains(v.excludedDogus, exDogu.Name) {
+		if slices.Contains(v.excludedDogus, exDoguName) {
 			continue
 		}
 
@@ -81,6 +89,13 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	}
 
 	return result
+}
+
+func getDoguNameWithoutNamespace(doguName string) string {
+	if strings.Contains(doguName, "/") {
+		return strings.Split(doguName, "/")[1]
+	}
+	return doguName
 }
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid

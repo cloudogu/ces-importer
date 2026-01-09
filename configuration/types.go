@@ -253,7 +253,7 @@ func joinValidationErrors(err error) error {
 	return allVErrors
 }
 
-// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
-func GetExcludedDogus() []string {
+// GetGloballyExcludedDogus is a getter for the excluded dogus to ensure immutability
+func GetGloballyExcludedDogus() []string {
 	return append([]string(nil), globallyExcludedDogus...)
 }

@@ -122,8 +122,10 @@ func ReadCoordinatorConfig() (Coordinator, error) {
 		return Coordinator{}, fmt.Errorf("failed to read smtp configuration: %w", err)
 	}
 
+	excludedDogus := append(GetGloballyExcludedDogus(), jobConfig.AdditionalExcludedDogus...)
+
 	generalConfig := General{
-		ExcludedDogus: GetExcludedDogus(),
+		ExcludedDogus: excludedDogus,
 		Namespace:     namespace,
 	}
 

@@ -1069,6 +1069,9 @@ func Test_validateJobConfig(t *testing.T) {
 			name: "valid job config",
 			inConfig: `---
 doguVolumeBasePath: "/data"
+excludedDogus:
+  - "jenkins"
+  - "redmine"
 exclude:
   - dogu: "jenkins"
     pattern: 
@@ -1101,6 +1104,14 @@ exclude:
 			inConfig: `---
 doguVolumeBasePath: "/data"
 exclude: []
+verbose: true
+`,
+			expectErr: false,
+		}, {
+			name: "valid job config - excludeddogus empty",
+			inConfig: `---
+doguVolumeBasePath: "/data"
+excludeddogus: []
 verbose: true
 `,
 			expectErr: false,

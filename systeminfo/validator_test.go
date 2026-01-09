@@ -275,4 +275,38 @@ func TestValidateSystemInfo(t *testing.T) {
 		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
 	})
+	t.Run("should throw no error on excluded dogu regardless of namespace", func(t *testing.T) {
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{},
+			Components: []migration.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
+				{
+					Name:    "registrator",
+					Version: "1.2.3",
+					Volume: migration.DoguVolume{
+						SizeInBytes: 10,
+					},
+				},
+			},
+			Components: []migration.Component{
+				{
+					Name:    "testcomponent",
+					Version: "1.2.3",
+				},
+			},
+		}
+
+		v := Validator{
+			excludedDogus: []string{"official/registrator", "test2"},
+		}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.NoError(t, err)
+	})
 }

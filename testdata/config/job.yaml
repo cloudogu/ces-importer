@@ -1,5 +1,8 @@
 ---
 doguVolumeBasePath: "/data"
+excludedDogus:
+  - "DOGU_EXCLUDE_1"
+  - "DOGU_EXCLUDE_2"
 exclude:
   - dogu: "jenkins"
     pattern:
