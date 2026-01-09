@@ -72,7 +72,7 @@ config:
       text: "The migration of your instance is in progress."
     # executePreflightCheck controls whether the preflight check will be executed.
     # Default: True
-    executePreflightCheck: false
+    executePreflightCheck: true
   job:
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
