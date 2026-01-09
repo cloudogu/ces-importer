@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added 
 - [#116] make mail delivery after import optional
   - added new configuration option in values.yaml: `config.smtp.enabled` with default value `false`
+- [#120] add configuration to exclude dogus
+  -  added new configuration option in values.yaml: `config.job.excludedDogus` to exclude dogus from migration 
 
 ## [v2.1.0] - 2026-01-05
 ### Changed
