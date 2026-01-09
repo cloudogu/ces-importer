@@ -74,6 +74,9 @@ config:
     # Default: True
     executePreflightCheck: true
   job:
+    # excludedDogus contains dogus to exclude from the import in addition ro the dogus that are
+    # excluded because they do not exist on MN clusters
+    excludedDogus: []
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:
