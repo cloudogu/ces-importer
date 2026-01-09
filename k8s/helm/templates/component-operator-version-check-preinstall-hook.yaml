@@ -1,5 +1,5 @@
 {{- /* checks if the component operator is installed in the given version */ -}}
-{{- $minComponentOperatorVersion := "1.124.0" }}
+{{- $minComponentOperatorVersion := "1.12.0" }}
 {{- $componentOperatorVersion := "" }}
 
 {{- $deployments := lookup "apps/v1" "Deployment" "" "" }}
