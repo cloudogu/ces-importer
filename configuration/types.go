@@ -176,6 +176,8 @@ type JobConfig struct {
 
 // Smtp holds SMTP server configuration details required for sending emails.
 type Smtp struct {
+	// Enabled indicates whether an email should be sent
+	Enabled bool `yaml:"enabled"`
 	// SMTP server address (e.g., smtp.example.com)
 	Server string `yaml:"server" validate:"omitempty,hostname_rfc1123"`
 	// SMTP server port (default is "25" if not specified)
