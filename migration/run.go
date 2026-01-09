@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/cron"
 	"log/slog"
 	"sync/atomic"
+
+	"github.com/cloudogu/ces-importer/api/importer"
+	"github.com/cloudogu/ces-importer/cron"
+	"github.com/cloudogu/ces-importer/migration/manual"
 )
 
 type migrationRunner interface {
@@ -14,8 +17,16 @@ type migrationRunner interface {
 }
 
 // Run is the main function to run the migration initiating the delta and final migration
-func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner) error {
+func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, k8sClientSet importer.K8sClients) error {
 	var migrationRunning atomic.Bool
+
+	// start the configmap watcher async
+	go func() {
+		err := manual.StartManualMigrationConfigmapWatcher(ctx, k8sClientSet.ConfigMap, "ecosystem", runner, &migrationRunning)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("Configmap watcher stopped: %v", err))
+		}
+	}()
 
 	finalTimestamp, err := ParseFinalTimestamp(finalTimestampStr)
 	if err != nil {
