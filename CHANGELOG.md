@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
+- [#114] reword dogu and component validation messages
 - [#116] default smtp address is now smtp.example.com instead of smtp.mailserver.com
 
 ### Added 
