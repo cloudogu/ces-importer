@@ -79,7 +79,6 @@ func TestStartManualMigrationConfigmapWatcher(t *testing.T) {
 		mockConfigMapClient.EXPECT().Delete(ctx, "test-configmap", metav1.DeleteOptions{}).Return(nil)
 
 		mockMigrator := newMockMigrationRunner(t)
-		mockMigrator.EXPECT().RunMigration(ctx).Return(nil)
 		migrationRunning := &atomic.Bool{}
 
 		// send event and close first channel, then cancel context after reconnect
