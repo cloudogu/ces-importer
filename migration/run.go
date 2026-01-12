@@ -96,6 +96,10 @@ func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN 
 
 func runDeltaMigration(finalTimestamp FinalTimestamp, runner migrationRunner, migrationRunning *atomic.Bool) cron.JobFunc {
 	return func(ctx context.Context) (int, error) {
+		if migrationRunning.Load() {
+			slog.Warn("Migration is currently running. Not responding to cron trigger to create a new delta migration.")
+			return 0, nil
+		}
 		// set migration to running to prevent simultaneous migrations
 		migrationRunning.Store(true)
 		defer migrationRunning.Store(false)
