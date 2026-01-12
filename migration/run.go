@@ -7,22 +7,32 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"github.com/cloudogu/ces-importer/api/importer"
 	"github.com/cloudogu/ces-importer/cron"
 	"github.com/cloudogu/ces-importer/migration/manual"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type migrationRunner interface {
 	RunMigration(context.Context) error
 }
 
+type ConfigmapClient interface {
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+}
+
+type watcher interface {
+	watch.Interface
+}
+
 // Run is the main function to run the migration initiating the delta and final migration
-func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, k8sClientSet importer.K8sClients) error {
+func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, configmapClient ConfigmapClient) error {
 	var migrationRunning atomic.Bool
 
 	// start the configmap watcher async
 	go func() {
-		err := manual.StartManualMigrationConfigmapWatcher(ctx, k8sClientSet.ConfigMap, "ecosystem", runner, &migrationRunning)
+		err := manual.StartManualMigrationConfigmapWatcher(ctx, configmapClient, "ecosystem", runner, &migrationRunning)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("Configmap watcher stopped: %v", err))
 		}
