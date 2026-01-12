@@ -116,7 +116,7 @@ func (v *Validator) getExcludedDoguNames() []string {
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid
 func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.Dogu, result error) error {
-	imDogu, exists := imDoguMap[exDogu.Name]
+	imDogu, exists := imDoguMap[getDoguName(exDogu)]
 	if !exists {
 		return errors.Join(result, fmt.Errorf("dogu %s is not installed (required version: %s) \n", exDogu.Name, exDogu.Version))
 	}
@@ -127,7 +127,7 @@ func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.D
 	}
 
 	// Remove validated dogu from map
-	delete(imDoguMap, exDogu.Name)
+	delete(imDoguMap, getDoguName(exDogu))
 	return result
 }
 

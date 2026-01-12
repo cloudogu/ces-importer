@@ -101,7 +101,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		}
 		isExcluded := slices.Contains(excludedDoguNames, qualifiedDoguName.SimpleName.String())
 		if isExcluded {
-			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s", dogu.Name))
+			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s or was excluded by configuration", dogu.Name))
 			continue
 		}
 
