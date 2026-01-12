@@ -73,11 +73,7 @@ func handleWatchEvents(ctx context.Context, watcher watcher, migrator migrationR
 
 			switch event.Type {
 			case watch.Added:
-				if !migrationRunning.Load() {
-					startManualMigration(ctx, event, client, migrationRunning, migrator)
-				} else {
-					slog.Info("Migration is already running. Skipping manual migration start.")
-				}
+				startManualMigration(ctx, event, client, migrationRunning, migrator)
 			}
 		}
 	}
@@ -85,8 +81,6 @@ func handleWatchEvents(ctx context.Context, watcher watcher, migrator migrationR
 
 // startManualMigration starts the migration when a ConfigMap with the label "k8s.cloudogu.com/start-migration" is added.
 func startManualMigration(ctx context.Context, event watch.Event, client configmapClient, migrationRunning *atomic.Bool, migrator migrationRunner) {
-	migrationRunning.Store(true)
-	defer migrationRunning.Store(false)
 	slog.Info("manual migration starter configmap with start-migration label added", "object", event.Object)
 	configMap, ok := event.Object.(*corev1.ConfigMap)
 	if !ok {
@@ -105,6 +99,8 @@ func startManualMigration(ctx context.Context, event watch.Event, client configm
 		slog.Info("Migration is already running. Skipping manual migration start.")
 		return
 	}
+	migrationRunning.Store(true)
+	defer migrationRunning.Store(false)
 	err := migrator.RunMigration(ctx)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to run manual migration: %v", err))
