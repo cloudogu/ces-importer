@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 
+	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/migration"
 	"strings"
 )
@@ -62,15 +63,23 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 
 	// dogus are excluded based on name regardless of namespace
 	for i, doguName := range v.excludedDogus {
-		v.excludedDogus[i] = getDoguNameWithoutNamespace(doguName)
+		simpleDoguName, err := getDoguNameWithoutNamespace(doguName)
+		if err != nil {
+			result = errors.Join(result, err)
+		}
+		v.excludedDogus[i] = simpleDoguName
 	}
 
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
-		exDoguName := getDoguNameWithoutNamespace(exDogu.Name)
+		simpleDoguName, err := getDoguNameWithoutNamespace(exDogu.Name)
+
+		if err != nil {
+			result = errors.Join(result, err)
+		}
 
 		// Skip excluded dogus
-		if slices.Contains(v.excludedDogus, exDoguName) {
+		if slices.Contains(v.excludedDogus, simpleDoguName) {
 			continue
 		}
 
@@ -91,11 +100,15 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	return result
 }
 
-func getDoguNameWithoutNamespace(doguName string) string {
+func getDoguNameWithoutNamespace(doguName string) (string, error) {
 	if strings.Contains(doguName, "/") {
-		return strings.Split(doguName, "/")[1]
+		doguQualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
+		if err != nil {
+			return doguName, fmt.Errorf("failed to get qualified dogu name from dogu: %s: %v", doguName, err)
+		}
+		return doguQualifiedName.SimpleName.String(), nil
 	}
-	return doguName
+	return doguName, nil
 }
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid
