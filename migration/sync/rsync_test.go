@@ -257,6 +257,43 @@ func TestSyncData(t *testing.T) {
 		// this test is verified by there being no error and no calls to the cmd
 		require.NoError(t, err)
 	})
+	t.Run("should not sync excluded dogu regardless of namespace in excluded dogu name", func(t *testing.T) {
+		cmd := newMockCommand(t)
+		commandMaker := func(name string, arg ...string) command {
+			return cmd
+		}
+		systemInfoProvider := newMockSystemInfoProvider(t)
+		exportDoguApiClient := newMockExportDoguApiClient(t)
+		syncer := &RsyncSyncer{
+			host:                "localhost",
+			user:                "user",
+			privateKeyPath:      "secret/private.key",
+			makeCommand:         commandMaker,
+			exportModeApiClient: exportDoguApiClient,
+			systemInfoProvider:  systemInfoProvider,
+			doguVolumeBasePath:  "../../testdata/sync",
+			excludedDogus:       []string{"test"},
+		}
+
+		// system info request
+		systemInfo := migration.SystemInfo{
+			FQDN:        "",
+			IsMultinode: false,
+			Dogus: []migration.Dogu{
+				{
+					Name:    "official/test",
+					Version: "",
+					Volume:  migration.DoguVolume{},
+				},
+			},
+			Components: nil,
+		}
+		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
+
+		err := syncer.SyncData(context.Background())
+		// this test is verified by there being no error and no calls to the cmd
+		require.NoError(t, err)
+	})
 }
 
 func TestSyncDogu(t *testing.T) {

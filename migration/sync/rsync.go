@@ -89,22 +89,25 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		excludeMap[p.DoguName] = append(excludeMap[p.DoguName], p.Pattern...)
 	}
 
+	excludedDoguNames := rs.getExcludedDoguNames()
+
 	// sync data for every dogu
 	for _, dogu := range systemInfo.Dogus {
-		isExcluded := slices.Contains(rs.excludedDogus, dogu.Name)
-		if isExcluded {
-			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s", dogu.Name))
-			continue
-		}
-		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
-		doguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
+		qualifiedDoguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to get qualified dogu name from dogu %s: %v", dogu.Name, err))
 			result = errors.Join(result, fmt.Errorf("failed to get qualified dogu name from dogu %s: %w", dogu.Name, err))
 			continue
 		}
+		isExcluded := slices.Contains(excludedDoguNames, qualifiedDoguName.SimpleName.String())
+		if isExcluded {
+			slog.Debug(fmt.Sprintf("Not syncing dogu %s as it is not available in k8s", dogu.Name))
+			continue
+		}
+
+		slog.Info("Starting sync for dogu", "doguName", dogu.Name)
 		// set the current dogu as export dogu in exporter
-		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, string(doguName.SimpleName))
+		doguExport, err := rs.exportModeApiClient.SetExportDogu(ctx, string(qualifiedDoguName.SimpleName))
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to set dogu %s as export dogu: %v", dogu.Name, err))
 			result = errors.Join(result, fmt.Errorf("failed to set dogu %s as export dogu: %w", dogu.Name, err))
@@ -115,7 +118,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		excludePattern := excludeMap[dogu.Name]
 		// default is /data/{doguName}
 
-		doguImportDir := path.Join(rs.doguVolumeBasePath, string(doguName.SimpleName))
+		doguImportDir := path.Join(rs.doguVolumeBasePath, string(qualifiedDoguName.SimpleName))
 		subDirs, err := getSubDirs(doguImportDir)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to get subDirs for dogu %s: %v", dogu.Name, err))
@@ -138,6 +141,19 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 		slog.Info("Syncing for dogu finished", "doguName", dogu.Name)
 	}
 	return result
+}
+
+func (rs *RsyncSyncer) getExcludedDoguNames() []string {
+	excludedDoguNames := make([]string, len(rs.excludedDogus))
+	for i, doguName := range rs.excludedDogus {
+		qualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
+		if err == nil {
+			excludedDoguNames[i] = qualifiedName.SimpleName.String()
+		} else {
+			excludedDoguNames[i] = doguName
+		}
+	}
+	return excludedDoguNames
 }
 
 // SyncDoguDir copies dogu volume data from a remote Cloudogu EcoSystem instance.

@@ -9,7 +9,6 @@ import (
 
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/migration"
-	"strings"
 )
 
 const (
@@ -58,28 +57,20 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	// Create a map of importing dogus for quick lookup
 	imDoguMap := make(map[string]migration.Dogu)
 	for _, d := range imInfo.Dogus {
-		imDoguMap[d.Name] = d
+		imDoguMap[getDoguName(d)] = d
 	}
 
-	// dogus are excluded based on name regardless of namespace
-	for i, doguName := range v.excludedDogus {
-		simpleDoguName, err := getDoguNameWithoutNamespace(doguName)
-		if err != nil {
-			result = errors.Join(result, err)
-		}
-		v.excludedDogus[i] = simpleDoguName
-	}
+	// Dogu names in excludedDogus may be a name with or without namespace information
+	excludedDoguNames := v.getExcludedDoguNames()
 
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
-		simpleDoguName, err := getDoguNameWithoutNamespace(exDogu.Name)
-
-		if err != nil {
-			result = errors.Join(result, err)
-		}
+		doguName := getDoguName(exDogu)
 
 		// Skip excluded dogus
-		if slices.Contains(v.excludedDogus, simpleDoguName) {
+		if slices.Contains(excludedDoguNames, doguName) {
+			// Remove excluded dogu from map
+			delete(imDoguMap, doguName)
 			continue
 		}
 
@@ -100,15 +91,27 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	return result
 }
 
-func getDoguNameWithoutNamespace(doguName string) (string, error) {
-	if strings.Contains(doguName, "/") {
-		doguQualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
-		if err != nil {
-			return doguName, fmt.Errorf("failed to get qualified dogu name from dogu: %s: %v", doguName, err)
-		}
-		return doguQualifiedName.SimpleName.String(), nil
+func getDoguName(dogu migration.Dogu) string {
+	simpleDoguName := dogu.Name
+
+	qualifiedDoguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
+	if err == nil {
+		simpleDoguName = qualifiedDoguName.SimpleName.String()
 	}
-	return doguName, nil
+	return simpleDoguName
+}
+
+func (v *Validator) getExcludedDoguNames() []string {
+	excludedDoguNames := make([]string, len(v.excludedDogus))
+	for i, doguName := range v.excludedDogus {
+		qualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
+		if err == nil {
+			excludedDoguNames[i] = qualifiedName.SimpleName.String()
+		} else {
+			excludedDoguNames[i] = doguName
+		}
+	}
+	return excludedDoguNames
 }
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid
