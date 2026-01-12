@@ -101,9 +101,9 @@ func startManualMigration(ctx context.Context, event watch.Event, client configm
 	}
 	migrationRunning.Store(true)
 	defer migrationRunning.Store(false)
+	slog.Info("Starting manual migration.")
 	err := migrator.RunMigration(ctx)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to run manual migration: %v", err))
 	}
-	return
 }

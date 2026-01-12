@@ -22,17 +22,13 @@ type ConfigmapClient interface {
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 }
 
-type watcher interface {
-	watch.Interface
-}
-
 // Run is the main function to run the migration initiating the delta and final migration
-func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, configmapClient ConfigmapClient) error {
+func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, cmc ConfigmapClient) error {
 	var migrationRunning atomic.Bool
 
 	// start the configmap watcher async
 	go func() {
-		err := manual.StartManualMigrationConfigmapWatcher(ctx, configmapClient, "ecosystem", runner, &migrationRunning)
+		err := manual.StartManualMigrationConfigmapWatcher(ctx, cmc, "ecosystem", runner, &migrationRunning)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("Configmap watcher stopped: %v", err))
 		}
