@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - [#114] reword dogu and component validation messages
 - [#116] default smtp address is now smtp.example.com instead of smtp.mailserver.com
+- [#121] add a configmap watcher for starting imports manually
 
 ### Added 
 - [#116] make mail delivery after import optional
