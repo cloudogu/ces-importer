@@ -61,14 +61,11 @@ func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN 
 		slog.Info("No valid final migration timestamp configured. Final migration will NOT run.")
 		// Wait for context to be done
 		<-ctx.Done()
-
 		slog.Info("Received shutdown signal, stopping infinite delta migration loop.")
-
 		return nil
 	}
 
 	slog.Info("Scheduled final migration", "startTime", finalTimestamp.String())
-
 	doneFinalMigration := make(chan error)
 
 	go func() {
