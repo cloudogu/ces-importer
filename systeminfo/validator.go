@@ -69,6 +69,7 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 
 		// Skip excluded dogus
 		if slices.Contains(excludedDoguNames, doguName) {
+			slog.Info(fmt.Sprintf("skipping validation for excluded dogu %s", doguName))
 			// Remove excluded dogu from map
 			delete(imDoguMap, doguName)
 			continue

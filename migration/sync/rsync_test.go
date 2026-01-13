@@ -272,7 +272,7 @@ func TestSyncData(t *testing.T) {
 			exportModeApiClient: exportDoguApiClient,
 			systemInfoProvider:  systemInfoProvider,
 			doguVolumeBasePath:  "../../testdata/sync",
-			excludedDogus:       []string{"test"},
+			excludedDogus:       []string{"test", "official/seconddogu"},
 		}
 
 		// system info request
@@ -281,7 +281,12 @@ func TestSyncData(t *testing.T) {
 			IsMultinode: false,
 			Dogus: []migration.Dogu{
 				{
-					Name:    "official/test",
+					Name:    "namespace/test",
+					Version: "",
+					Volume:  migration.DoguVolume{},
+				},
+				{
+					Name:    "test/seconddogu",
 					Version: "",
 					Volume:  migration.DoguVolume{},
 				},

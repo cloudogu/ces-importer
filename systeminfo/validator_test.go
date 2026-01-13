@@ -283,19 +283,27 @@ func TestValidateSystemInfo(t *testing.T) {
 					Name:    "official/ignoreddogu",
 					Version: "1.2.3",
 				},
+				{
+					Name:    "namespace/testdogu",
+					Version: "1.2.3",
+				},
 			},
 		}
 		exSysInfo := migration.SystemInfo{
 			Dogus: []migration.Dogu{
 				{
-					Name:    "premium/ignoreddogu",
+					Name:    "testing/ignoreddogu",
+					Version: "1.3.2",
+				},
+				{
+					Name:    "testing/testdogu",
 					Version: "1.3.2",
 				},
 			},
 		}
 
 		v := Validator{
-			excludedDogus: []string{"ignoreddogu"},
+			excludedDogus: []string{"testing/ignoreddogu", "testdogu"},
 		}
 		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
