@@ -166,8 +166,8 @@ type ExcludePattern struct {
 
 // JobConfig contains the configuration data for the job container.
 type JobConfig struct {
-	// AdditionalExcludedDogus specifies dogus that should be  excluded from the migration on top
-	// of the globally excluded dogus
+	// AdditionalExcludedDogus specifies dogus that should be excluded from the migration in
+	// addition to the globally excluded dogus
 	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath" validate:"required"`

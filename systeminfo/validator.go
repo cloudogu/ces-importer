@@ -57,15 +57,15 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	// Create a map of importing dogus for quick lookup
 	imDoguMap := make(map[string]migration.Dogu)
 	for _, d := range imInfo.Dogus {
-		imDoguMap[getDoguName(d)] = d
+		imDoguMap[getDoguNameWithoutNamespace(d.Name)] = d
 	}
 
-	// Dogu names in excludedDogus may be a name with or without namespace information
+	// Dogu names in excludedDogus may be names with or without namespace information
 	excludedDoguNames := v.getExcludedDoguNames()
 
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
-		doguName := getDoguName(exDogu)
+		doguName := getDoguNameWithoutNamespace(exDogu.Name)
 
 		// Skip excluded dogus
 		if slices.Contains(excludedDoguNames, doguName) {
@@ -92,32 +92,29 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	return result
 }
 
-func getDoguName(dogu migration.Dogu) string {
-	simpleDoguName := dogu.Name
-
-	qualifiedDoguName, err := doguCommons.QualifiedNameFromString(dogu.Name)
+// getDoguNameWithoutNamespace gets the simple name of a dogu without the namespace
+func getDoguNameWithoutNamespace(doguName string) string {
+	qualifiedDoguName, err := doguCommons.QualifiedNameFromString(doguName)
+	// fall back on name that was passed in
 	if err == nil {
-		simpleDoguName = qualifiedDoguName.SimpleName.String()
+		doguName = qualifiedDoguName.SimpleName.String()
 	}
-	return simpleDoguName
+	return doguName
 }
 
+// getExcludedDoguNames gets the list of excluded dogu names without the namespace
 func (v *Validator) getExcludedDoguNames() []string {
 	excludedDoguNames := make([]string, len(v.excludedDogus))
 	for i, doguName := range v.excludedDogus {
-		qualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
-		if err == nil {
-			excludedDoguNames[i] = qualifiedName.SimpleName.String()
-		} else {
-			excludedDoguNames[i] = doguName
-		}
+		excludedDoguNames[i] = getDoguNameWithoutNamespace(doguName)
 	}
 	return excludedDoguNames
 }
 
 // validateRegularDogu validates a single non-nginx dogu and removes it from the map if valid
 func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.Dogu, result error) error {
-	imDogu, exists := imDoguMap[getDoguName(exDogu)]
+	exDoguName := getDoguNameWithoutNamespace(exDogu.Name)
+	imDogu, exists := imDoguMap[exDoguName]
 	if !exists {
 		return errors.Join(result, fmt.Errorf("dogu %s is not installed (required version: %s) \n", exDogu.Name, exDogu.Version))
 	}
@@ -128,7 +125,7 @@ func validateRegularDogu(exDogu migration.Dogu, imDoguMap map[string]migration.D
 	}
 
 	// Remove validated dogu from map
-	delete(imDoguMap, getDoguName(exDogu))
+	delete(imDoguMap, exDoguName)
 	return result
 }
 

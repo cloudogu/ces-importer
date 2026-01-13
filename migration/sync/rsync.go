@@ -143,6 +143,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 	return result
 }
 
+// getExcludedDoguNames gets the list of excluded dogu names without the namespace
 func (rs *RsyncSyncer) getExcludedDoguNames() []string {
 	excludedDoguNames := make([]string, len(rs.excludedDogus))
 	for i, doguName := range rs.excludedDogus {
