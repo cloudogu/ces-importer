@@ -6,97 +6,98 @@ metadata:
     {{- include "ces-importer.labels" . | nindent 4 }}
 rules:
   # allow starting + stopping of dogus
-- apiGroups:
-    - ""
-  resources:
-    - configmaps
-  verbs:
-    - list
-    - get
-    - delete
-    - update
-    - create
-- apiGroups:
-    - ""
-  resources:
-    - secrets
-  verbs:
-    - list
-    - get
-    - delete
-    - update
-    - create
-- apiGroups:
-    - ""
-  resources:
-    - pods
-  verbs:
-    - list
-- apiGroups:
-    - ""
-  resources:
-    - pods/log
-  verbs:
-    - get
-- apiGroups:
-    - k8s.cloudogu.com
-  resources:
-    - dogus
-  verbs:
-    - get
-    - update
-  # allow for systeminfo comparison and storage size update
-- apiGroups:
-    - k8s.cloudogu.com
-  resources:
-    - dogus
-  verbs:
-    - get
-    - list
-    - update
-- apiGroups:
-    - k8s.cloudogu.com
-  resources:
-    - blueprints
-  verbs:
-    - get
-    - list
-    - update
-  # allow for dogu resizing
-- apiGroups: [""]
-  resources:
-    - persistentvolumeclaims
-  verbs:
-    - list
-    - get
-  # allow for systeminfo comparison
-- apiGroups:
-  - k8s.cloudogu.com
-  resources:
-    - components
-  verbs:
-    - list
-  # allow creating / deleting backup schedules
-- apiGroups:
-  - k8s.cloudogu.com
-  resources:
-    - backupschedules
-  verbs:
-    - create
-    - watch
-    - delete
-- apiGroups:
-  - k8s.cloudogu.com
-  resources:
-    - backupschedules/finalizers
-  verbs:
-    - update
-  # allow for jobs creating
-- apiGroups:
-    - batch
-  resources:
-    - jobs
-  verbs:
-    - list
-    - create
-    - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - list
+      - get
+      - delete
+      - update
+      - create
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - list
+      - get
+      - delete
+      - update
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods/log
+    verbs:
+      - get
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - dogus
+    verbs:
+      - get
+      - update
+    # allow for systeminfo comparison and storage size update
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - dogus
+    verbs:
+      - get
+      - list
+      - update
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - blueprints
+    verbs:
+      - get
+      - list
+      - update
+    # allow for dogu resizing
+  - apiGroups: [""]
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - list
+      - get
+    # allow for systeminfo comparison
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - components
+    verbs:
+      - list
+    # allow creating / deleting backup schedules
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - backupschedules
+    verbs:
+      - create
+      - watch
+      - delete
+  - apiGroups:
+      - k8s.cloudogu.com
+    resources:
+      - backupschedules/finalizers
+    verbs:
+      - update
+    # allow for jobs creating
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - list
+      - create
+      - watch
