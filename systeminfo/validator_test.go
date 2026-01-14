@@ -241,71 +241,96 @@ func TestValidateSystemInfo(t *testing.T) {
 		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
 	})
 
-	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
+	t.Run("should throw no error on version mismatch for excluded dogu that is present on both exporting and importing system", func(t *testing.T) {
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
+				{
+					Name:    "official/excludeddogu",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
+				{
+					Name:    "official/excludeddogu",
+					Version: "1.2.5",
+				},
+			},
+		}
+
+		v := Validator{
+			excludedDogus: []string{"excludeddogu"},
+		}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.NoError(t, err)
+
+	})
+	t.Run("should throw no error on version mismatch for excluded dogu that is present on both exporting and importing system with different namespaces", func(t *testing.T) {
+		imSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
+				{
+					Name:    "official/excludeddogu",
+					Version: "1.2.3",
+				},
+			},
+		}
+		exSysInfo := migration.SystemInfo{
+			Dogus: []migration.Dogu{
+				{
+					Name:    "testing/excludeddogu",
+					Version: "1.2.5",
+				},
+			},
+		}
+
+		v := Validator{
+			excludedDogus: []string{"excludeddogu"},
+		}
+		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
+		require.NoError(t, err)
+
+	})
+
+	t.Run("should throw no error on excluded dogu not installed in the importing system", func(t *testing.T) {
 		imSysInfo := migration.SystemInfo{
 			Dogus: []migration.Dogu{},
-			Components: []migration.Component{
-				{
-					Name:    "testcomponent",
-					Version: "1.2.3",
-				},
-			},
 		}
 		exSysInfo := migration.SystemInfo{
 			Dogus: []migration.Dogu{
 				{
-					Name:    "official/registrator",
-					Version: "1.2.3",
-					Volume: migration.DoguVolume{
-						SizeInBytes: 10,
-					},
-				},
-			},
-			Components: []migration.Component{
-				{
-					Name:    "testcomponent",
-					Version: "1.2.3",
+					Name:    "testing/excludeddogu",
+					Version: "1.2.5",
 				},
 			},
 		}
 
 		v := Validator{
-			excludedDogus: []string{"official/registrator", "test2"},
+			excludedDogus: []string{"excludeddogu"},
 		}
 		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
-	})
 
-	t.Run("throw no error on excluded dogu, ignoring the dogu namespace", func(t *testing.T) {
+	})
+	t.Run("should throw no error on excluded dogu not installed in the exporting system", func(t *testing.T) {
 		imSysInfo := migration.SystemInfo{
 			Dogus: []migration.Dogu{
 				{
-					Name:    "official/ignoreddogu",
-					Version: "1.2.3",
-				},
-				{
-					Name:    "namespace/testdogu",
+					Name:    "official/excludeddogu",
 					Version: "1.2.3",
 				},
 			},
 		}
 		exSysInfo := migration.SystemInfo{
-			Dogus: []migration.Dogu{
-				{
-					Name:    "testing/ignoreddogu",
-					Version: "1.3.2",
-				},
-				{
-					Name:    "testing/testdogu",
-					Version: "1.3.2",
-				},
-			},
+			Dogus: []migration.Dogu{},
 		}
 
 		v := Validator{
-			excludedDogus: []string{"testing/ignoreddogu", "testdogu"},
+			excludedDogus: []string{"excludeddogu"},
 		}
 		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
 		require.NoError(t, err)
+
 	})
+
 }
