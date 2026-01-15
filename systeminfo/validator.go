@@ -61,7 +61,7 @@ func (v *Validator) validateDogus(imInfo *migration.SystemInfo, exInfo *migratio
 	}
 
 	// Dogu names in excludedDogus may be names with or without namespace information
-	excludedDoguNames := v.getExcludedDoguNames()
+	excludedDoguNames := getExcludedDoguNames(v.excludedDogus)
 
 	// Validate each exporting dogu
 	for _, exDogu := range exInfo.Dogus {
@@ -106,9 +106,9 @@ func getDoguNameWithoutNamespace(doguName string) string {
 }
 
 // getExcludedDoguNames gets the list of excluded dogu names without the namespace
-func (v *Validator) getExcludedDoguNames() []string {
-	excludedDoguNames := make([]string, len(v.excludedDogus))
-	for i, doguName := range v.excludedDogus {
+func getExcludedDoguNames(excludedDogus []string) []string {
+	excludedDoguNames := make([]string, len(excludedDogus))
+	for i, doguName := range excludedDogus {
 		excludedDoguNames[i] = getDoguNameWithoutNamespace(doguName)
 	}
 	return excludedDoguNames
