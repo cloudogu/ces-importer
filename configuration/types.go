@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	excludedDogus = []string{
+	globallyExcludedDogus = []string{
 		"premium/monitoring",
 		"premium/backup",
 		"official/registrator",
@@ -166,6 +166,9 @@ type ExcludePattern struct {
 
 // JobConfig contains the configuration data for the job container.
 type JobConfig struct {
+	// AdditionalExcludedDogus specifies dogus that should be excluded from the migration in
+	// addition to the globally excluded dogus
+	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath" validate:"required"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
@@ -250,7 +253,7 @@ func joinValidationErrors(err error) error {
 	return allVErrors
 }
 
-// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
-func GetExcludedDogus() []string {
-	return append([]string(nil), excludedDogus...)
+// GetGloballyExcludedDogus is a getter for the excluded dogus to ensure immutability
+func GetGloballyExcludedDogus() []string {
+	return append([]string(nil), globallyExcludedDogus...)
 }

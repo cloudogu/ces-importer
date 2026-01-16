@@ -468,6 +468,85 @@ func Test_defaultDoguVolumeResizer_ResizeDogusIfNeeded(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to find dogu official/otherDogu in the importing system")
 		assert.ErrorContains(t, err, "failed to check if dogu has volume needing backup for dogu simpleName: failed to get qualified dogu name: dogu name needs to be in the form 'namespace/dogu' but is 'simpleName'")
 	})
+	t.Run("Should not error or resize volume on excluded dogu and resize other dogus", func(t *testing.T) {
+		mDoguClient := newMockDoguClient(t)
+		dogu := &doguv2.Dogu{
+			Spec: doguv2.DoguSpec{
+				Resources: doguv2.DoguResources{
+					MinDataVolumeSize: resource.MustParse("1Gi"),
+				},
+			},
+		}
+
+		mDoguDescriptorDoguRepo := newMockDoguDescriptorRepo(t)
+		expectedDogu := &core.Dogu{Volumes: []core.Volume{
+			{
+				NeedsBackup: true,
+			},
+		}}
+
+		mDoguDescriptorDoguRepo.EXPECT().Get(testCtx, mock.Anything).Return(expectedDogu, nil).Times(1)
+
+		mDoguClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(dogu, nil)
+		mDoguClient.EXPECT().Update(testCtx, dogu, metav1.UpdateOptions{}).RunAndReturn(func(ctx context.Context, dogu *doguv2.Dogu, options metav1.UpdateOptions) (*doguv2.Dogu, error) {
+			assert.Equal(t, "2Gi", dogu.Spec.Resources.MinDataVolumeSize.String())
+
+			return dogu, nil
+		})
+
+		mPvcClient := newMockPvcClient(t)
+		mPvcClient.EXPECT().Get(testCtx, "ldap", metav1.GetOptions{}).Return(&corev1.PersistentVolumeClaim{
+			Spec: corev1.PersistentVolumeClaimSpec{
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("2Gi"),
+					},
+				},
+			},
+			Status: corev1.PersistentVolumeClaimStatus{
+				Capacity: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("2Gi"),
+				},
+			},
+		}, nil)
+
+		resizer := &DoguVolumeResizer{
+			doguClient:         mDoguClient,
+			pvcClient:          mPvcClient,
+			doguDescriptorRepo: mDoguDescriptorDoguRepo,
+			excludedDogus:      []string{"excluded"},
+		}
+
+		waitSecondsBetweenRetries = 0
+		defer func() {
+			waitSecondsBetweenRetries = defaultWaitSecondsBetweenRetries
+		}()
+
+		exporterDogus := []migration.Dogu{
+			{
+				Name:    "official/ldap",
+				Version: "1.2.3",
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+			},
+			{
+				Name:    "official/excluded",
+				Version: "1.2.3",
+				Volume:  migration.DoguVolume{SizeInBytes: 2 * 1024 * 1024 * 1024},
+			},
+		}
+
+		importerDogus := []migration.Dogu{
+			{
+				Name:    "official/ldap",
+				Version: "1.2.3",
+				Volume:  migration.DoguVolume{SizeInBytes: 1 * 1024 * 1024 * 1024},
+			},
+		}
+
+		err := resizer.ResizeDogusIfNeeded(testCtx, exporterDogus, importerDogus)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestNewDoguVolumeResizer(t *testing.T) {

@@ -74,6 +74,13 @@ config:
     # Default: True
     executePreflightCheck: true
   job:
+    # excludedDogus contains the names of dogus to exclude from the import. This is in addition to the dogus that are
+    # excluded because they do not exist as dogus on multinode clusters: monitoring, backup, and registrator
+    # example:
+    #   excludedDogus:
+    #   - jenkins
+    #   - cockpit
+    excludedDogus: []
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:

@@ -66,8 +66,12 @@ func (d *DoguVolumeResizer) ResizeDogusIfNeeded(ctx context.Context, exporterDog
 	var err error
 	errorsChan := make(chan error, len(exporterDogus))
 
+	excludedDoguNames := getExcludedDoguNames(d.excludedDogus)
+
 	for _, exporterDogu := range exporterDogus {
-		if slices.Contains(d.excludedDogus, exporterDogu.Name) {
+		doguName := getDoguNameWithoutNamespace(exporterDogu.Name)
+
+		if slices.Contains(excludedDoguNames, doguName) {
 			continue
 		}
 

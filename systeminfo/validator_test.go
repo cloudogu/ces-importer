@@ -241,38 +241,48 @@ func TestValidateSystemInfo(t *testing.T) {
 		require.ErrorContains(t, err, "dogu onlyPresentHere is installed in the importing system but not present in the exporting system")
 	})
 
-	t.Run("should throw no error on excluded dogu", func(t *testing.T) {
-		imSysInfo := migration.SystemInfo{
-			Dogus: []migration.Dogu{},
-			Components: []migration.Component{
-				{
-					Name:    "testcomponent",
-					Version: "1.2.3",
-				},
-			},
-		}
-		exSysInfo := migration.SystemInfo{
-			Dogus: []migration.Dogu{
-				{
-					Name:    "official/registrator",
-					Version: "1.2.3",
-					Volume: migration.DoguVolume{
-						SizeInBytes: 10,
-					},
-				},
-			},
-			Components: []migration.Component{
-				{
-					Name:    "testcomponent",
-					Version: "1.2.3",
-				},
-			},
-		}
+	type excludedDogusTestCase struct {
+		name          string
+		exDogus       []migration.Dogu
+		imDogus       []migration.Dogu
+		excludedDogus []string
+	}
 
-		v := Validator{
-			excludedDogus: []string{"official/registrator", "test2"},
-		}
-		err := v.Validate(context.Background(), &exSysInfo, &imSysInfo)
-		require.NoError(t, err)
-	})
+	excludedDogusTestCasess := []excludedDogusTestCase{
+		{
+			name:          "should throw no error on version mismatch for excluded dogu",
+			exDogus:       []migration.Dogu{{Name: "official/excludeddogu", Version: "1.2.3"}},
+			imDogus:       []migration.Dogu{{Name: "official/excludeddogu", Version: "9.9.9"}},
+			excludedDogus: []string{"excludeddogu"},
+		},
+		{
+			name:          "should throw no error on version mismatch for excluded dogu with different namespaces",
+			exDogus:       []migration.Dogu{{Name: "official/excludeddogu", Version: "1.2.3"}},
+			imDogus:       []migration.Dogu{{Name: "testing/excludeddogu", Version: "9.9.9"}},
+			excludedDogus: []string{"excludeddogu"},
+		},
+		{
+			name:          "should throw no error on excluded dogu not installed in the importing system",
+			exDogus:       []migration.Dogu{{Name: "official/excludeddogu", Version: "1.2.3"}},
+			imDogus:       []migration.Dogu{},
+			excludedDogus: []string{"excludeddogu"},
+		}, {
+			name:          "should throw no error on excluded dogu not installed in the exporting system",
+			exDogus:       []migration.Dogu{},
+			imDogus:       []migration.Dogu{{Name: "official/excludeddogu", Version: "1.2.3"}},
+			excludedDogus: []string{"excludeddogu"},
+		},
+	}
+
+	for _, tc := range excludedDogusTestCasess {
+		t.Run(tc.name, func(t *testing.T) {
+			exInfo := &migration.SystemInfo{Dogus: tc.exDogus}
+			imInfo := &migration.SystemInfo{Dogus: tc.imDogus}
+			v := NewValidator(tc.excludedDogus)
+
+			err := v.Validate(context.Background(), exInfo, imInfo)
+			assert.NoError(t, err)
+		})
+	}
+
 }
