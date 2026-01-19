@@ -46,8 +46,8 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient) *ConfigImporter {
-	gci := &cesGlobalConfigImporter{globalConfigRepo, []string{}}
+func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, additionalExcludedConfiguration []string) *ConfigImporter {
+	gci := &cesGlobalConfigImporter{globalConfigRepo, additionalExcludedConfiguration}
 	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 

@@ -311,13 +311,15 @@ func TestNewConfigImporter(t *testing.T) {
 		mDoguRepo := newMockDoguConfigRepo(t)
 		mSensitiveRepo := newMockDoguConfigRepo(t)
 		mBackupScheduleClient := newMockBackupScheduleClient(t)
+		additionalExcludedConfiguration := []string{"excluded"}
 
-		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient)
+		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, additionalExcludedConfiguration)
 
 		require.NotNil(t, importer)
 		assert.Equal(t, mConfigGetter, importer.getter)
 		assert.NotNil(t, importer.globalConfigImporter)
 		assert.Equal(t, mGlobalRepo, importer.globalConfigImporter.(*cesGlobalConfigImporter).globalConfigRepo)
+		assert.Equal(t, additionalExcludedConfiguration, importer.globalConfigImporter.(*cesGlobalConfigImporter).additionalKeysToKeep)
 		assert.NotNil(t, importer.doguConfigImporter)
 		assert.Equal(t, basePath, importer.doguConfigImporter.(*cesDoguConfigImporter).dataBasePath)
 		assert.Equal(t, mDoguRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).doguConfigRepo)
