@@ -164,14 +164,24 @@ type ExcludePattern struct {
 	Pattern []string `yaml:"pattern" validate:"gt=0,dive,required"`
 }
 
+// ExcludePattern defines a pattern for files that should not be synchronized for a specific dogu
+type DoguConfiguration struct {
+	// DoguName specifies the name of the dogu for which the specific keys should not be imported.
+	DoguName string `yaml:"dogu" validate:"required"`
+	// Keys specifies the configuration key names for the excluded configuration values.
+	Keys []string `yaml:"pattern" validate:"gt=0,dive,required"`
+}
+
 // JobConfig contains the configuration data for the job container.
 type JobConfig struct {
 	// AdditionalExcludedDogus specifies dogus that should be excluded from the migration in
 	// addition to the globally excluded dogus
 	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
-	// AdditionalExcludedConfigurations specifies configurations that should be excluded from the migration
+	// AdditionalExcludedConfigurations specifies global configurations that should be excluded from the migration
 	// in addition to configurations that are already being excluded
 	AdditionalExcludedConfigurations []string `yaml:"excludedConfigurations"`
+	// ExcludedDoguConfigurations defines specific Dogu configurations to be excluded from the migration process
+	ExcludedDoguConfigurations []DoguConfiguration `yaml:"excludedDoguConfigurations" validate:"omitempty,dive"`
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath" validate:"required"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.

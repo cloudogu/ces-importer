@@ -81,12 +81,22 @@ config:
     #   - jenkins
     #   - cockpit
     excludedDogus: []
-    # excludeConfigurations contains the names of configuration keys  to exclude from the import.
+    # excludeConfigurations contains the names of configuration keys that are not dogu-specific to exclude from the
+    # import.  For these configuration keys, the importing system will keep the current value.
     # example:
-    #   excludedDogus:
-    #   - jenkins
-    #   - cockpit
-    excludeConfigurations: []
+    #   excludeConfigurations:
+    #   - import/key
+    #   - import/otherKey
+    excludedConfigurations: []
+    # excludedDoguConfigurations contains the names of configuration keys that are dogu-specific to exclude from the
+    # import, grouped by dogu name
+    # example:
+    #   excludedDoguConfigurations:
+    #     - dogu: "jenkins"
+    #       keys:
+    #       - "path/excluded1"
+    #       - "path/excluded2"
+    excludedDoguConfigurations: []
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:
