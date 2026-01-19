@@ -1,5 +1,16 @@
 ---
 doguVolumeBasePath: "/data"
+excludedConfigurationKeys:
+  - "CONFIGURATION_EXCLUDE_1"
+  - "CONFIGURATION_EXCLUDE_2"
+excludedDoguConfigurationKeys:
+  - dogu: "dogu1"
+    keys:
+      - "KEY_1"
+      - "KEY_2"
+  - dogu: "dogu2"
+    keys:
+      - "KEY_3"
 excludedDogus:
   - "DOGU_EXCLUDE_1"
   - "DOGU_EXCLUDE_2"

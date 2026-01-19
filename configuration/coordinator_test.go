@@ -65,6 +65,25 @@ func TestReadCoordinatorConfig(t *testing.T) {
 				"DOGU_EXCLUDE_1",
 				"DOGU_EXCLUDE_2",
 			},
+			AdditionalExcludedConfigurations: []string{
+				"CONFIGURATION_EXCLUDE_1",
+				"CONFIGURATION_EXCLUDE_2",
+			},
+			ExcludedDoguConfigurations: []DoguConfigurationKeys{
+				{
+					DoguName: "dogu1",
+					Keys: []string{
+						"KEY_1",
+						"KEY_2",
+					},
+				},
+				{
+					DoguName: "dogu2",
+					Keys: []string{
+						"KEY_3",
+					},
+				},
+			},
 			Exclude: []ExcludePattern{
 				{
 					DoguName: "jenkins",
