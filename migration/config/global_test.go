@@ -37,7 +37,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -88,7 +89,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -133,7 +135,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -141,6 +144,58 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+	})
+
+	t.Run("should not overwrite excluded config keys", func(t *testing.T) {
+		// given
+		mockConfigRepo := newMockGlobalConfigRepo(t)
+
+		importerConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
+			"path/to/ignoredKey": "importer-value",
+			"ignoredKey":         "importer-value",
+			"path/to/key1":       "importer-value",
+			"key2":               "importer-value",
+		})
+
+		mockConfigRepo.EXPECT().Get(testCtx).Return(importerConfig, nil)
+		mockConfigRepo.EXPECT().Delete(testCtx).Return(nil)
+
+		emptyConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
+		mockConfigRepo.EXPECT().Create(testCtx, emptyConfig).Return(emptyConfig, nil)
+
+		var mergedConfig regConfig.GlobalConfig
+		mockConfigRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, newConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
+			mergedConfig = newConfig
+
+			return emptyConfig, nil
+		})
+
+		expectedConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
+			"path/to/key1":       "exporter-value",
+			"key2":               "exporter-value",
+			"path/to/ignoredKey": "importer-value",
+			"ignoredKey":         "importer-value",
+		})
+
+		exporterConfig := []migration.KeyValue{
+			{"path/to/key1", "exporter-value"},
+			{"key2", "exporter-value"},
+			{"path/to/ignoredKey", "exporter-value"},
+			{"ignoredKey", "exporter-value"},
+		}
+
+		importer := &cesGlobalConfigImporter{
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{"path/to/ignoredKey", "ignoredKey"},
+		}
+
+		// when
+		err := importer.importGlobalConfig(testCtx, exporterConfig)
+
+		// then
+		require.NoError(t, err)
+		diff := expectedConfig.Diff(mergedConfig.Config)
+		assert.Equal(t, len(diff), 0)
 	})
 
 	t.Run("should fail to import global config on get previous config", func(t *testing.T) {
@@ -154,7 +209,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -178,7 +234,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -205,7 +262,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when
@@ -241,7 +299,8 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		importer := &cesGlobalConfigImporter{
-			globalConfigRepo: mockConfigRepo,
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
 		}
 
 		// when

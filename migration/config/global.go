@@ -19,7 +19,8 @@ var globalConfigKeysToKeep = []string{
 }
 
 type cesGlobalConfigImporter struct {
-	globalConfigRepo globalConfigRepo
+	globalConfigRepo     globalConfigRepo
+	additionalKeysToKeep []string
 }
 
 func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config migration.GlobalConfig) error {
@@ -32,7 +33,7 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 
 	configToKeep := make(map[regConfig.Key]regConfig.Value)
 	for key, value := range previousGlobalConfig.GetAll() {
-		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) {
+		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || matchesAnyKeyByPattern(key.String(), gci.additionalKeysToKeep) {
 			configToKeep[key] = value
 		}
 	}
@@ -60,7 +61,11 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	// import config from exporter
 	for _, kv := range config {
 		if matchesAnyKeyByPattern(kv.Key, globalConfigKeysToKeep) {
-			slog.Debug("Ignoring global config-key", "key", kv.Key)
+			slog.Debug("Ignoring global config-key from global exclude list", "key", kv.Key)
+			continue
+		}
+		if matchesAnyKeyByPattern(kv.Key, gci.additionalKeysToKeep) {
+			slog.Debug("Ignoring global config-key from additional exclude list", "key", kv.Key)
 			continue
 		}
 
