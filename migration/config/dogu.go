@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"slices"
 )
 
 const (
@@ -27,6 +28,7 @@ type cesDoguConfigImporter struct {
 	dataBasePath            string
 	doguConfigRepo          doguConfigRepo
 	sensitiveDoguConfigRepo doguConfigRepo
+	excludedDoguConfigKeys  map[string][]string
 }
 
 func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []migration.DoguConfig) error {
@@ -47,32 +49,42 @@ func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 }
 
 func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc migration.DoguConfig) error {
-	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.NormalConfig, dci.doguConfigRepo); err != nil {
-		return fmt.Errorf("failed to import dogu config for dogu '%s': %w", dc.Name, err)
+	doguName := dc.Name
+
+	excludedKeys := dci.excludedDoguConfigKeys[doguName]
+	if err := importDoguConfigWithRepo(ctx, doguName, dc.NormalConfig, dci.doguConfigRepo, excludedKeys); err != nil {
+		return fmt.Errorf("failed to import dogu config for dogu '%s': %w", doguName, err)
 	}
 
-	if err := importDoguConfigWithRepo(ctx, dc.Name, dc.SensitiveConfig, dci.sensitiveDoguConfigRepo); err != nil {
-		return fmt.Errorf("failed to import sensitive dogu config for dogu '%s': %w", dc.Name, err)
+	if err := importDoguConfigWithRepo(ctx, doguName, dc.SensitiveConfig, dci.sensitiveDoguConfigRepo, excludedKeys); err != nil {
+		return fmt.Errorf("failed to import sensitive dogu config for dogu '%s': %w", doguName, err)
 	}
 
-	if err := importLocalConfig(dci.dataBasePath, dc.Name, dc.LocalConfig); err != nil {
+	if err := importLocalConfig(dci.dataBasePath, doguName, dc.LocalConfig); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			slog.Debug("no local config found for dogu", "dogu", dc.Name)
+			slog.Debug("no local config found for dogu", "dogu", doguName)
 			return nil
 		}
 
-		return fmt.Errorf("failed to import local config for dogu '%s': %w", dc.Name, err)
+		return fmt.Errorf("failed to import local config for dogu '%s': %w", doguName, err)
 	}
 
 	return nil
 }
 
-func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []migration.KeyValue, repo doguConfigRepo) error {
+func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []migration.KeyValue, repo doguConfigRepo, excludedKeys []string) error {
 	doguName := doguCommons.SimpleName(dogu)
-
 	err := repo.Delete(ctx, doguName)
 	if err != nil {
 		return fmt.Errorf("failed to delete original dogu config: %w", err)
+	}
+
+	var originalValues regConfig.DoguConfig
+	if len(excludedKeys) > 0 {
+		originalValues, err = repo.Get(ctx, doguName)
+		if err != nil {
+			return fmt.Errorf("failed to get original dogu config: %w", err)
+		}
 	}
 
 	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
@@ -81,15 +93,30 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, dc []migration.K
 	}
 
 	for _, kv := range dc {
-		slog.Debug("Setting dogu config", "key", kv.Key, "dogu", doguName)
-		newDoguConfig, err := registryDoguConfig.Set(regConfig.Key(kv.Key), regConfig.Value(kv.Value))
+		key := kv.Key
+		slog.Debug("Setting dogu config", "key", key, "dogu", doguName)
+		regKey := regConfig.Key(key)
+		var newValue regConfig.Value
+		if slices.Contains(excludedKeys, key) {
+			slog.Debug("not importing config-key from exclude list, setting to old value", "key", key)
+			original, exists := originalValues.Get(regKey)
+			if exists {
+				newValue = original
+			} else {
+				slog.Warn("config-key was excluded from import and not set in original config", "key", key)
+				continue
+			}
+		} else {
+			newValue = regConfig.Value(kv.Value)
+		}
+		newDoguConfig, err := registryDoguConfig.Set(regKey, newValue)
 		registryDoguConfig = regConfig.DoguConfig{
 			DoguName: doguName,
 			Config:   newDoguConfig,
 		}
 
 		if err != nil {
-			return fmt.Errorf("failed to set key %s: %w\n", kv.Key, err)
+			return fmt.Errorf("failed to set key %s: %w\n", key, err)
 		}
 	}
 

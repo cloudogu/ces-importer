@@ -179,7 +179,7 @@ type JobConfig struct {
 	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
 	// AdditionalExcludedConfigurations specifies global configurations that should be excluded from the migration
 	// in addition to configurations that are already being excluded
-	AdditionalExcludedConfigurations []string `yaml:"excludedConfigurationKeys"`
+	AdditionalExcludedConfigurationKeys []string `yaml:"excludedConfigurationKeys"`
 	// ExcludedDoguConfigurations defines specific Dogu configurations to be excluded from the migration process
 	ExcludedDoguConfigurations []DoguConfigurationKeys `yaml:"excludedDoguConfigurationKeys" validate:"omitempty,dive"`
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.

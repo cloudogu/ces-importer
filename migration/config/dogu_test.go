@@ -180,7 +180,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo)
+		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo, []string{})
 
 		require.NoError(t, err)
 	})
@@ -196,7 +196,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo)
+		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo, []string{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -217,7 +217,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo)
+		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo, []string{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -251,7 +251,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 			{"sub/key/foo", "bar"},
 		}
 
-		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo)
+		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo, []string{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -576,6 +576,84 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, "local: lokal\n", string(file))
+	})
+
+	t.Run("should import dogu configs except for excluded configuration keys", func(t *testing.T) {
+		doguNameCas := doguCommons.SimpleName("cas")
+
+		mockNormalRepo := newMockDoguConfigRepo(t)
+		mockNormalRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
+		originalConfigs := map[regConfig.Key]regConfig.Value{
+			"key1":             "importer-value",
+			"sub/key/foo":      "importer-value",
+			"excludedkey1":     "importer-value",
+			"excluded/key/foo": "importer-value",
+		}
+		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.CreateDoguConfig("cas", originalConfigs), nil)
+		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
+		var mergedConfig regConfig.DoguConfig
+		mockNormalRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
+			mergedConfig = config
+
+			return mergedConfig, nil
+		})
+
+		mockSensitiveRepo := newMockDoguConfigRepo(t)
+		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
+		originalSensitiveConfigs := map[regConfig.Key]regConfig.Value{
+			"sensitivetoexclude": "importer-value",
+			"sensitive":          "importer-value",
+		}
+		mockSensitiveRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.CreateDoguConfig("cas", originalSensitiveConfigs), nil)
+		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
+		var mergedSensitiveConfig regConfig.DoguConfig
+		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
+			mergedSensitiveConfig = config
+
+			return mergedSensitiveConfig, nil
+		})
+
+		cfg := []migration.DoguConfig{
+			{
+				Name: "cas",
+				NormalConfig: []migration.KeyValue{
+					{"key1", "exporter-value"},
+					{"sub/key/foo", "exporter-value"},
+					{"excludedkey1", "exporter-value"},
+					{"excluded/key/foo", "exporter-value"},
+				},
+				SensitiveConfig: []migration.KeyValue{
+					{"sensitive", "exporter-value"},
+					{"sensitivetoexclude", "exporter-value"},
+				},
+			},
+		}
+
+		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{
+			"key1":             "exporter-value",
+			"sub/key/foo":      "exporter-value",
+			"excludedkey1":     "importer-value",
+			"excluded/key/foo": "importer-value",
+		})
+		expectedSensitiveDoguCfg := regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{
+			"sensitive":          "exporter-value",
+			"sensitivetoexclude": "importer-value",
+		})
+
+		excludedConfigs := map[string][]string{
+			"cas": {"excludedkey1", "excluded/key/foo", "sensitivetoexclude"},
+		}
+		ci := &cesDoguConfigImporter{
+			doguConfigRepo:          mockNormalRepo,
+			sensitiveDoguConfigRepo: mockSensitiveRepo,
+			excludedDoguConfigKeys:  excludedConfigs,
+		}
+
+		err := ci.importDoguConfigs(testCtx, cfg)
+
+		require.NoError(t, err)
+		assert.Equal(t, mergedConfig.Config.GetAll(), expectedNormalDoguCfg.Config.GetAll())
+		assert.Equal(t, mergedSensitiveConfig.Config.GetAll(), expectedSensitiveDoguCfg.Config.GetAll())
 	})
 
 	t.Run("should fail import dogu configs", func(t *testing.T) {

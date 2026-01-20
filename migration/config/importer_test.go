@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -312,8 +313,9 @@ func TestNewConfigImporter(t *testing.T) {
 		mSensitiveRepo := newMockDoguConfigRepo(t)
 		mBackupScheduleClient := newMockBackupScheduleClient(t)
 		additionalExcludedConfiguration := []string{"excluded"}
+		excludedDoguConfigKeys := []configuration.DoguConfigurationKeys{{DoguName: "test", Keys: []string{"key1", "key2"}}}
 
-		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, additionalExcludedConfiguration)
+		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, additionalExcludedConfiguration, excludedDoguConfigKeys)
 
 		require.NotNil(t, importer)
 		assert.Equal(t, mConfigGetter, importer.getter)
@@ -324,6 +326,7 @@ func TestNewConfigImporter(t *testing.T) {
 		assert.Equal(t, basePath, importer.doguConfigImporter.(*cesDoguConfigImporter).dataBasePath)
 		assert.Equal(t, mDoguRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).doguConfigRepo)
 		assert.Equal(t, mSensitiveRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).sensitiveDoguConfigRepo)
+		assert.Equal(t, excludedDoguConfigKeys, importer.doguConfigImporter.(*cesDoguConfigImporter).excludedDoguConfigKeys)
 		assert.NotNil(t, importer.backupScheduleImporter)
 		assert.Equal(t, mBackupScheduleClient, importer.backupScheduleImporter.(*cesBackupScheduleImporter).backupScheduleClient)
 	})

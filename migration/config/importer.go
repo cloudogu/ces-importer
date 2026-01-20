@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"path"
@@ -23,6 +24,7 @@ type globalConfigRepo interface {
 
 type doguConfigRepo interface {
 	Create(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
+	Get(ctx context.Context, name dogu.SimpleName) (regConfig.DoguConfig, error)
 	SaveOrMerge(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	Delete(ctx context.Context, name dogu.SimpleName) error
 }
@@ -46,9 +48,15 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, additionalExcludedConfiguration []string) *ConfigImporter {
+func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, additionalExcludedConfiguration []string, excludedDoguConfigKeys []configuration.DoguConfigurationKeys) *ConfigImporter {
+	// map excluded keys to dogu name for easy retrieval
+	excludedConfigKeysByDogu := make(map[string][]string)
+	for _, configs := range excludedDoguConfigKeys {
+		excludedConfigKeysByDogu[configs.DoguName] = append(excludedConfigKeysByDogu[configs.DoguName], configs.Keys...)
+	}
+
 	gci := &cesGlobalConfigImporter{globalConfigRepo, additionalExcludedConfiguration}
-	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo}
+	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo, excludedConfigKeysByDogu}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
 	return &ConfigImporter{
