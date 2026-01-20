@@ -31,13 +31,6 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 		return fmt.Errorf("failed to get global config: %w", err)
 	}
 
-	configToKeep := make(map[regConfig.Key]regConfig.Value)
-	for key, value := range previousGlobalConfig.GetAll() {
-		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || matchesAnyKeyByPattern(key.String(), gci.additionalKeysToKeep) {
-			configToKeep[key] = value
-		}
-	}
-
 	err = gci.globalConfigRepo.Delete(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete global config: %w", err)
@@ -48,14 +41,9 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 		return fmt.Errorf("failed to create global config: %w", err)
 	}
 
-	for kkey, kval := range configToKeep {
-		slog.Debug("Setting previous global config-entry", "key", kkey, "value", kval)
-		newGlobalConfig, err := gc.Set(kkey, kval)
-		if err != nil {
-			return fmt.Errorf("failed to set previous config key %s: %w", kkey, err)
-		}
-
-		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+	gc, err = gci.addConfigToKeepToRegistry(previousGlobalConfig, gc)
+	if err != nil {
+		return err
 	}
 
 	// import config from exporter
@@ -85,4 +73,23 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 
 	slog.Info("...Successfully imported global config.")
 	return nil
+}
+
+func (gci *cesGlobalConfigImporter) addConfigToKeepToRegistry(previousGlobalConfig regConfig.GlobalConfig, gc regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
+	configToKeep := make(map[regConfig.Key]regConfig.Value)
+	for key, value := range previousGlobalConfig.GetAll() {
+		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || matchesAnyKeyByPattern(key.String(), gci.additionalKeysToKeep) {
+			configToKeep[key] = value
+		}
+	}
+	for kkey, kval := range configToKeep {
+		slog.Debug("Setting previous global config-entry", "key", kkey, "value", kval)
+		newGlobalConfig, err := gc.Set(kkey, kval)
+		if err != nil {
+			return regConfig.GlobalConfig{}, fmt.Errorf("failed to set previous config key %s: %w", kkey, err)
+		}
+
+		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+	}
+	return gc, nil
 }

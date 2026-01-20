@@ -315,7 +315,8 @@ func TestNewConfigImporter(t *testing.T) {
 		additionalExcludedConfiguration := []string{"excluded"}
 		excludedDoguConfigKeys := []configuration.DoguConfigurationKeys{{DoguName: "test", Keys: []string{"key1", "key2"}}}
 
-		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, additionalExcludedConfiguration, excludedDoguConfigKeys)
+		excludedConfig := ExcludedConfig{ExcludedGlobalConfigKeys: additionalExcludedConfiguration, ExcludedDoguConfigKeys: excludedDoguConfigKeys}
+		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, excludedConfig)
 
 		require.NotNil(t, importer)
 		assert.Equal(t, mConfigGetter, importer.getter)

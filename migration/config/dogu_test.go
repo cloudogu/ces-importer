@@ -621,6 +621,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 					{"sub/key/foo", "exporter-value"},
 					{"excludedkey1", "exporter-value"},
 					{"excluded/key/foo", "exporter-value"},
+					{"excluded/not-set", "exporter-value"},
 				},
 				SensitiveConfig: []migration.KeyValue{
 					{"sensitive", "exporter-value"},
@@ -641,7 +642,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		})
 
 		excludedConfigs := map[string][]string{
-			"cas": {"excludedkey1", "excluded/key/foo", "sensitivetoexclude"},
+			"cas": {"excludedkey1", "excluded/key/foo", "sensitivetoexclude", "excluded/not-set"},
 		}
 		ci := &cesDoguConfigImporter{
 			doguConfigRepo:          mockNormalRepo,

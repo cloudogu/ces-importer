@@ -48,14 +48,19 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, additionalExcludedConfiguration []string, excludedDoguConfigKeys []configuration.DoguConfigurationKeys) *ConfigImporter {
+type ExcludedConfig struct {
+	ExcludedGlobalConfigKeys []string
+	ExcludedDoguConfigKeys   []configuration.DoguConfigurationKeys
+}
+
+func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, excludedConfig ExcludedConfig) *ConfigImporter {
 	// map excluded keys to dogu name for easy retrieval
 	excludedConfigKeysByDogu := make(map[string][]string)
-	for _, configs := range excludedDoguConfigKeys {
+	for _, configs := range excludedConfig.ExcludedDoguConfigKeys {
 		excludedConfigKeysByDogu[configs.DoguName] = append(excludedConfigKeysByDogu[configs.DoguName], configs.Keys...)
 	}
 
-	gci := &cesGlobalConfigImporter{globalConfigRepo, additionalExcludedConfiguration}
+	gci := &cesGlobalConfigImporter{globalConfigRepo, excludedConfig.ExcludedGlobalConfigKeys}
 	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo, excludedConfigKeysByDogu}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
