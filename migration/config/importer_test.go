@@ -311,12 +311,12 @@ func TestNewConfigImporter(t *testing.T) {
 		mGlobalRepo := newMockGlobalConfigRepo(t)
 		mDoguRepo := newMockDoguConfigRepo(t)
 		mSensitiveRepo := newMockDoguConfigRepo(t)
+		configRepos := ConfigRepos{globalConfigRepo: mGlobalRepo, doguConfigRepo: mDoguRepo, sensitiveDoguConfigRepo: mSensitiveRepo}
 		mBackupScheduleClient := newMockBackupScheduleClient(t)
 		additionalExcludedConfiguration := []string{"excluded"}
 		excludedDoguConfigKeys := []configuration.DoguConfigurationKeys{{DoguName: "test", Keys: []string{"key1", "key2"}}}
 
-		excludedConfig := ExcludedConfig{ExcludedGlobalConfigKeys: additionalExcludedConfiguration, ExcludedDoguConfigKeys: excludedDoguConfigKeys}
-		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient, excludedConfig)
+		importer := NewConfigImporter(basePath, mConfigGetter, configRepos, mBackupScheduleClient, additionalExcludedConfiguration, excludedDoguConfigKeys)
 
 		require.NotNil(t, importer)
 		assert.Equal(t, mConfigGetter, importer.getter)

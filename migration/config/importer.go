@@ -48,20 +48,28 @@ type ConfigImporter struct {
 	backupScheduleImporter backupScheduleImporter
 }
 
-type ExcludedConfig struct {
-	ExcludedGlobalConfigKeys []string
-	ExcludedDoguConfigKeys   []configuration.DoguConfigurationKeys
+type ConfigRepos struct {
+	globalConfigRepo        globalConfigRepo
+	doguConfigRepo          doguConfigRepo
+	sensitiveDoguConfigRepo doguConfigRepo
 }
 
-func NewConfigImporter(dataBasePath string, configGetter configGetter, globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo, backupScheduleClient backupScheduleClient, excludedConfig ExcludedConfig) *ConfigImporter {
-	// map excluded keys to dogu name for easy retrieval
+func NewConfigRepos(globalConfigRepo globalConfigRepo, doguConfigRepo doguConfigRepo, sensitiveDoguConfigRepo doguConfigRepo) *ConfigRepos {
+	return &ConfigRepos{
+		globalConfigRepo:        globalConfigRepo,
+		doguConfigRepo:          doguConfigRepo,
+		sensitiveDoguConfigRepo: sensitiveDoguConfigRepo,
+	}
+}
+
+func NewConfigImporter(dataBasePath string, configGetter configGetter, repos ConfigRepos, backupScheduleClient backupScheduleClient, excludedGlobalConfigKeys []string, excludedDoguConfiguration []configuration.DoguConfigurationKeys) *ConfigImporter {
 	excludedConfigKeysByDogu := make(map[string][]string)
-	for _, configs := range excludedConfig.ExcludedDoguConfigKeys {
+	for _, configs := range excludedDoguConfiguration {
 		excludedConfigKeysByDogu[configs.DoguName] = append(excludedConfigKeysByDogu[configs.DoguName], configs.Keys...)
 	}
 
-	gci := &cesGlobalConfigImporter{globalConfigRepo, excludedConfig.ExcludedGlobalConfigKeys}
-	dci := &cesDoguConfigImporter{dataBasePath, doguConfigRepo, sensitiveDoguConfigRepo, excludedConfigKeysByDogu}
+	gci := &cesGlobalConfigImporter{repos.globalConfigRepo, excludedGlobalConfigKeys}
+	dci := &cesDoguConfigImporter{dataBasePath, repos.doguConfigRepo, repos.sensitiveDoguConfigRepo, excludedConfigKeysByDogu}
 	bsi := &cesBackupScheduleImporter{backupScheduleClient: backupScheduleClient}
 
 	return &ConfigImporter{
