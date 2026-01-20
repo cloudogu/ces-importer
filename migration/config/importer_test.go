@@ -326,7 +326,7 @@ func TestNewConfigImporter(t *testing.T) {
 		assert.Equal(t, basePath, importer.doguConfigImporter.(*cesDoguConfigImporter).dataBasePath)
 		assert.Equal(t, mDoguRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).doguConfigRepo)
 		assert.Equal(t, mSensitiveRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).sensitiveDoguConfigRepo)
-		assert.Equal(t, excludedDoguConfigKeys, importer.doguConfigImporter.(*cesDoguConfigImporter).excludedDoguConfigKeys)
+		assert.Equal(t, map[string][]string{"test": {"key1", "key2"}}, importer.doguConfigImporter.(*cesDoguConfigImporter).excludedDoguConfigKeys)
 		assert.NotNil(t, importer.backupScheduleImporter)
 		assert.Equal(t, mBackupScheduleClient, importer.backupScheduleImporter.(*cesBackupScheduleImporter).backupScheduleClient)
 	})
