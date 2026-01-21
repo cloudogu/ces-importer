@@ -7,6 +7,8 @@ import (
 
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	"slices"
+	"strings"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -78,7 +80,7 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 func (gci *cesGlobalConfigImporter) addConfigToKeepToRegistry(previousGlobalConfig regConfig.GlobalConfig, gc regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
 	configToKeep := make(map[regConfig.Key]regConfig.Value)
 	for key, value := range previousGlobalConfig.GetAll() {
-		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || matchesAnyKeyByPattern(key.String(), gci.additionalKeysToKeep) {
+		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || slices.Contains(gci.additionalKeysToKeep, strings.TrimPrefix(key.String(), "/")) {
 			configToKeep[key] = value
 		}
 	}

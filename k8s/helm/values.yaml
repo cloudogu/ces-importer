@@ -85,17 +85,17 @@ config:
     # import. For these configuration keys, the importing system will keep the current value.
     # example:
     #   excludeConfigurations:
-    #   - import/key
-    #   - import/otherKey
+    #   - default_dogu
+    #   - otherKey
     excludedConfigurationKeys: []
     # excludedDoguConfigurations contains the names of configuration keys that are dogu-specific to exclude from the
     # import, grouped by dogu name
     # example:
     #   excludedDoguConfigurations:
-    #     - dogu: "jenkins"
+    #     - dogu: "ldap"
     #       keys:
-    #       - "path/excluded1"
-    #       - "path/excluded2"
+    #       - admin_mail
+    #       - admin_username
     excludedDoguConfigurationKeys: []
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:

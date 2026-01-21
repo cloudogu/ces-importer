@@ -152,7 +152,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 
 		importerConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{
 			"path/to/ignoredKey": "importer-value",
-			"ignoredKey":         "importer-value",
+			"/default_dogu":      "importer-value",
 			"path/to/key1":       "importer-value",
 			"key2":               "importer-value",
 		})
@@ -174,19 +174,19 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 			"path/to/key1":       "exporter-value",
 			"key2":               "exporter-value",
 			"path/to/ignoredKey": "importer-value",
-			"ignoredKey":         "importer-value",
+			"default_dogu":       "importer-value",
 		})
 
 		exporterConfig := []migration.KeyValue{
 			{"path/to/key1", "exporter-value"},
 			{"key2", "exporter-value"},
-			{"path/to/ignoredKey", "exporter-value"},
-			{"ignoredKey", "exporter-value"},
+			{"/path/to/ignoredKey", "exporter-value"},
+			{"default_dogu", "exporter-value"},
 		}
 
 		importer := &cesGlobalConfigImporter{
 			globalConfigRepo:     mockConfigRepo,
-			additionalKeysToKeep: []string{"path/to/ignoredKey", "ignoredKey"},
+			additionalKeysToKeep: []string{"path/to/ignoredKey", "default_dogu"},
 		}
 
 		// when

@@ -653,8 +653,8 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		err := ci.importDoguConfigs(testCtx, cfg)
 
 		require.NoError(t, err)
-		assert.Equal(t, mergedConfig.Config.GetAll(), expectedNormalDoguCfg.Config.GetAll())
-		assert.Equal(t, mergedSensitiveConfig.Config.GetAll(), expectedSensitiveDoguCfg.Config.GetAll())
+		assert.Equal(t, expectedNormalDoguCfg.Config.GetAll(), mergedConfig.Config.GetAll())
+		assert.Equal(t, expectedSensitiveDoguCfg.Config.GetAll(), mergedSensitiveConfig.Config.GetAll())
 	})
 
 	t.Run("should fail import dogu configs", func(t *testing.T) {
