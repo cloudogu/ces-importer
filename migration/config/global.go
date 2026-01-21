@@ -54,7 +54,7 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 			slog.Debug("Ignoring global config-key from global exclude list", "key", kv.Key)
 			continue
 		}
-		if matchesAnyKeyByPattern(kv.Key, gci.additionalKeysToKeep) {
+		if slices.Contains(gci.additionalKeysToKeep, strings.TrimPrefix(kv.Key, "/")) {
 			slog.Debug("Ignoring global config-key from additional exclude list", "key", kv.Key)
 			continue
 		}

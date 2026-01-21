@@ -118,7 +118,7 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 	for keyToSet, valueToSet := range configValuesToSet {
 		registryDoguConfig, err = setValueInRegistry(doguName, registryDoguConfig, keyToSet, valueToSet)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to set key %s: %w\n", keyToSet.String(), err)
 		}
 	}
 
