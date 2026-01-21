@@ -102,13 +102,7 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 		keyToSet := regConfig.Key(kv.Key)
 		if len(excludedKeys) > 0 {
 			if slices.Contains(excludedKeys, strings.TrimPrefix(keyToSet.String(), "/")) {
-				original, exists := originalValues.Get(keyToSet)
-				if exists {
-					slog.Debug("not importing config-key from exclude list, setting to old value", "key", keyToSet.String())
-					configValuesToSet[keyToSet] = original
-				} else {
-					slog.Warn("config-key was excluded from import and not set in original config, it will not be created by import", "key", keyToSet.String())
-				}
+				setOriginalValueForKey(originalValues, keyToSet, configValuesToSet)
 				continue
 			}
 		}
@@ -128,6 +122,16 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 	}
 
 	return nil
+}
+
+func setOriginalValueForKey(originalValues regConfig.DoguConfig, keyToSet regConfig.Key, configValuesToSet map[regConfig.Key]regConfig.Value) {
+	original, exists := originalValues.Get(keyToSet)
+	if exists {
+		slog.Debug("not importing config-key from exclude list, setting to old value", "key", keyToSet.String())
+		configValuesToSet[keyToSet] = original
+	} else {
+		slog.Warn("config-key was excluded from import and not set in original config, it will not be created by import", "key", keyToSet.String())
+	}
 }
 
 func setValueInRegistry(doguName doguCommons.SimpleName, registryDoguConfig regConfig.DoguConfig, key regConfig.Key, value regConfig.Value) (regConfig.DoguConfig, error) {
