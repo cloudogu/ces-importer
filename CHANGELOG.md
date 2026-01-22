@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -  added new configuration option in values.yaml: `config.job.excludedDogus` to exclude dogus from migration
 - [#124] exclude configuration values from import
   - added new configuration options in values.yaml to exclude configurations
-  - new option `config.job.excludedConfigurationKeys` for excluding global configuration keys from being imported
+  - new option `config.job.excludedGlobalConfigurationKeys` for excluding global configuration keys from being imported
   - new option `config.job.excludedDoguConfigurationKeys` for excluding dogu specific configuration keys from being imported
 
 ## [v2.1.0] - 2026-01-05

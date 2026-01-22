@@ -47,7 +47,7 @@ func TestReadJobConfig(t *testing.T) {
 				"DOGU_EXCLUDE_1",
 				"DOGU_EXCLUDE_2",
 			},
-			AdditionalExcludedConfigurationKeys: []string{
+			AdditionalExcludedGlobalConfigurationKeys: []string{
 				"CONFIGURATION_EXCLUDE_1",
 				"CONFIGURATION_EXCLUDE_2",
 			},

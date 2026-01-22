@@ -32,6 +32,8 @@ type cesDoguConfigImporter struct {
 	excludedDoguConfigKeys  map[string][]string
 }
 
+// importDoguConfigs imports the configurations from the supplied array of  migration.DoguConfig objects
+// into the appropiate dogu configuration repositories for the individual dogus
 func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config []migration.DoguConfig) error {
 	slog.Info("Importing dogu config...")
 
@@ -49,6 +51,8 @@ func (dci *cesDoguConfigImporter) importDoguConfigs(ctx context.Context, config 
 	return nil
 }
 
+// importDoguConfig imports a single dogu configuration from a migration.DoguConfig object into the
+// appropriate dogu configuration repositories for sensitive, normal, and local configuration
 func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc migration.DoguConfig) error {
 	doguName := dc.Name
 
@@ -73,6 +77,9 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc migra
 	return nil
 }
 
+// importDoguConfigWithRepo imports a dogu configuration into a doguConfigRepo by deleting the original repo
+// and creating and then filling a new one. Dogu configurations specifically excluded are set to the original values
+// or skipped if they didn't exist before the import
 func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConfig []migration.KeyValue, repo doguConfigRepo, excludedKeys []string) error {
 	doguName := doguCommons.SimpleName(dogu)
 
@@ -124,16 +131,20 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 	return nil
 }
 
+// setOriginalValueForKey sets the value of a key to the original value from before the import if the key is
+// marked as being excluded from importing. A warning is logged if the key was not set before the import and in
+// that case, the value will not be set in the dogu configuration
 func setOriginalValueForKey(originalValues regConfig.DoguConfig, keyToSet regConfig.Key, configValuesToSet map[regConfig.Key]regConfig.Value) {
 	original, exists := originalValues.Get(keyToSet)
 	if exists {
-		slog.Debug("not importing config-key from exclude list, setting to old value", "key", keyToSet.String())
+		slog.Debug("not importing config-key from exclude list, setting to old value", "doguName", originalValues.DoguName, "key", keyToSet.String())
 		configValuesToSet[keyToSet] = original
 	} else {
-		slog.Warn("config-key was excluded from import and not set in original config, it will not be created by import", "key", keyToSet.String())
+		slog.Warn("config-key was excluded from import and not set in original config, it will not be created by import", "doguName", originalValues.DoguName, "key", keyToSet.String())
 	}
 }
 
+// setValueInRegistry sets a key-value pair in the dogu configuration registry
 func setValueInRegistry(doguName doguCommons.SimpleName, registryDoguConfig regConfig.DoguConfig, key regConfig.Key, value regConfig.Value) (regConfig.DoguConfig, error) {
 	regKey := regConfig.Key(key)
 	slog.Debug("Setting dogu config", "key", key, "dogu", doguName)
