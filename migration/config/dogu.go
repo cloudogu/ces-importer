@@ -107,11 +107,9 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 
 	for _, kv := range exporterDoguConfig {
 		keyToSet := regConfig.Key(kv.Key)
-		if len(excludedKeys) > 0 {
-			if slices.Contains(excludedKeys, strings.TrimPrefix(keyToSet.String(), "/")) {
-				setOriginalValueForKey(originalValues, keyToSet, configValuesToSet)
-				continue
-			}
+		if slices.Contains(excludedKeys, strings.TrimPrefix(keyToSet.String(), "/")) {
+			setOriginalValueForKey(originalValues, keyToSet, configValuesToSet)
+			continue
 		}
 		configValuesToSet[keyToSet] = regConfig.Value(kv.Value)
 	}

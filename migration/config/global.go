@@ -82,16 +82,14 @@ func (gci *cesGlobalConfigImporter) addConfigToKeepToRegistry(previousGlobalConf
 	for key, value := range previousGlobalConfig.GetAll() {
 		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || slices.Contains(gci.additionalKeysToKeep, strings.TrimPrefix(key.String(), "/")) {
 			configToKeep[key] = value
-		}
-	}
-	for kkey, kval := range configToKeep {
-		slog.Debug("Setting previous global config-entry", "key", kkey, "value", kval)
-		newGlobalConfig, err := gc.Set(kkey, kval)
-		if err != nil {
-			return regConfig.GlobalConfig{}, fmt.Errorf("failed to set previous config key %s: %w", kkey, err)
-		}
+			slog.Debug("Setting previous global config-entry", "key", key.String(), "value", value.String())
+			newGlobalConfig, err := gc.Set(key, value)
+			if err != nil {
+				return regConfig.GlobalConfig{}, fmt.Errorf("failed to set previous config key %s: %w", key.String(), err)
+			}
 
-		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+			gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+		}
 	}
 	return gc, nil
 }
