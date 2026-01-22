@@ -77,6 +77,8 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	return nil
 }
 
+// addConfigToKeepToRegistry adds the config entries from the previous global config to the new global config for the
+// keys that should not be overwritten by the exporting system configuration
 func (gci *cesGlobalConfigImporter) addConfigToKeepToRegistry(previousGlobalConfig regConfig.GlobalConfig, gc regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
 	configToKeep := make(map[regConfig.Key]regConfig.Value)
 	for key, value := range previousGlobalConfig.GetAll() {
