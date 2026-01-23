@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v2.2.0] - 2026-01-23
 ### Changed
 - [#114] reword dogu and component validation messages
 - [#116] default smtp address is now smtp.example.com instead of smtp.mailserver.com
