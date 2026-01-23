@@ -43,6 +43,29 @@ func TestReadJobConfig(t *testing.T) {
 		// job
 		assert.Equal(t, JobConfig{
 			DoguVolumeBasePath: "/data",
+			AdditionalExcludedDogus: []string{
+				"DOGU_EXCLUDE_1",
+				"DOGU_EXCLUDE_2",
+			},
+			AdditionalExcludedGlobalConfigurationKeys: []string{
+				"CONFIGURATION_EXCLUDE_1",
+				"CONFIGURATION_EXCLUDE_2",
+			},
+			ExcludedDoguConfigurations: []DoguConfigurationKeys{
+				{
+					DoguName: "dogu1",
+					Keys: []string{
+						"KEY_1",
+						"KEY_2",
+					},
+				},
+				{
+					DoguName: "dogu2",
+					Keys: []string{
+						"KEY_3",
+					},
+				},
+			},
 			Exclude: []ExcludePattern{
 				{
 					DoguName: "jenkins",

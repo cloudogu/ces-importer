@@ -2,11 +2,31 @@ package migration
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/watch"
 )
+
+type fakeWatcher struct {
+	resultChan chan watch.Event
+}
+
+func newFakeWatcher() *fakeWatcher {
+	ch := make(chan watch.Event)
+	close(ch) // Sofort schließen, damit der Watcher stoppt
+	return &fakeWatcher{resultChan: ch}
+}
+
+func (f *fakeWatcher) Stop() {
+	// Nichts zu tun, Channel ist bereits geschlossen
+}
+
+func (f *fakeWatcher) ResultChan() <-chan watch.Event {
+	return f.resultChan
+}
 
 func TestRun(t *testing.T) {
 	type inFields struct {
@@ -17,10 +37,11 @@ func TestRun(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		in          inFields
-		expErr      bool
-		errContains string
+		name          string
+		in            inFields
+		expErr        bool
+		errContains   string
+		createWatcher bool
 	}{
 		{
 			name: "Run delta and final migration",
@@ -34,8 +55,9 @@ func TestRun(t *testing.T) {
 					m.EXPECT().RunMigration(mock.Anything).Return(nil)
 				},
 			},
-			expErr:      false,
-			errContains: "",
+			expErr:        false,
+			errContains:   "",
+			createWatcher: true,
 		},
 		{
 			name: "Delta migrations fails but final migration succeeds",
@@ -55,8 +77,9 @@ func TestRun(t *testing.T) {
 					})
 				},
 			},
-			expErr:      false,
-			errContains: "",
+			expErr:        false,
+			errContains:   "",
+			createWatcher: true,
 		},
 		{
 			name: "Dont run any migration if final timestamp is in the past",
@@ -68,8 +91,9 @@ func TestRun(t *testing.T) {
 				regularCron: "* * * * * *",
 				setupMock:   func(m *mockMigrationRunner) {},
 			},
-			expErr:      false,
-			errContains: "",
+			expErr:        false,
+			errContains:   "",
+			createWatcher: false,
 		},
 		{
 			name: "Dont run final migration if final timestamp is empty",
@@ -83,8 +107,9 @@ func TestRun(t *testing.T) {
 					m.On("RunMigration", mock.Anything).Maybe().Return(nil)
 				},
 			},
-			expErr:      false,
-			errContains: "",
+			expErr:        false,
+			errContains:   "",
+			createWatcher: false,
 		},
 		{
 			name: "Fallback to empty final timestamp if final timestamp is invalid",
@@ -98,8 +123,9 @@ func TestRun(t *testing.T) {
 					m.On("RunMigration", mock.Anything).Maybe().Return(nil)
 				},
 			},
-			expErr:      false,
-			errContains: "",
+			expErr:        false,
+			errContains:   "",
+			createWatcher: false,
 		},
 		{
 			name: "Error: Migration fails if cron is invalid",
@@ -111,8 +137,9 @@ func TestRun(t *testing.T) {
 				regularCron: "invalid",
 				setupMock:   func(m *mockMigrationRunner) {},
 			},
-			expErr:      true,
-			errContains: "failed to create cron looper for expression",
+			expErr:        true,
+			errContains:   "failed to create cron looper for expression",
+			createWatcher: false,
 		},
 		{
 			name: "Error: Migration fails if context is cancelled before final migration is started",
@@ -126,8 +153,9 @@ func TestRun(t *testing.T) {
 					m.On("RunMigration", mock.Anything).Maybe().Return(nil)
 				},
 			},
-			expErr:      true,
-			errContains: "received shutdown signal before final migration has been completed",
+			expErr:        true,
+			errContains:   "received shutdown signal before final migration has been completed",
+			createWatcher: false,
 		},
 		{
 			name: "Error: Final migrations fails",
@@ -147,8 +175,9 @@ func TestRun(t *testing.T) {
 					})
 				},
 			},
-			expErr:      true,
-			errContains: "failed to run final migration",
+			expErr:        true,
+			errContains:   "failed to run final migration",
+			createWatcher: true,
 		},
 	}
 
@@ -160,7 +189,12 @@ func TestRun(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), tt.in.ctxTimeout)
 			defer cancel()
 
-			err := Run(ctx, tt.in.timestamp(), tt.in.regularCron, true, migrationRunnerMock)
+			configmapClient := NewMockConfigmapClient(t)
+			if tt.createWatcher {
+				configmapClient.EXPECT().Watch(mock.Anything, mock.Anything).Return(newFakeWatcher(), nil)
+			}
+
+			err := Run(ctx, tt.in.timestamp(), tt.in.regularCron, true, migrationRunnerMock, configmapClient)
 
 			assert.Equal(t, tt.expErr, err != nil)
 			if err != nil {

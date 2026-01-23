@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/cloudogu/ces-importer/api/exporter"
 )
 
 var testCtx, _ = context.WithTimeout(context.Background(), 1*time.Second)
@@ -106,13 +104,6 @@ func Test_doguClient_StopDogu(t *testing.T) {
 			Stopped: false,
 		}}
 
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, v2DoguJenkins, mock.Anything, mock.Anything).Return(v2DoguJenkins, nil)
@@ -120,7 +111,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		sut := &DoguControl{doguCli: doguCli}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu.Name)
+		err := sut.StopDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
@@ -135,18 +126,10 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
-
 		sut := &DoguControl{doguCli}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu.Name)
+		err := sut.StopDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
@@ -155,14 +138,6 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		// given
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(nil, jenkinsDoguNotFoundErr)
-
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
 
 		sut := &DoguControl{doguCli}
 
@@ -176,7 +151,7 @@ func Test_doguClient_StopDogu(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := sut.StopDogu(testCtx, dogu.Name)
+		err := sut.StopDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
@@ -187,14 +162,10 @@ func Test_doguClient_StopDogu(t *testing.T) {
 	})
 	t.Run("should return with error on misconfigured dogu name", func(t *testing.T) {
 		// given
-		dogu := exporter.Dogu{
-			Name: "missingnamespacedoguname",
-		}
-
 		sut := &DoguControl{nil}
 
 		// when
-		err := sut.StopDogu(testCtx, dogu.Name)
+		err := sut.StopDogu(testCtx, "missingnamespacedoguname")
 
 		// then
 		require.Error(t, err)
@@ -214,18 +185,10 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 		doguCli.EXPECT().UpdateSpecWithRetry(testCtx, v2DoguJenkins, mock.Anything, mock.Anything).Return(v2DoguJenkins, nil)
 
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
-
 		sut := &DoguControl{doguCli}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu.Name)
+		err := sut.StartDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
@@ -240,33 +203,16 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(v2DoguJenkins, nil)
 
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
-
 		sut := &DoguControl{doguCli}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu.Name)
+		err := sut.StartDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
 	})
 	t.Run("should return without error but log warning when dogu was removed in the meantime", func(t *testing.T) {
 		// given
-
-		dogu := exporter.Dogu{
-			Name:    "official/jenkins",
-			Version: "2.492.3-4",
-			Volume: exporter.DoguVolume{
-				SizeInBytes: 2 * gibiByte,
-			},
-		}
-
 		doguCli := NewMockDoguInterface(t)
 		doguCli.EXPECT().Get(testCtx, "jenkins", mock.Anything).Return(nil, jenkinsDoguNotFoundErr)
 
@@ -282,7 +228,7 @@ func Test_doguClient_StartDogu(t *testing.T) {
 		slog.SetDefault(logger)
 
 		// when
-		err := sut.StartDogu(testCtx, dogu.Name)
+		err := sut.StartDogu(testCtx, "official/jenkins")
 
 		// then
 		require.NoError(t, err)
@@ -293,14 +239,10 @@ func Test_doguClient_StartDogu(t *testing.T) {
 	})
 	t.Run("should return with error on misconfigured dogu name", func(t *testing.T) {
 		// given
-		dogu := exporter.Dogu{
-			Name: "missingnamespacedoguname",
-		}
-
 		sut := &DoguControl{nil}
 
 		// when
-		err := sut.StartDogu(testCtx, dogu.Name)
+		err := sut.StartDogu(testCtx, "missingnamespacedoguname")
 
 		// then
 		require.Error(t, err)

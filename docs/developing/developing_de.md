@@ -15,6 +15,20 @@ werden.
 Um ihn wieder zu deinstallieren, kann der Befehl `make helm-delete` verwendet werden.
 
 ### Mails versenden
-Der Importer versendet nach jeder Migration automatisch Benachrichtigungsmails. Das Ziel davon wird über die values.yaml gesteuert.
-Standardmäßig ist es so konfiguriert, dass es auf einen Mailhog auf dem Host versendet wird. Dafür muss nichts konfiguriert werden.
-Um den Mailhog zu starten, muss auf dem Host `docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog` ausgeführt werden.
+Der Importer kann nach jeder Migration automatisch Benachrichtigungsmails versenden. Die Konfiguration der Empfänger 
+erfolgt über die values.yaml Datei. Standardmäßig ist der Mailversand deaktiviert. Wird er aktiviert, so ist er so 
+konfiguriert, dass es auf einen Mailhog auf dem Host versendet wird. Dafür muss nichts weiter konfiguriert werden. 
+Um den Mailhog zu starten, muss auf dem Host`docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog` ausgeführt werden.
+
+### Migration manuell starten
+Durch das Anlegen einer Configmap mit dem Label `k8s.cloudogu.com/start-migration` kann eine Migration manuell 
+gestartet werden.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: start-migration
+  labels:
+    k8s.cloudogu.com/start-migration: "true"
+```

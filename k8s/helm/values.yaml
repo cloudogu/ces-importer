@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 2.1.0
+    tag: 2.2.0
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer-migration-job
-    tag: 2.1.0
+    tag: 2.2.0
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -74,6 +74,32 @@ config:
     # Default: True
     executePreflightCheck: true
   job:
+    # excludedDogus contains the names of dogus to exclude from the import. This is in addition to the dogus that are
+    # excluded because they do not exist as dogus on multinode clusters: monitoring, backup, and registrator
+    # example:
+    #   excludedDogus:
+    #   - jenkins
+    #   - cockpit
+    excludedDogus: []
+    # excludedGlobalConfigurationKeys contains the names of configuration keys that are not dogu-specific to exclude from the
+    # import. For these configuration keys, the importing system will keep the current value. The keys in this list are
+    # added to the keys that are always excluded from the import, those will not be ovrwritten by this configuration.
+    # Always excluded keys are: fqdn, alternativeFQDNs, maintenance, and those starting with proxy/, k8s/ or
+    # certificate/
+    # example:
+    #   excludedGlobalConfigurationKeys:
+    #   - default_dogu
+    #   - otherKey
+    excludedGlobalConfigurationKeys: []
+    # excludedDoguConfigurations contains the names of configuration keys that are dogu-specific to exclude from the
+    # import, grouped by dogu name
+    # example:
+    #   excludedDoguConfigurations:
+    #     - dogu: "ldap"
+    #       keys:
+    #       - admin_mail
+    #       - admin_username
+    excludedDoguConfigurationKeys: []
     # exclude contains dogus with a pattern to exclude specific files during the import
     # example:
     #   exclude:
@@ -85,8 +111,11 @@ config:
     # verbose sets the migrator to verbose logging
     verbose: false
   smtp:
+    # enabled controls whether email notifications are sent.
+    # Default: false
+    enabled: false
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
-    server: smtp.mailserver.com
+    server: smtp.example.com
     # The port the SMTP server listens on (25, 587 for TLS, 1025 for MailHog/dev)
     port: 25
     # Optional: username for SMTP authentication (leave empty if not required)

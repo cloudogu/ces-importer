@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.2.0] - 2026-01-23
+### Changed
+- [#114] reword dogu and component validation messages
+- [#116] default smtp address is now smtp.example.com instead of smtp.mailserver.com
+- [#121] add a configmap watcher for starting imports manually
+
+### Added 
+- [#116] make mail delivery after import optional
+  - added new configuration option in values.yaml: `config.smtp.enabled` with default value `false`
+- [#120] add configuration to exclude dogus
+  -  added new configuration option in values.yaml: `config.job.excludedDogus` to exclude dogus from migration
+- [#124] exclude configuration values from import
+  - added new configuration options in values.yaml to exclude configurations
+  - new option `config.job.excludedGlobalConfigurationKeys` for excluding global configuration keys from being imported
+  - new option `config.job.excludedDoguConfigurationKeys` for excluding dogu specific configuration keys from being imported
+
 ## [v2.1.0] - 2026-01-05
 ### Changed
 - [#112] Stop blueprint during migration

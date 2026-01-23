@@ -7,6 +7,8 @@ import (
 
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	"slices"
+	"strings"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -19,7 +21,8 @@ var globalConfigKeysToKeep = []string{
 }
 
 type cesGlobalConfigImporter struct {
-	globalConfigRepo globalConfigRepo
+	globalConfigRepo     globalConfigRepo
+	additionalKeysToKeep []string
 }
 
 func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config migration.GlobalConfig) error {
@@ -28,13 +31,6 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	previousGlobalConfig, err := gci.globalConfigRepo.Get(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get global config: %w", err)
-	}
-
-	configToKeep := make(map[regConfig.Key]regConfig.Value)
-	for key, value := range previousGlobalConfig.GetAll() {
-		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) {
-			configToKeep[key] = value
-		}
 	}
 
 	err = gci.globalConfigRepo.Delete(ctx)
@@ -47,20 +43,19 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 		return fmt.Errorf("failed to create global config: %w", err)
 	}
 
-	for kkey, kval := range configToKeep {
-		slog.Debug("Setting previous global config-entry", "key", kkey, "value", kval)
-		newGlobalConfig, err := gc.Set(kkey, kval)
-		if err != nil {
-			return fmt.Errorf("failed to set previous config key %s: %w", kkey, err)
-		}
-
-		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+	gc, err = gci.addConfigToKeepToRegistry(previousGlobalConfig, gc)
+	if err != nil {
+		return err
 	}
 
 	// import config from exporter
 	for _, kv := range config {
 		if matchesAnyKeyByPattern(kv.Key, globalConfigKeysToKeep) {
-			slog.Debug("Ignoring global config-key", "key", kv.Key)
+			slog.Debug("Ignoring global config-key from global exclude list", "key", kv.Key)
+			continue
+		}
+		if slices.Contains(gci.additionalKeysToKeep, strings.TrimPrefix(kv.Key, "/")) {
+			slog.Debug("Ignoring global config-key from additional exclude list", "key", kv.Key)
 			continue
 		}
 
@@ -80,4 +75,23 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 
 	slog.Info("...Successfully imported global config.")
 	return nil
+}
+
+// addConfigToKeepToRegistry adds the config entries from the previous global config to the new global config for the
+// keys that should not be overwritten by the exporting system configuration
+func (gci *cesGlobalConfigImporter) addConfigToKeepToRegistry(previousGlobalConfig regConfig.GlobalConfig, gc regConfig.GlobalConfig) (regConfig.GlobalConfig, error) {
+	configToKeep := make(map[regConfig.Key]regConfig.Value)
+	for key, value := range previousGlobalConfig.GetAll() {
+		if matchesAnyKeyByPattern(key.String(), globalConfigKeysToKeep) || slices.Contains(gci.additionalKeysToKeep, strings.TrimPrefix(key.String(), "/")) {
+			configToKeep[key] = value
+			slog.Debug("Setting previous global config-entry", "key", key.String(), "value", value.String())
+			newGlobalConfig, err := gc.Set(key, value)
+			if err != nil {
+				return regConfig.GlobalConfig{}, fmt.Errorf("failed to set previous config key %s: %w", key.String(), err)
+			}
+
+			gc = regConfig.GlobalConfig{Config: newGlobalConfig}
+		}
+	}
+	return gc, nil
 }

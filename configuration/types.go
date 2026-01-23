@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	excludedDogus = []string{
+	globallyExcludedDogus = []string{
 		"premium/monitoring",
 		"premium/backup",
 		"official/registrator",
@@ -164,8 +164,24 @@ type ExcludePattern struct {
 	Pattern []string `yaml:"pattern" validate:"gt=0,dive,required"`
 }
 
+// DoguConfigurationKeys contains a list of configuration keys that should not be imported for a specific dogu
+type DoguConfigurationKeys struct {
+	// DoguName specifies the name of the dogu for which the specific keys should not be imported.
+	DoguName string `yaml:"dogu" validate:"required"`
+	// Keys specifies the configuration key names for the excluded configuration values.
+	Keys []string `yaml:"keys" validate:"gt=0,dive,required"`
+}
+
 // JobConfig contains the configuration data for the job container.
 type JobConfig struct {
+	// AdditionalExcludedDogus specifies dogus that should be excluded from the migration in
+	// addition to the globally excluded dogus
+	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
+	// AdditionalExcludedConfigurations specifies global configurations that should be excluded from the migration
+	// in addition to configurations that are already being excluded
+	AdditionalExcludedGlobalConfigurationKeys []string `yaml:"excludedGlobalConfigurationKeys"`
+	// ExcludedDoguConfigurations defines specific Dogu configurations to be excluded from the migration process
+	ExcludedDoguConfigurations []DoguConfigurationKeys `yaml:"excludedDoguConfigurationKeys" validate:"omitempty,dive"`
 	// DoguVolumeBasePath specifies the base path for the Dogu volumes mounted in the job.
 	DoguVolumeBasePath string `yaml:"doguVolumeBasePath" validate:"required"`
 	// Exclude specifies a list of dogus for which specific files should not be synchronized.
@@ -176,6 +192,8 @@ type JobConfig struct {
 
 // Smtp holds SMTP server configuration details required for sending emails.
 type Smtp struct {
+	// Enabled indicates whether an email should be sent
+	Enabled bool `yaml:"enabled"`
 	// SMTP server address (e.g., smtp.example.com)
 	Server string `yaml:"server" validate:"omitempty,hostname_rfc1123"`
 	// SMTP server port (default is "25" if not specified)
@@ -248,7 +266,7 @@ func joinValidationErrors(err error) error {
 	return allVErrors
 }
 
-// GetExcludedDogus is a getter for the excluded dogus to ensure immutability
-func GetExcludedDogus() []string {
-	return append([]string(nil), excludedDogus...)
+// GetGloballyExcludedDogus is a getter for the excluded dogus to ensure immutability
+func GetGloballyExcludedDogus() []string {
+	return append([]string(nil), globallyExcludedDogus...)
 }

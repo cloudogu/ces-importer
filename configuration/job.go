@@ -51,8 +51,10 @@ func ReadJobConfig() (Job, error) {
 		return Job{}, fmt.Errorf("failed to read job configuration: %w", err)
 	}
 
+	excludedDogus := append(GetGloballyExcludedDogus(), jobConfig.AdditionalExcludedDogus...)
+
 	generalConfig := General{
-		ExcludedDogus: GetExcludedDogus(),
+		ExcludedDogus: excludedDogus,
 		Namespace:     namespace,
 	}
 

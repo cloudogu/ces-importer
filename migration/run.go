@@ -4,18 +4,35 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudogu/ces-importer/cron"
 	"log/slog"
 	"sync/atomic"
+
+	"github.com/cloudogu/ces-importer/cron"
+	"github.com/cloudogu/ces-importer/migration/manual"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type migrationRunner interface {
 	RunMigration(context.Context) error
 }
 
+type ConfigmapClient interface {
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+}
+
 // Run is the main function to run the migration initiating the delta and final migration
-func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner) error {
+func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN bool, runner migrationRunner, cmc ConfigmapClient) error {
 	var migrationRunning atomic.Bool
+
+	// start the configmap watcher async
+	go func() {
+		err := manual.StartManualMigrationConfigmapWatcher(ctx, cmc, "ecosystem", runner, &migrationRunning)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("Configmap watcher stopped: %v", err))
+		}
+	}()
 
 	finalTimestamp, err := ParseFinalTimestamp(finalTimestampStr)
 	if err != nil {
@@ -44,14 +61,11 @@ func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN 
 		slog.Info("No valid final migration timestamp configured. Final migration will NOT run.")
 		// Wait for context to be done
 		<-ctx.Done()
-
 		slog.Info("Received shutdown signal, stopping infinite delta migration loop.")
-
 		return nil
 	}
 
 	slog.Info("Scheduled final migration", "startTime", finalTimestamp.String())
-
 	doneFinalMigration := make(chan error)
 
 	go func() {
@@ -75,6 +89,10 @@ func Run(ctx context.Context, finalTimestampStr, regularCron string, changeFQDN 
 
 func runDeltaMigration(finalTimestamp FinalTimestamp, runner migrationRunner, migrationRunning *atomic.Bool) cron.JobFunc {
 	return func(ctx context.Context) (int, error) {
+		if migrationRunning.Load() {
+			slog.Warn("Migration is currently running. Not responding to cron trigger to create a new delta migration.")
+			return 0, nil
+		}
 		// set migration to running to prevent simultaneous migrations
 		migrationRunning.Store(true)
 		defer migrationRunning.Store(false)

@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -310,18 +311,23 @@ func TestNewConfigImporter(t *testing.T) {
 		mGlobalRepo := newMockGlobalConfigRepo(t)
 		mDoguRepo := newMockDoguConfigRepo(t)
 		mSensitiveRepo := newMockDoguConfigRepo(t)
+		configRepos := ConfigRepos{globalConfigRepo: mGlobalRepo, doguConfigRepo: mDoguRepo, sensitiveDoguConfigRepo: mSensitiveRepo}
 		mBackupScheduleClient := newMockBackupScheduleClient(t)
+		additionalExcludedConfiguration := []string{"excluded"}
+		excludedDoguConfigKeys := []configuration.DoguConfigurationKeys{{DoguName: "test", Keys: []string{"key1", "key2"}}}
 
-		importer := NewConfigImporter(basePath, mConfigGetter, mGlobalRepo, mDoguRepo, mSensitiveRepo, mBackupScheduleClient)
+		importer := NewConfigImporter(basePath, mConfigGetter, configRepos, mBackupScheduleClient, additionalExcludedConfiguration, excludedDoguConfigKeys)
 
 		require.NotNil(t, importer)
 		assert.Equal(t, mConfigGetter, importer.getter)
 		assert.NotNil(t, importer.globalConfigImporter)
 		assert.Equal(t, mGlobalRepo, importer.globalConfigImporter.(*cesGlobalConfigImporter).globalConfigRepo)
+		assert.Equal(t, additionalExcludedConfiguration, importer.globalConfigImporter.(*cesGlobalConfigImporter).additionalKeysToKeep)
 		assert.NotNil(t, importer.doguConfigImporter)
 		assert.Equal(t, basePath, importer.doguConfigImporter.(*cesDoguConfigImporter).dataBasePath)
 		assert.Equal(t, mDoguRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).doguConfigRepo)
 		assert.Equal(t, mSensitiveRepo, importer.doguConfigImporter.(*cesDoguConfigImporter).sensitiveDoguConfigRepo)
+		assert.Equal(t, map[string][]string{"test": {"key1", "key2"}}, importer.doguConfigImporter.(*cesDoguConfigImporter).excludedDoguConfigKeys)
 		assert.NotNil(t, importer.backupScheduleImporter)
 		assert.Equal(t, mBackupScheduleClient, importer.backupScheduleImporter.(*cesBackupScheduleImporter).backupScheduleClient)
 	})
