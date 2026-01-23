@@ -81,7 +81,7 @@ config:
     #   - jenkins
     #   - cockpit
     excludedDogus: []
-    # excludedConfigurationKeys contains the names of configuration keys that are not dogu-specific to exclude from the
+    # excludedGlobalConfigurationKeys contains the names of configuration keys that are not dogu-specific to exclude from the
     # import. For these configuration keys, the importing system will keep the current value. The keys in this list are
     # added to the keys that are always excluded from the import, those will not be ovrwritten by this configuration.
     # Always excluded keys are: fqdn, alternativeFQDNs, maintenance, and those starting with proxy/, k8s/ or
