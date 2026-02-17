@@ -5,9 +5,10 @@ ARTIFACT_ID_JOB=${ARTIFACT_ID_IMPORTER}-migration-job
 ARTIFACT_ID=${ARTIFACT_ID_IMPORTER}
 
 MAKEFILES_VERSION=10.5.0
-VERSION=2.2.1
+VERSION=2.2.2
 
-GOTAG=1.25.5
+GOTAG=1.26.0
+LINT_VERSION=v2.9.0
 GO_BUILD_FLAGS?=-mod=vendor -a -tags netgo $(LDFLAGS) -installsuffix cgo -o $(BINARY) ./cmd/ces-importer
 .DEFAULT_GOAL:=help
 
