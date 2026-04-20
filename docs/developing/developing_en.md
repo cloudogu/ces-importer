@@ -19,6 +19,11 @@ The importer can automatically send notification emails after each migration. Th
 By default, email dispatch is deactivated. If enabled, it is configured to be sent to a mailhog on the host. Nothing more 
 needs to be configured for this. To start the mailhog, `docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog` must be 
 executed on the host.
+Additionally, it can be configured whether the mail server uses implicit TLS, STARTTLS, or no TLS at all.
+
+- implicit
+- starttls
+- none
 
 ### Trigger the migration manually
 By creating a configmap with the label `k8s.cloudogu.com/start-migration` the migration will be triggered manually.

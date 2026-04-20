@@ -190,6 +190,8 @@ type JobConfig struct {
 	Verbose bool `yaml:"verbose"`
 }
 
+type TLSMode string
+
 // Smtp holds SMTP server configuration details required for sending emails.
 type Smtp struct {
 	// Enabled indicates whether an email should be sent
@@ -211,7 +213,7 @@ type Smtp struct {
 	// SecretDataKey specifies the key inside the secret containing the SMTP password.
 	SecretDataKey string `yaml:"secretDataKey" validate:"required_with=Server,len=0|k8sSecretDataKey"`
 	// UseTls configures the mail service to use TLS
-	UseTls bool `yaml:"useTLS"`
+	UseTls TLSMode `yaml:"useTLS"`
 	// SkipTLSVerify configures the mail service to skip TLS verification when using TLS
 	SkipTLSVerify bool `yaml:"skipTLSVerify"`
 	// TLSCertificateName is the name of the mounted TLS CA. It corresponds to mail.tlsConfigmapKey in values.yaml

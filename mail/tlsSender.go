@@ -70,29 +70,91 @@ func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to [
 	return nil
 }
 
-func createTLSConfig(serverName string, insecureSkipVerify bool) (*tls.Config, error) {
-	caCert, err := os.ReadFile(customCAPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
+func (ts *tlsSender) sendMailWithStartTLS(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+	serverName := strings.Split(addr, ":")[0]
 
-			return &tls.Config{
-				ServerName:         serverName,
-				InsecureSkipVerify: insecureSkipVerify,
-			}, nil
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to read custom CA file: %w", err)
+	conn, err := smtp.Dial(addr)
+	if err != nil {
+		return err
+	}
+
+	defer func(conn *smtp.Client) {
+		err := conn.Quit()
+		if err != nil {
+			slog.Error(fmt.Sprintf("Failed to quit smtp mail client: %v", err))
+		}
+	}(conn)
+
+	hostname, _ := os.Hostname()
+	if err = conn.Hello(hostname); err != nil {
+		return fmt.Errorf("failed to register conn: %w", err)
+	}
+
+	if ok, _ := conn.Extension("STARTTLS"); !ok {
+		return fmt.Errorf("SMTP server does not support STARTTLS")
+	}
+
+	tlsConfig, err := createTLSConfig(serverName, ts.config.SkipTLSVerify)
+	if err != nil {
+		return err
+	}
+
+	if err = conn.StartTLS(tlsConfig); err != nil {
+		return fmt.Errorf("failed to init starttls: %w", err)
+	}
+
+	if auth != nil {
+		if ok, _ := conn.Extension("AUTH"); ok {
+			if err = conn.Auth(auth); err != nil {
+				return fmt.Errorf("failed to authenticate: %w", err)
+			}
 		}
 	}
 
-	// use system cert pool if it exists
+	if err = conn.Mail(from); err != nil {
+		return fmt.Errorf("failed to set sender: %w", err)
+	}
+
+	for _, addr := range to {
+		if err = conn.Rcpt(addr); err != nil {
+			return fmt.Errorf("failed to set recipient: %w", err)
+		}
+	}
+
+	w, err := conn.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get writer from mail server: %w", err)
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+	err = w.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close message writer: %w", err)
+	}
+
+	return nil
+}
+
+func createTLSConfig(serverName string, insecureSkipVerify bool) (*tls.Config, error) {
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
 		rootCAs = x509.NewCertPool()
 	}
 
-	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-		slog.Warn("Could not add custom CAs. They might already be included.")
+	caCert, err := os.ReadFile(customCAPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			slog.Info(fmt.Sprintf("No custom CA found at %s, using system certs only", customCAPath))
+		} else {
+			return nil, fmt.Errorf("failed to read custom CA file: %w", err)
+		}
+	} else {
+		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+			slog.Warn(fmt.Sprintf("No certificates could be parsed from %s", customCAPath))
+		}
 	}
 
 	return &tls.Config{

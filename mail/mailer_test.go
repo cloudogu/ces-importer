@@ -28,7 +28,7 @@ func TestSender(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
-		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
 
 		auth := sender.auth()
 		assert.NotNil(t, auth)
@@ -40,7 +40,7 @@ func TestSender(t *testing.T) {
 		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
-		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
 
 		auth := sender.auth()
 		assert.Nil(t, auth)
@@ -54,7 +54,7 @@ func TestSender(t *testing.T) {
 		}
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
-		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
 
 		assert.Equal(t, "server:123", sender.server())
 	})
@@ -76,7 +76,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 
-		sender := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{}, mGlobalConfigRepo)
 		senderFunc := NewMockSenderService(t)
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -118,7 +118,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(context.Background()).Return(globalConfig, nil)
-		sender := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
 
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -155,7 +155,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(context.Background()).Return(globalConfig, nil)
-		sender := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
 
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -193,7 +193,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(context.Background()).Return(globalConfig, assert.AnError)
-		sender := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
 
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -242,7 +242,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 			return globalConfig, assert.AnError
 		})
-		sender := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
 
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -284,7 +284,7 @@ func TestSendMigrationResult(t *testing.T) {
 
 		mGlobalConfigRepo := newMockGlobalConfigRepo(t)
 		mGlobalConfigRepo.EXPECT().Get(context.Background()).Return(globalConfig, nil)
-		sender := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, mGlobalConfigRepo)
 
 		sender.senderService = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 			return senderFunc.Execute(addr, a, from, to, msg)
@@ -316,7 +316,7 @@ func TestSendMigrationResult(t *testing.T) {
 			Enabled: true,
 			Port:    25,
 		}
-		sender := CreateSender(config, "source", []string{"a", "b"}, nil)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, nil)
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
@@ -340,7 +340,7 @@ func TestSendMigrationResult(t *testing.T) {
 			Enabled: true,
 			Server:  "myserver",
 		}
-		sender := CreateSender(config, "source", []string{"a", "b"}, nil)
+		sender, _ := CreateSender(config, "source", []string{"a", "b"}, nil)
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
@@ -426,7 +426,7 @@ func TestSender_writeBodyText(t *testing.T) {
 			}), nil,
 		)
 
-		sender := CreateSender(config, "instance-a", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "instance-a", []string{}, mGlobalConfigRepo)
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
@@ -452,7 +452,7 @@ func TestSender_writeBodyText(t *testing.T) {
 			}), nil,
 		)
 
-		sender := CreateSender(config, "instance-a", []string{}, mGlobalConfigRepo)
+		sender, _ := CreateSender(config, "instance-a", []string{}, mGlobalConfigRepo)
 
 		timeA, _ := time.Parse("15:04", "13:01")
 		timeB := timeA.Add(5 * time.Minute)
