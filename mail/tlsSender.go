@@ -139,22 +139,27 @@ func (ts *tlsSender) sendMailWithStartTLS(addr string, auth smtp.Auth, from stri
 }
 
 func createTLSConfig(serverName string, insecureSkipVerify bool) (*tls.Config, error) {
+	caCert, err := os.ReadFile(customCAPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
+
+			return &tls.Config{
+				ServerName:         serverName,
+				InsecureSkipVerify: insecureSkipVerify,
+			}, nil
+		} else if err != nil {
+			return nil, fmt.Errorf("failed to read custom CA file: %w", err)
+		}
+	}
+
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
 		rootCAs = x509.NewCertPool()
 	}
 
-	caCert, err := os.ReadFile(customCAPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			slog.Info(fmt.Sprintf("No custom CA found at %s, using system certs only", customCAPath))
-		} else {
-			return nil, fmt.Errorf("failed to read custom CA file: %w", err)
-		}
-	} else {
-		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-			slog.Warn(fmt.Sprintf("No certificates could be parsed from %s", customCAPath))
-		}
+	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+		slog.Warn(fmt.Sprintf("No certificates could be parsed from %s", customCAPath))
 	}
 
 	return &tls.Config{
