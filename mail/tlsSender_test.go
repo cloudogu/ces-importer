@@ -52,3 +52,19 @@ func Test_sendMailWithTls(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to connect to mail server")
 	})
 }
+
+func Test_sendMailWithStarttls(t *testing.T) {
+	t.Run("should fail to send mail with StartTLS", func(t *testing.T) {
+		addr := "localhost:1"
+		var a smtp.Auth = nil
+		from := "from@example.com"
+		to := []string{"to@example.com"}
+		msg := []byte("Subject: test\r\n\r\nbody")
+
+		ts := &tlsSender{config: configuration.Smtp{SkipTLSVerify: true}}
+
+		err := ts.sendMailWithStartTLS(addr, a, from, to, msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "connect: connection refused")
+	})
+}
