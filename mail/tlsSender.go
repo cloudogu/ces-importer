@@ -18,6 +18,9 @@ type tlsSender struct {
 	factory SMTPClientFactory
 }
 
+var readFile = os.ReadFile
+var systemCertPool = x509.SystemCertPool
+
 func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 	slog.Debug("sending mail with TLS enabled")
 
@@ -132,7 +135,7 @@ func (ts *tlsSender) sendMailWithStartTLS(addr string, auth smtp.Auth, from stri
 }
 
 func createTLSConfig(serverName string, insecureSkipVerify bool) (*tls.Config, error) {
-	caCert, err := os.ReadFile(customCAPath)
+	caCert, err := readFile(customCAPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Info(fmt.Sprintf("Skipping custom CAs as none were provided in %s", customCAPath))
@@ -146,7 +149,7 @@ func createTLSConfig(serverName string, insecureSkipVerify bool) (*tls.Config, e
 		}
 	}
 
-	rootCAs, err := x509.SystemCertPool()
+	rootCAs, err := systemCertPool()
 	if err != nil {
 		rootCAs = x509.NewCertPool()
 	}
