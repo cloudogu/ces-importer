@@ -69,10 +69,10 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 	slog.Info(fmt.Sprintf("Mailer useTLS Config: %v", config.UseTls))
 	var senderService SenderService
 	if config.UseTls == configuration.TLSModeImplicit || config.UseTls == "true" {
-		ts := &tlsSender{config: config}
+		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
 		senderService = ts.sendMailWithTls
 	} else if config.UseTls == configuration.TLSModeStartTLS {
-		ts := &tlsSender{config: config}
+		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
 		senderService = ts.sendMailWithStartTLS
 	} else if config.UseTls == configuration.TLSModeNone || config.UseTls == "false" || config.UseTls == "" {
 		senderService = smtp.SendMail
