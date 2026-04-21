@@ -467,3 +467,23 @@ func TestSender_writeBodyText(t *testing.T) {
 		assert.Contains(t, body.String(), "Die Delta-Migration von der Instanz https://instance-a zu der Instanz https=\r\n://instance-b war nicht erfolgreich.\r\n\r\nStartzeitpunkt: 01.01.0000 13:01 (UTC +0000)\r\nEndzeitpunkt: 01.01.0000 13:06 (UTC +0000)\r\n\r\nDie Fehlermeldung ist: migration-error\r\n\r\nAlle weiteren Informationen finden Sie in der Log-Datei im Anhang.")
 	})
 }
+
+func TestSender_CreateSender(t *testing.T) {
+
+	t.Run("createSender no error", func(t *testing.T) {
+		tlss := []configuration.TLSMode{configuration.TLSModeImplicit, "true", configuration.TLSModeStartTLS, configuration.TLSModeNone, "false", ""}
+
+		for _, tls := range tlss {
+			sender, err := CreateSender(configuration.Smtp{UseTls: tls}, "test", []string{}, nil)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		}
+	})
+	t.Run("createSender error", func(t *testing.T) {
+		var tls configuration.TLSMode = "invalid"
+		sender, err := CreateSender(configuration.Smtp{UseTls: tls}, "test", []string{}, nil)
+		assert.Error(t, err)
+		assert.Nil(t, sender)
+	})
+
+}
