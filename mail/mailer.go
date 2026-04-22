@@ -66,7 +66,7 @@ type Sender struct {
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) (*Sender, error) {
-	slog.Info(fmt.Sprintf("Mailer useTLS Config: %v", config.TlsMode))
+	slog.Info(fmt.Sprintf("Mailer tlsMode Config: %v", config.TlsMode))
 	var senderService SenderService
 	switch config.TlsMode {
 	case configuration.TLSModeImplicit, "true":
@@ -78,7 +78,7 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 	case configuration.TLSModeNone, "false", "":
 		senderService = smtp.SendMail
 	default:
-		return nil, fmt.Errorf("invalid useTLS(implicit, starttls, none): %v", config.TlsMode)
+		return nil, fmt.Errorf("invalid tlsMode(implicit, starttls, none): %v", config.TlsMode)
 	}
 
 	customCAPath = fmt.Sprintf(customCAPath, config.TLSCertificateName)

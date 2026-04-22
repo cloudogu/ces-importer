@@ -72,7 +72,7 @@ config:
       text: "The migration of your instance is in progress."
     # executePreflightCheck controls whether the preflight check will be executed.
     # Default: True
-    executePreflightCheck: false
+    executePreflightCheck: true
   job:
     # excludedDogus contains the names of dogus to exclude from the import. This is in addition to the dogus that are
     # excluded because they do not exist as dogus on multinode clusters: monitoring, backup, and registrator
@@ -113,7 +113,7 @@ config:
   smtp:
     # enabled controls whether email notifications are sent.
     # Default: false
-    enabled: true
+    enabled: false
     # The SMTP server hostname or IP address (e.g., mailhog, smtp.gmail.com)
     server: smtp.example.com
     # The port the SMTP server listens on (25, 587 for TLS, 1025 for MailHog/dev)
@@ -128,15 +128,15 @@ config:
     # Email address that appears in the "From" field of the email
     from: importer@cloudogu.com
     # List of recipient email addresses
-    to: [bla@blubb.de]
-    # useTLS configures the mail server to use TLS
+    to: []
+    # tlsMode configures the mail server to use TLS
     # Disable, if the mail server does not support TLS, otherwise this will lead to errors
     # You can choose between implicit TLS or STARTTLS depending on the depending on the available ports
     # - implicit
     # - starttls
     # - none
     # default: none
-    useTLS: starttls
+    tlsMode: none
     # skipTLSVerify configures the mail service to skip TLS verification when using TLS
     # default: false
     skipTLSVerify: false
