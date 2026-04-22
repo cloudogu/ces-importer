@@ -66,18 +66,19 @@ type Sender struct {
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
 func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) (*Sender, error) {
-	slog.Info(fmt.Sprintf("Mailer useTLS Config: %v", config.UseTls))
+	slog.Info(fmt.Sprintf("Mailer useTLS Config: %v", config.TlsMode))
 	var senderService SenderService
-	if config.UseTls == configuration.TLSModeImplicit || config.UseTls == "true" {
+	switch config.TlsMode {
+	case configuration.TLSModeImplicit, "true":
 		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
 		senderService = ts.sendMailWithTls
-	} else if config.UseTls == configuration.TLSModeStartTLS {
+	case configuration.TLSModeStartTLS:
 		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
 		senderService = ts.sendMailWithStartTLS
-	} else if config.UseTls == configuration.TLSModeNone || config.UseTls == "false" || config.UseTls == "" {
+	case configuration.TLSModeNone, "false", "":
 		senderService = smtp.SendMail
-	} else {
-		return nil, fmt.Errorf("invalid useTLS(implicit, starttls, none): %v", config.UseTls)
+	default:
+		return nil, fmt.Errorf("invalid useTLS(implicit, starttls, none): %v", config.TlsMode)
 	}
 
 	customCAPath = fmt.Sprintf(customCAPath, config.TLSCertificateName)
@@ -106,7 +107,6 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 //   - end: End time of the migration.
 //   - isFinal: Whether this is the final report of a migration process.
 //
-// :
 // Returns an error if email composition or sending fails.
 func (s *Sender) Send(ctx context.Context, isFinal bool, migrationResult error, start time.Time, end time.Time) error {
 	if !s.config.Enabled {

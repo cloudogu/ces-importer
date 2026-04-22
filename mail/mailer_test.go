@@ -474,14 +474,14 @@ func TestSender_CreateSender(t *testing.T) {
 		tlss := []configuration.TLSMode{configuration.TLSModeImplicit, "true", configuration.TLSModeStartTLS, configuration.TLSModeNone, "false", ""}
 
 		for _, tls := range tlss {
-			sender, err := CreateSender(configuration.Smtp{UseTls: tls}, "test", []string{}, nil)
+			sender, err := CreateSender(configuration.Smtp{TlsMode: tls}, "test", []string{}, nil)
 			assert.NoError(t, err)
 			assert.NotNil(t, sender)
 		}
 	})
 	t.Run("createSender error", func(t *testing.T) {
 		var tls configuration.TLSMode = "invalid"
-		sender, err := CreateSender(configuration.Smtp{UseTls: tls}, "test", []string{}, nil)
+		sender, err := CreateSender(configuration.Smtp{TlsMode: tls}, "test", []string{}, nil)
 		assert.Error(t, err)
 		assert.Nil(t, sender)
 	})

@@ -1,6 +1,6 @@
 ### Mailpit aufsetzen
 
-Unter Treafik kann ein mailpit für Testzwecke aufgesetzt und konfiguriert werden.
+Unter Traefik kann ein mailpit für Testzwecke aufgesetzt und konfiguriert werden.
 Dazu muss zunächst ein entsprechendes Zertifikat erstellt werden um mailpit mit STARTTLS verwenden zu können:
 
 #### Zertifikat:
@@ -134,7 +134,7 @@ spec:
                   number: 8025
 ```
 
-#### Testen über Portfowarding
+#### Testen über Portforwarding
 
 - via k9s den Port 8025 am Mailpit-Pod freigeben
 - ggf. den Port 8025 im InteliJ von coder freigeben

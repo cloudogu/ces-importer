@@ -22,6 +22,7 @@ var readFile = os.ReadFile
 var systemCertPool = x509.SystemCertPool
 
 func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	// addr contains the server and port
 	slog.Debug("sending mail with TLS enabled")
 
 	serverName := strings.Split(addr, ":")[0]
@@ -68,7 +69,7 @@ func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to [
 	return nil
 }
 
-func (ts *tlsSender) sendMailWithStartTLS(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+func (ts *tlsSender) sendMailWithStartTLS(addr string, a smtp.Auth, f string, t []string, msg []byte) error {
 	serverName := strings.Split(addr, ":")[0]
 
 	client, err := ts.factory.NewClient(addr)
@@ -100,19 +101,19 @@ func (ts *tlsSender) sendMailWithStartTLS(addr string, auth smtp.Auth, from stri
 		return fmt.Errorf("failed to init starttls: %w", err)
 	}
 
-	if auth != nil {
+	if a != nil {
 		if ok, _ := client.Extension("AUTH"); ok {
-			if err = client.Auth(auth); err != nil {
+			if err = client.Auth(a); err != nil {
 				return fmt.Errorf("failed to authenticate: %w", err)
 			}
 		}
 	}
 
-	if err = client.Mail(from); err != nil {
+	if err = client.Mail(f); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
 
-	for _, rcpt := range to {
+	for _, rcpt := range t {
 		if err = client.Rcpt(rcpt); err != nil {
 			return fmt.Errorf("failed to set recipient %s: %w", rcpt, err)
 		}
