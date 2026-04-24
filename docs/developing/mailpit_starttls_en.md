@@ -26,7 +26,7 @@ DNS.2 = mailpit.ecosystem.svc.cluster.local
 DNS.3 = localhost
 ```
 
-Crea```te the certificate using the configuration:
+Create the certificate using the configuration:
 ```bash
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -config server.cnf
