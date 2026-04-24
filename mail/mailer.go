@@ -65,13 +65,20 @@ type Sender struct {
 
 // CreateSender initializes and returns a new Sender instance with the provided configuration,
 // sender service, and file reader.
-func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) *Sender {
+func CreateSender(config configuration.Smtp, sourceInstance string, attachments []string, globalConfigRepo globalConfigRepo) (*Sender, error) {
+	slog.Info(fmt.Sprintf("Mailer tlsMode Config: %v", config.TlsMode))
 	var senderService SenderService
-	if config.UseTls {
-		ts := &tlsSender{config: config}
+	switch config.TlsMode {
+	case configuration.TLSModeImplicit, "true":
+		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
 		senderService = ts.sendMailWithTls
-	} else {
+	case configuration.TLSModeStartTLS:
+		ts := &tlsSender{config: config, factory: &realSMTPFactory{}}
+		senderService = ts.sendMailWithStartTLS
+	case configuration.TLSModeNone, "false", "":
 		senderService = smtp.SendMail
+	default:
+		return nil, fmt.Errorf("invalid tlsMode(implicit, starttls, none): %v", config.TlsMode)
 	}
 
 	customCAPath = fmt.Sprintf(customCAPath, config.TLSCertificateName)
@@ -83,7 +90,7 @@ func CreateSender(config configuration.Smtp, sourceInstance string, attachments 
 		os.ReadFile,
 		attachments,
 		globalConfigRepo,
-	}
+	}, nil
 }
 
 // Send composes and sends an email containing the result of a migration operation.
