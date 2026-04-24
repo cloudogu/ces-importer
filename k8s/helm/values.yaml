@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 2.2.2
+    tag: 2.2.3
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer-migration-job
-    tag: 2.2.2
+    tag: 2.2.3
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -129,10 +129,14 @@ config:
     from: importer@cloudogu.com
     # List of recipient email addresses
     to: []
-    # useTLS configures the mail server to use TLS
+    # tlsMode configures the mail server to use TLS
     # Disable, if the mail server does not support TLS, otherwise this will lead to errors
-    # default: false
-    useTLS: false
+    # You can choose between implicit TLS or STARTTLS depending on the depending on the available ports
+    # - implicit
+    # - starttls
+    # - none
+    # default: none
+    tlsMode: none
     # skipTLSVerify configures the mail service to skip TLS verification when using TLS
     # default: false
     skipTLSVerify: false

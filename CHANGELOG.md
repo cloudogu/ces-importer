@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.2.3] - 2026-04-24
+### Changed
+- [#130] allow STARTTLS for Mail-Server
+
 ## [v2.2.2] - 2026-02-17
 ### Security
 - [#128] Fix Go stdlib CVE-2025-68121

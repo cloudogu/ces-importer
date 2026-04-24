@@ -144,12 +144,15 @@ func createMigrator(k8sClientSet importer.K8sClients, cfg configuration.Coordina
 
 	globalConfig := repository.NewGlobalConfigRepository(k8sClientSet.ConfigMap)
 
-	mailSender := mail.CreateSender(
+	mailSender, err := mail.CreateSender(
 		cfg.Smtp,
 		cfg.ExporterHost,
 		[]string{logging.PathAppLogFile},
 		globalConfig,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating mailSender: %w", err)
+	}
 
 	deps := migration.MigratorDependencies{
 		ExportModeValidator:    exportModeValidator,
