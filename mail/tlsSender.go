@@ -22,9 +22,8 @@ var readFile = os.ReadFile
 var systemCertPool = x509.SystemCertPool
 
 func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
-	// addr contains the server and port
 	slog.Debug("sending mail with TLS enabled")
-
+	// addr contains the server and port
 	serverName := strings.Split(addr, ":")[0]
 
 	tlsConfig, err := createTLSConfig(serverName, ts.config.SkipTLSVerify)
