@@ -5,7 +5,7 @@ MOCKERY_VERSION?=v2.53.3
 MOCKERY_YAML=${WORKDIR}/.mockery.yaml
 
 ${MOCKERY_BIN}: ${UTILITY_BIN_PATH}
-	GOBIN=${UTILITY_BIN_PATH} go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
+	$(call go-get-tool,$(MOCKERY_BIN),github.com/vektra/mockery/v2@$(MOCKERY_VERSION))
 
 ${MOCKERY_YAML}:
 	@cp ${BUILD_DIR}/make/mockery.yaml ${WORKDIR}/.mockery.yaml
