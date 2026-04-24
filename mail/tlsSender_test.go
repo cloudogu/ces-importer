@@ -193,7 +193,7 @@ func Test_sendMailWithTls(t *testing.T) {
 		err := ts.sendMailWithTls(addr, a, from, to, msg)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to add recipient to@example.com")
+		assert.Contains(t, err.Error(), "failed to set recipient to@example.com")
 	})
 	t.Run("should fail to send mail with implicit tls on set data", func(t *testing.T) {
 		addr := "localhost:1"

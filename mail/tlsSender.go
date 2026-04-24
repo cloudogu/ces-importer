@@ -42,33 +42,10 @@ func (ts *tlsSender) sendMailWithTls(addr string, a smtp.Auth, from string, to [
 		}
 	}()
 
-	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("failed to set sender: %w", err)
-	}
-
-	for _, rcpt := range to {
-		if err := client.Rcpt(rcpt); err != nil {
-			return fmt.Errorf("failed to add recipient %s: %w", rcpt, err)
-		}
-	}
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get writer from mail server: %w", err)
-	}
-
-	if _, err := w.Write(msg); err != nil {
-		return fmt.Errorf("failed to write message: %w", err)
-	}
-
-	if err := w.Close(); err != nil {
-		return fmt.Errorf("failed to close message writer: %w", err)
-	}
-
-	return nil
+	return ts.prepareMail(client, from, to, msg)
 }
 
-func (ts *tlsSender) sendMailWithStartTLS(addr string, a smtp.Auth, f string, t []string, msg []byte) error {
+func (ts *tlsSender) sendMailWithStartTLS(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 	serverName := strings.Split(addr, ":")[0]
 
 	client, err := ts.factory.NewClient(addr)
@@ -108,12 +85,16 @@ func (ts *tlsSender) sendMailWithStartTLS(addr string, a smtp.Auth, f string, t 
 		}
 	}
 
-	if err = client.Mail(f); err != nil {
+	return ts.prepareMail(client, from, to, msg)
+}
+
+func (ts *tlsSender) prepareMail(client SMTPClient, f string, t []string, msg []byte) error {
+	if err := client.Mail(f); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
 
 	for _, rcpt := range t {
-		if err = client.Rcpt(rcpt); err != nil {
+		if err := client.Rcpt(rcpt); err != nil {
 			return fmt.Errorf("failed to set recipient %s: %w", rcpt, err)
 		}
 	}
@@ -130,7 +111,6 @@ func (ts *tlsSender) sendMailWithStartTLS(addr string, a smtp.Auth, f string, t 
 	if err = w.Close(); err != nil {
 		return fmt.Errorf("failed to close message writer: %w", err)
 	}
-
 	return nil
 }
 
