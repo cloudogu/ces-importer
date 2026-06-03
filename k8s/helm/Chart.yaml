@@ -6,6 +6,6 @@ version: 0.0.0-replaceme
 appVersion: "0.0.0-replaceme"
 annotations:
   "k8s.cloudogu.com/ces-dependency/k8s-dogu-operator": "^3.11.0"
-  "k8s.cloudogu.com/ces-dependency/k8s-backup-operator": "^1.6.0 || ^2.0.0"
+  "k8s.cloudogu.com/ces-dependency/k8s-backup-operator": "^1.6.0 || ^2.0.0 || ^3.0.0"
   # "k8s.cloudogu.com/ces-dependency/k8s-component-operator": "^1.12.0"
   # the component operator version gets checked in a separate helm preinstall hook
