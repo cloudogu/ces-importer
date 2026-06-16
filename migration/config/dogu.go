@@ -4,19 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
-	"github.com/cloudogu/ces-importer/migration"
-	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	"time"
+
 	"log/slog"
 	"os"
 	"path"
 	"slices"
 	"strings"
+
+	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
+	"github.com/cloudogu/ces-importer/migration"
+	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 )
 
 const (
-	localConfigPathTemplate = "%s/localConfig/local.yaml"
-	nginxDoguName           = "nginx"
+	localConfigPathTemplate           = "%s/localConfig/local.yaml"
+	nginxDoguName                     = "nginx"
+	deleteConfigMapTimeoutSeconds     = 10
+	deleteConfigMapPollIntervalMillis = 200
 )
 
 var getLocalConfigFileForDogu = func(dataBasePath string, dogu string) string {
@@ -96,6 +101,22 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 	err = repo.Delete(ctx, doguName)
 	if err != nil {
 		return fmt.Errorf("failed to delete original dogu config: %w", err)
+	}
+
+	timeout := time.After(deleteConfigMapTimeoutSeconds * time.Second)
+
+	for {
+		_, terr := repo.Get(ctx, doguName)
+		if terr != nil {
+			// Objekt existiert nicht mehr
+			break
+		}
+
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for dogu config deletion")
+		case <-time.After(deleteConfigMapPollIntervalMillis * time.Millisecond):
+		}
 	}
 
 	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
