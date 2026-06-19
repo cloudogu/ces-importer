@@ -2,11 +2,12 @@ package configuration
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Helper function to create valid config files
@@ -48,6 +49,7 @@ image:
   repository: "cloudogu/ces-importer"
   tag: "0.0.1"
 imagePullPolicy: "IfNotPresent"
+hostNetwork: true
 imagePullSecrets:
   - name: "ces-container-registries"
 resources:
@@ -518,6 +520,7 @@ image:
   registry: "docker.io"
   repository: "cloudogu/ces-importer"
   tag: "0.0.1"
+hostNetwork: true
 imagePullPolicy: "IfNotPresent"
 imagePullSecrets:
   - name: "ces-container-registries"
@@ -607,6 +610,29 @@ image:
   repository: "cloudogu/ces-importer"
   tag: "0.0.1"
 imagePullPolicy: "JUST PULL"
+imagePullSecrets:
+  - name: "ces-container-registries"
+resources:
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+jobConfigMap: "ces-importer-job-config"
+jobServiceAccount: "ces-importer-main-manager"
+`,
+			expectErr: true,
+		},
+		{
+			name: "error - invalid hostNetwork",
+			inConfig: `---
+image:
+  registry: "docker.io"
+  repository: "cloudogu/ces-importer"
+  tag: "0.0.1"
+hostNetwork: "invalid"
+imagePullPolicy: "Always"
 imagePullSecrets:
   - name: "ces-container-registries"
 resources:

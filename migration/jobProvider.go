@@ -3,18 +3,19 @@ package migration
 import (
 	"context"
 	"fmt"
-	"github.com/cloudogu/ces-importer/configuration"
-	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"log/slog"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/cloudogu/ces-importer/configuration"
+	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const jobName = "migration-job"
@@ -170,6 +171,7 @@ type jobSpec struct {
 	env              []v1.EnvVar
 	serviceAccount   string
 	jobConfigMap     string
+	hostNetwork      bool
 }
 
 type JobProviderDependencies struct {
@@ -227,6 +229,7 @@ func createJobSpec(jcCfg configuration.JobContainer, apiKey string) (jobSpec, er
 		env:              envs,
 		jobConfigMap:     jcCfg.JobConfigMap,
 		serviceAccount:   jcCfg.JobServiceAccount,
+		hostNetwork:      jcCfg.HostNetwork,
 	}, nil
 }
 
@@ -363,7 +366,8 @@ func (j jobProvider) createImportJob(ctx context.Context) (*batchv1.Job, error) 
 			TTLSecondsAfterFinished: ptr.To(int32(jobTTLCleanupSeconds)),
 			Template: v1.PodTemplateSpec{
 				Spec: v1.PodSpec{
-					Volumes: jobVolumeMounts.volumes,
+					HostNetwork: j.hostNetwork,
+					Volumes:     jobVolumeMounts.volumes,
 					Containers: []v1.Container{
 						{
 							Name:            fmt.Sprintf("%s-container", jobName),

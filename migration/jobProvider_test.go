@@ -3,10 +3,11 @@ package migration
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestNewJobProvider(t *testing.T) {
@@ -122,6 +123,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 				env:              []v1.EnvVar{{Name: "API_KEY", Value: "test-api-key"}},
 				jobConfigMap:     "test-config-map",
 				serviceAccount:   "test-service-account",
+				hostNetwork:      true,
 			},
 			pvcClient: pvcClient,
 			sshConfig: configuration.SSH{
@@ -145,6 +147,7 @@ func TestJobProvider_createImportJob(t *testing.T) {
 		assert.Equal(t, "registry.example.com/test-repo:latest", job.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, v1.PullPolicy("IfNotPresent"), job.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Equal(t, "test-service-account", job.Spec.Template.Spec.ServiceAccountName)
+		assert.Equal(t, true, job.Spec.Template.Spec.HostNetwork)
 
 		// Verify that the volumes are set up correctly
 		assert.Equal(t, 5, len(job.Spec.Template.Spec.Volumes))                    // 1 config volume + 2 dogu volumes + 1 ssh key volume + 1 tls ca volume
