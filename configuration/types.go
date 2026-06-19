@@ -154,6 +154,8 @@ type JobContainer struct {
 	ImagePullSecrets []ImagePullSecret `yaml:"imagePullSecrets"`
 	// Resources defines the compute resources required by the container
 	Resources ResourceRequirements `yaml:"resources" validate:"required"`
+	// HostNetwork specifies whether the container should run on the host network
+	HostNetwork bool `yaml:"hostNetwork"`
 }
 
 // ExcludePattern defines a pattern for files that should not be synchronized for a specific dogu

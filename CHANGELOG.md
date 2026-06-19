@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.0] - 2026-06-19
+### Added
+- [#135] Configuration for running the migration job in the host network.
+
 ## [v2.2.4] - 2026-06-03
 ### Fixed
 - [#132] Add install compatibility for the new backup-operator via component dependency update

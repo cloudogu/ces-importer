@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 2.2.4
+    tag: 2.3.0
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer-migration-job
-    tag: 2.2.4
+    tag: 2.3.0
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -28,6 +28,7 @@ job:
     requests:
       cpu: 100m
       memory: 128Mi
+  hostNetwork: false
 config:
   logging:
     # level defines the log level to be used. Valid values are: DEBUG, INFO, WARN, ERROR
