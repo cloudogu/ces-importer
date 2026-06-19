@@ -28,6 +28,7 @@ job:
     requests:
       cpu: 100m
       memory: 128Mi
+  hostNetwork: false
 config:
   logging:
     # level defines the log level to be used. Valid values are: DEBUG, INFO, WARN, ERROR
