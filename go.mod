@@ -6,7 +6,7 @@ require (
 	github.com/adhocore/gronx v1.19.5
 	github.com/cloudogu/ces-commons-lib v0.2.0
 	github.com/cloudogu/k8s-backup-lib v1.7.0
-	github.com/cloudogu/k8s-blueprint-lib/v3 v3.1.0
+	github.com/cloudogu/k8s-blueprint-lib/v3 v3.2.0
 	github.com/cloudogu/k8s-component-lib v1.13.0
 	github.com/cloudogu/k8s-dogu-lib/v2 v2.11.0
 	github.com/cloudogu/k8s-registry-lib v0.5.1
@@ -22,7 +22,6 @@ require (
 )
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudogu/cesapp-lib v0.18.1
@@ -77,7 +76,6 @@ require (
 
 require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cloudogu/k8s-dogu-lib v0.0.0-20250505182238-860c909518c1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-openapi/swag/cmdutils v0.25.1 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
@@ -93,7 +91,6 @@ require (
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/onsi/gomega v1.38.2 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect

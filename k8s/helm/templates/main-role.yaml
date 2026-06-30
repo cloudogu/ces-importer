@@ -62,7 +62,7 @@ rules:
     verbs:
       - get
       - list
-      - update
+      - patch
     # allow for dogu resizing
   - apiGroups: [""]
     resources:

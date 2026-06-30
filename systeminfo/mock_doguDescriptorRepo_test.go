@@ -7,7 +7,6 @@ import (
 
 	dogu "github.com/cloudogu/ces-commons-lib/dogu"
 	core "github.com/cloudogu/cesapp-lib/core"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
