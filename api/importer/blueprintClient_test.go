@@ -219,7 +219,7 @@ func Test_blueprintClient_StartBlueprint(t *testing.T) {
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint A", mock.Anything).Return(&v3BlueprintA, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint B", mock.Anything).Return(&v3BlueprintB, nil)
 		blueprintCli.EXPECT().Patch(testCtx, "Blueprint A", types.MergePatchType, patchBlueprintStart, mock.Anything).Return(&v3BlueprintA, nil)
-		blueprintCli.EXPECT().Patch(testCtx, "Blueprint B", types.MergePatchType, patchBlueprintStart, mock.Anything).Return(&v3BlueprintA, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint B", types.MergePatchType, patchBlueprintStart, mock.Anything).Return(&v3BlueprintB, nil)
 
 		sut := NewBlueprintControl(blueprintCli)
 		sut.stoppedBlueprints = []string{"Blueprint A", "Blueprint B"}

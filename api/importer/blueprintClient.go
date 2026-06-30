@@ -32,7 +32,7 @@ var (
 	patchBlueprintStart = []byte(`{"spec":{"stopped":false}}`)
 )
 
-// NewDoguControl creates a new client that operates on dogu deployments on the importer system.
+// NewBlueprintControl creates a new client that operates on dogu deployments on the importer system.
 func NewBlueprintControl(blueprintCli BlueprintInterface) *BlueprintControl {
 	return &BlueprintControl{
 		blueprintCli:      blueprintCli,
