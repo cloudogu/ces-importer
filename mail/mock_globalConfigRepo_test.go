@@ -6,7 +6,6 @@ import (
 	context "context"
 
 	config "github.com/cloudogu/k8s-registry-lib/config"
-
 	mock "github.com/stretchr/testify/mock"
 )
 

@@ -6,9 +6,7 @@ import (
 	context "context"
 
 	apiv1 "github.com/cloudogu/k8s-component-lib/api/v1"
-
 	mock "github.com/stretchr/testify/mock"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

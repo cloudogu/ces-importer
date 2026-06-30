@@ -5,10 +5,8 @@ package configuration
 import (
 	context "context"
 
-	config "github.com/cloudogu/k8s-registry-lib/config"
-
 	dogu "github.com/cloudogu/ces-commons-lib/dogu"
-
+	config "github.com/cloudogu/k8s-registry-lib/config"
 	mock "github.com/stretchr/testify/mock"
 )
 

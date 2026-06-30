@@ -6,8 +6,9 @@ import (
 	"log/slog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/ptr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	blueprintv3 "github.com/cloudogu/k8s-blueprint-lib/v3/api/v3"
 )
@@ -17,14 +18,19 @@ type BlueprintInterface interface {
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*blueprintv3.Blueprint, error)
 	// List takes label and field selectors, and returns the list of Blueprints that match those selectors.
 	List(ctx context.Context, opts metav1.ListOptions) (*blueprintv3.BlueprintList, error)
-	// Update takes the representation of a blueprint and updates it. Returns the server's representation of the blueprint, and an error, if there is any.
-	Update(ctx context.Context, blueprint *blueprintv3.Blueprint, opts metav1.UpdateOptions) (*blueprintv3.Blueprint, error)
+	// Patch applies the patch and returns the patched blueprint.
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *blueprintv3.Blueprint, err error)
 }
 
 type BlueprintControl struct {
 	blueprintCli      BlueprintInterface
 	stoppedBlueprints []string
 }
+
+var (
+	patchBlueprintStop  = []byte(`{"spec":{"stopped":true}}`)
+	patchBlueprintStart = []byte(`{"spec":{"stopped":false}}`)
+)
 
 // NewDoguControl creates a new client that operates on dogu deployments on the importer system.
 func NewBlueprintControl(blueprintCli BlueprintInterface) *BlueprintControl {
@@ -83,11 +89,14 @@ func (bc *BlueprintControl) startStop(ctx context.Context, blueprintName string,
 		return false, nil
 	}
 
-	blueprint.Spec.Stopped = &shouldStop
-	_, err = bc.blueprintCli.Update(ctx, blueprint, metav1.UpdateOptions{})
+	patchData := patchBlueprintStart
+	if shouldStop {
+		patchData = patchBlueprintStop
+	}
 
+	_, err = bc.blueprintCli.Patch(ctx, blueprintName, types.MergePatchType, patchData, metav1.PatchOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to update blueprint %s (shouldStop: %t): %w", blueprintName, shouldStop, err)
+		return false, fmt.Errorf("failed to patch blueprint %s (shouldStop: %t): %w", blueprintName, shouldStop, err)
 	}
 
 	return true, nil
