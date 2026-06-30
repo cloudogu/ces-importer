@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var blueprintNotFoundErr = apierrors.NewNotFound(schema.GroupResource{Resource: "blueprints"}, "not-found")
@@ -41,8 +42,8 @@ func Test_blueprintClient_StopBlueprint(t *testing.T) {
 		blueprintCli.EXPECT().List(testCtx, mock.Anything).Return(&blueprintv3.BlueprintList{Items: []blueprintv3.Blueprint{v3BlueprintA, v3BlueprintB}}, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint A", mock.Anything).Return(&v3BlueprintA, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint B", mock.Anything).Return(&v3BlueprintB, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintA, mock.Anything).Return(&v3BlueprintA, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintB, mock.Anything).Return(&v3BlueprintB, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint A", types.MergePatchType, patchBlueprintStop, mock.Anything).Return(&v3BlueprintA, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint B", types.MergePatchType, patchBlueprintStop, mock.Anything).Return(&v3BlueprintB, nil)
 
 		sut := NewBlueprintControl(blueprintCli)
 
@@ -115,7 +116,7 @@ func Test_blueprintClient_StopBlueprint(t *testing.T) {
 		blueprintCli.EXPECT().List(testCtx, mock.Anything).Return(&blueprintv3.BlueprintList{Items: []blueprintv3.Blueprint{v3BlueprintA, v3BlueprintB}}, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint A", mock.Anything).Return(&v3BlueprintA, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint B", mock.Anything).Return(&v3BlueprintB, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintA, mock.Anything).Return(&v3BlueprintA, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint A", types.MergePatchType, patchBlueprintStop, mock.Anything).Return(&v3BlueprintA, nil)
 
 		sut := NewBlueprintControl(blueprintCli)
 
@@ -185,7 +186,7 @@ func Test_blueprintClient_StopBlueprint(t *testing.T) {
 		blueprintCli := NewMockBlueprintInterface(t)
 		blueprintCli.EXPECT().List(testCtx, mock.Anything).Return(&blueprintv3.BlueprintList{Items: []blueprintv3.Blueprint{v3BlueprintA}}, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint A", mock.Anything).Return(&v3BlueprintA, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintA, mock.Anything).Return(&v3BlueprintA, assert.AnError)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint A", types.MergePatchType, patchBlueprintStop, mock.Anything).Return(&v3BlueprintA, assert.AnError)
 
 		sut := NewBlueprintControl(blueprintCli)
 
@@ -195,7 +196,7 @@ func Test_blueprintClient_StopBlueprint(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, 0, len(sut.stoppedBlueprints))
-		assert.ErrorContains(t, err, "failed to update blueprint Blueprint A (shouldStop: true)")
+		assert.ErrorContains(t, err, "failed to patch blueprint Blueprint A (shouldStop: true)")
 	})
 }
 
@@ -217,8 +218,8 @@ func Test_blueprintClient_StartBlueprint(t *testing.T) {
 		blueprintCli := NewMockBlueprintInterface(t)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint A", mock.Anything).Return(&v3BlueprintA, nil)
 		blueprintCli.EXPECT().Get(testCtx, "Blueprint B", mock.Anything).Return(&v3BlueprintB, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintA, mock.Anything).Return(&v3BlueprintA, nil)
-		blueprintCli.EXPECT().Update(testCtx, &v3BlueprintB, mock.Anything).Return(&v3BlueprintB, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint A", types.MergePatchType, patchBlueprintStart, mock.Anything).Return(&v3BlueprintA, nil)
+		blueprintCli.EXPECT().Patch(testCtx, "Blueprint B", types.MergePatchType, patchBlueprintStart, mock.Anything).Return(&v3BlueprintB, nil)
 
 		sut := NewBlueprintControl(blueprintCli)
 		sut.stoppedBlueprints = []string{"Blueprint A", "Blueprint B"}

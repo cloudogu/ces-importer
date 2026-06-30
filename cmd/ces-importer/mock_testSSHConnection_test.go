@@ -6,7 +6,6 @@ import (
 	context "context"
 
 	configuration "github.com/cloudogu/ces-importer/configuration"
-
 	mock "github.com/stretchr/testify/mock"
 )
 

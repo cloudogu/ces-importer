@@ -5,11 +5,9 @@ package configuration
 import (
 	context "context"
 
+	v1 "github.com/cloudogu/k8s-backup-lib/api/v1"
 	mock "github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v1 "github.com/cloudogu/k8s-backup-lib/api/v1"
-
 	watch "k8s.io/apimachinery/pkg/watch"
 )
 
