@@ -5,9 +5,10 @@
 {{- $deployments := lookup "apps/v1" "Deployment" "" "" }}
 {{- if $deployments }}
   {{- range $deployments.items }}
-    {{- $componentName := index .metadata.labels "k8s.cloudogu.com/component.name" | default "" }}
+    {{- $labels := .metadata.labels | default dict }}
+    {{- $componentName := index $labels "k8s.cloudogu.com/component.name" | default "" }}
     {{- if eq $componentName "k8s-component-operator" }}
-      {{- $componentOperatorVersion = index .metadata.labels "k8s.cloudogu.com/component.version" | default "" }}
+      {{- $componentOperatorVersion = index $labels "k8s.cloudogu.com/component.version" | default "" }}
     {{- end }}
   {{- end }}
 {{- end }}
