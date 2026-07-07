@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - [#134] Wait for dogu-Configmap to get deleted
 
+## [v2.3.1] - 2026-06-30
+### Fixed
+- [#137] Use patch operation instead of update for blueprints to prevent overriding unknown fields if the blueprint CRD is updated.
+
+## [v2.3.0] - 2026-06-19
+### Added
+- [#135] Configuration for running the migration job in the host network.
+
 ## [v2.2.4] - 2026-06-03
 ### Fixed
 - [#132] Add install compatibility for the new backup-operator via component dependency update
