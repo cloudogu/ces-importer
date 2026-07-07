@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
 	"log/slog"
 	"os"
 	"path"
@@ -103,20 +101,12 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 		return fmt.Errorf("failed to delete original dogu config: %w", err)
 	}
 
-	timeout := time.After(deleteConfigMapTimeoutSeconds * time.Second)
-
-	for {
-		_, terr := repo.Get(ctx, doguName)
-		if terr != nil {
-			// Objekt existiert nicht mehr
-			break
-		}
-
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for dogu config deletion")
-		case <-time.After(deleteConfigMapPollIntervalMillis * time.Millisecond):
-		}
+	err = migration.WaitForDeletion(func() error {
+		_, terror := repo.Get(ctx, doguName)
+		return terror
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete dogu config after timeout: %w", err)
 	}
 
 	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))

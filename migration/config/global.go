@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/cloudogu/ces-importer/migration"
-	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"slices"
 	"strings"
+
+	"github.com/cloudogu/ces-importer/migration"
+	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -36,6 +37,14 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	err = gci.globalConfigRepo.Delete(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete global config: %w", err)
+	}
+
+	err = migration.WaitForDeletion(func() error {
+		_, terror := gci.globalConfigRepo.Get(ctx)
+		return terror
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete previous global config after timeout: %w", err)
 	}
 
 	gc, err := gci.globalConfigRepo.Create(ctx, regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{}))

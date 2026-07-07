@@ -280,6 +280,23 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 		assert.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, "failed to save dogu config:")
 	})
+	t.Run("should fail deleting with timeout", func(t *testing.T) {
+		doguName := doguCommons.SimpleName("cas")
+
+		mockRepo := newMockDoguConfigRepo(t)
+		mockRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
+		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, nil)
+
+		cfg := []migration.KeyValue{
+			{"key1", "value1"},
+			{"sub/key/foo", "bar"},
+		}
+
+		err := importDoguConfigWithRepo(testCtx, "cas", cfg, mockRepo, []string{})
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "timeout waiting for deletion")
+	})
 }
 
 func TestConfigImporter_importDoguConfig(t *testing.T) {

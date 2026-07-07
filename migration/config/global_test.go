@@ -2,16 +2,24 @@ package configuration
 
 import (
 	"context"
+	"testing"
+
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestConfigImporter_importGlobalConfig(t *testing.T) {
 	testCtx := context.Background()
+	oldWaitFunc := migration.WaitForDeletion
+	migration.WaitForDeletion = func(check func() error) error {
+		return nil
+	}
+	defer func() {
+		migration.WaitForDeletion = oldWaitFunc
+	}()
 
 	t.Run("should import global config successfully", func(t *testing.T) {
 		// given

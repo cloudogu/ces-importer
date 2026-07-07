@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - [#134] Wait for dogu-Configmap to get deleted
+- [#134] Wait for global-Configmap to get deleted
 
 ## [v2.3.1] - 2026-06-30
 ### Fixed
