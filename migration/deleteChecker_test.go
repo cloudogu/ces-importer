@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	cloudoguerrors "github.com/cloudogu/ces-commons-lib/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -88,6 +89,19 @@ func Test_waitForDeletion(t *testing.T) {
 		err := waitForDeletion(check)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("returns nil for a cloudogu config-lib NotFound error", func(t *testing.T) {
+		calls := 0
+		check := func() error {
+			calls++
+			return cloudoguerrors.NewNotFoundError(fmt.Errorf("could not find a configmap with the given name: global-config"))
+		}
+
+		err := waitForDeletion(check)
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, calls)
 	})
 }
 
