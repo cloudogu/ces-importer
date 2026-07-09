@@ -40,8 +40,8 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 	}
 
 	err = migration.WaitForDeletion(func() error {
-		_, terror := gci.globalConfigRepo.Get(ctx)
-		return terror
+		_, timeoutError := gci.globalConfigRepo.Get(ctx)
+		return timeoutError
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete previous global config after timeout: %w", err)

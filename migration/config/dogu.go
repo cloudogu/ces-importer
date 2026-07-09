@@ -102,8 +102,8 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 	}
 
 	err = migration.WaitForDeletion(func() error {
-		_, terror := repo.Get(ctx, doguName)
-		return terror
+		_, timeoutError := repo.Get(ctx, doguName)
+		return timeoutError
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete dogu config after timeout: %w", err)

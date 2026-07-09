@@ -17,10 +17,7 @@ var WaitForDeletion = waitForDeletion
 func waitForDeletion(check func() error) error {
 	timeout := time.After(deleteConfigMapTimeoutSeconds * time.Second)
 
-	for {
-		if apierrors.IsNotFound(check()) {
-			break
-		}
+	for !apierrors.IsNotFound(check()) {
 
 		select {
 		case <-timeout:

@@ -15,6 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var casNotFoundError = apierrors.NewNotFound(
+	schema.GroupResource{
+		Group:    "",
+		Resource: "configmaps",
+	},
+	"cas",
+)
+
 func Test_getLocalConfigFileForDogu(t *testing.T) {
 	localConfigFile := getLocalConfigFileForDogu("/data", "cas")
 	assert.Equal(t, "/data/cas/localConfig/local.yaml", localConfigFile)
@@ -161,13 +169,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 
 		mockRepo := newMockDoguConfigRepo(t)
 		mockRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 
 		newDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})
 		mockRepo.EXPECT().Create(testCtx, newDoguCfg).Return(newDoguCfg, nil)
@@ -217,13 +219,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 
 		mockRepo := newMockDoguConfigRepo(t)
 		mockRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 
 		newDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})
 		mockRepo.EXPECT().Create(testCtx, newDoguCfg).Return(newDoguCfg, assert.AnError)
@@ -245,13 +241,7 @@ func Test_importDoguConfigWithRepo(t *testing.T) {
 
 		mockRepo := newMockDoguConfigRepo(t)
 		mockRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 
 		newDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})
 		mockRepo.EXPECT().Create(testCtx, newDoguCfg).Return(newDoguCfg, nil)
@@ -307,13 +297,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}), nil)
 		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{
 			"key1":        "value1",
@@ -330,13 +314,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 
 		mockSensitiveRepo := newMockDoguConfigRepo(t)
 		mockSensitiveRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockSensitiveRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockSensitiveRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}), nil)
 		expectedSensitiveDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{
 			"sensitive": "geheim",
@@ -426,13 +404,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}), nil)
 		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{
 			"key1":        "value1",
@@ -480,13 +452,7 @@ func TestConfigImporter_importDoguConfig(t *testing.T) {
 
 		mockNormalRepo := newMockDoguConfigRepo(t)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguName).Return(nil)
-		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguName.String(),
-		))
+		mockNormalRepo.EXPECT().Get(testCtx, doguName).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}), nil)
 		expectedNormalDoguCfg := regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{
 			"key1":        "value1",
@@ -571,13 +537,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		})
 
 		mockNormalRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
-		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguNameCas.String(),
-		))
+		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
 		mockNormalRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
 			assert.Equal(t, testCtx, ctx)
@@ -594,13 +554,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		})
 
 		mockSensitiveRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
-		mockSensitiveRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguNameCas.String(),
-		))
+		mockSensitiveRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockSensitiveRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
 		mockSensitiveRepo.EXPECT().SaveOrMerge(testCtx, mock.Anything).RunAndReturn(func(ctx context.Context, config regConfig.DoguConfig) (regConfig.DoguConfig, error) {
 			assert.Equal(t, testCtx, ctx)
@@ -679,13 +633,7 @@ func TestConfigImporter_importDoguConfigs(t *testing.T) {
 		}
 		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Once().Return(regConfig.CreateDoguConfig("cas", originalConfigs), nil)
 		mockNormalRepo.EXPECT().Delete(testCtx, doguNameCas).Return(nil)
-		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Once().Return(regConfig.DoguConfig{}, apierrors.NewNotFound(
-			schema.GroupResource{
-				Group:    "",
-				Resource: "configmaps",
-			},
-			doguNameCas.String(),
-		))
+		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Once().Return(regConfig.DoguConfig{}, casNotFoundError)
 		mockNormalRepo.EXPECT().Get(testCtx, doguNameCas).Return(regConfig.CreateDoguConfig("cas", originalConfigs), nil)
 		mockNormalRepo.EXPECT().Create(testCtx, regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{})).Return(regConfig.CreateDoguConfig(doguNameCas, map[regConfig.Key]regConfig.Value{}), nil)
 		var mergedConfig regConfig.DoguConfig
