@@ -78,13 +78,16 @@ func (bsi *cesBackupScheduleImporter) delete(ctx context.Context, scheduleName s
 		if errors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to delete backup schedule resoruce'%s': %w", scheduleName, err)
+		return fmt.Errorf("failed to delete backup schedule resource'%s': %w", scheduleName, err)
 	}
 
 	err = migration.WaitForDeletion(func() error {
 		_, timeout_error := bsi.backupScheduleClient.Get(watchCtx, scheduleName, metav1.GetOptions{})
 		return timeout_error
 	})
+	if err != nil {
+		return fmt.Errorf("failed to delete backup schedule config after timeout: %w", err)
+	}
 
 	slog.Debug("marked backup schedule as deleted, wait for deletion of resource", "name", scheduleName)
 
