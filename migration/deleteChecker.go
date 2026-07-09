@@ -7,22 +7,22 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-const (
-	deleteConfigMapTimeoutSeconds     = 10
-	deleteConfigMapPollIntervalMillis = 200
+var (
+	deleteConfigMapTimeout      = 10 * time.Second
+	deleteConfigMapPollInterval = 200 * time.Millisecond
 )
 
 var WaitForDeletion = waitForDeletion
 
 func waitForDeletion(check func() error) error {
-	timeout := time.After(deleteConfigMapTimeoutSeconds * time.Second)
+	timeout := time.After(deleteConfigMapTimeout)
 
 	for !apierrors.IsNotFound(check()) {
 
 		select {
 		case <-timeout:
 			return fmt.Errorf("timeout waiting for deletion")
-		case <-time.After(deleteConfigMapPollIntervalMillis * time.Millisecond):
+		case <-time.After(deleteConfigMapPollInterval):
 		}
 	}
 	return nil
