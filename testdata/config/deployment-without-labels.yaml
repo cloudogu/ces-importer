@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment-without-labels
+  namespace: ecosystem
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-deployment
+  template:
+    metadata:
+      labels:
+        app: test-deployment
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.10
