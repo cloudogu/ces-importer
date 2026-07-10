@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- [#140] Check for labels on deployments before iterating over them
+### Fixed
 - [#134] Wait for dogu-Configmap to get deleted
 - [#134] Wait for global-Configmap to get deleted
 
