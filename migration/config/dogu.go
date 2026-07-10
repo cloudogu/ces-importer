@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
+	ceserrors "github.com/cloudogu/ces-commons-lib/errors"
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"log/slog"
 	"os"
 	"path"
@@ -93,15 +97,23 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 		}
 	}
 
-	err = repo.Delete(ctx, doguName)
+	// get current dogu-config to clear content
+	registryDoguConfig, err := repo.Get(ctx, doguName)
+	slog.Debug(fmt.Sprintf("old dogu config %s: %v", doguName, registryDoguConfig))
 	if err != nil {
-		return fmt.Errorf("failed to delete original dogu config: %w", err)
+		if ceserrors.IsNotFoundError(err) || apierrors.IsNotFound(err) {
+			// no current dogu-config, so we create it
+			registryDoguConfig, err = repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
+			if err != nil {
+				return fmt.Errorf("failed to create new dogu config: %w", err)
+			}
+		} else {
+			return fmt.Errorf("failed to get original dogu config: %w", err)
+		}
 	}
 
-	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
-	if err != nil {
-		return fmt.Errorf("failed to create new dogu config: %w", err)
-	}
+	//whipe out old config
+	registryDoguConfig.Config = regConfig.CreateConfig(make(regConfig.Entries))
 
 	configValuesToSet := make(map[regConfig.Key]regConfig.Value)
 
@@ -121,7 +133,10 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 		}
 	}
 
-	_, err = repo.SaveOrMerge(ctx, registryDoguConfig)
+	slog.Debug(fmt.Sprintf("config to overwrite %s: %v", doguName, registryDoguConfig))
+
+	//overwrite config instead of merging with old values
+	_, err = repo.Update(ctx, registryDoguConfig)
 	if err != nil {
 		return fmt.Errorf("failed to save dogu config: %w", err)
 	}
