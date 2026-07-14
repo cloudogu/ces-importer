@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- [#143] Option to add new env vars in the ces-importer container. You can change the default timezone with `TZ=Europe/Berlin` for example. The `TZ` variable will also be set in the job container.
+- [#143] Option to add new env vars in the ces-importer container.
+- Setting the default timezone `TZ=Europe/Berlin` with the env vars. The `TZ` variable will also be set in the job container.
 
 ### Fixed
 - [#140] Check for labels on deployments before iterating over them
