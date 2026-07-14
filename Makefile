@@ -138,6 +138,7 @@ images-import: ## import images from ces-importer and
 	@make image-import \
 		IMAGE=${ARTIFACT_ID_JOB}:${VERSION} \
 		IMAGE_DEV_VERSION=$(CES_REGISTRY_HOST)$(CES_REGISTRY_NAMESPACE)/$(ARTIFACT_ID_JOB)/$(GIT_BRANCH):${VERSION} \
+  		IMAGE_DEV_PUSH_VERSION=$(IMAGE_PUSH_REGISTRY_HOST)$(IMAGE_PUSH_REGISTRY_NAMESPACE)/$(ARTIFACT_ID_JOB)/$(GIT_BRANCH):${VERSION} \
 		BUILD_ARGS="--build-arg BINARY=import-job --build-arg UID=0 --build-arg GID=0"
 
 .PHONY: ces-importer-release
