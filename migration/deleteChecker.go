@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	deleteConfigMapTimeout      = 10 * time.Second
+	deleteConfigMapTimeout      = 30 * time.Second
 	deleteConfigMapPollInterval = 200 * time.Millisecond
 )
 
