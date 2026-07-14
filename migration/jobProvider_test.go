@@ -253,6 +253,8 @@ func TestJobProvider_createImportJob(t *testing.T) {
 func Test_createJobSpec(t *testing.T) {
 	t.Run("should create job spec successfully", func(t *testing.T) {
 		// given
+		t.Setenv("TZ", "Europe/Braunschweig")
+
 		jcCfg := configuration.JobContainer{
 			JobConfigMap:      "test-config-map",
 			JobServiceAccount: "test-service-account",
@@ -291,9 +293,11 @@ func Test_createJobSpec(t *testing.T) {
 		assert.Equal(t, "test-secret", spec.imagePullSecrets[0].Name)
 
 		// Check that the environment variables are set correctly
-		assert.Len(t, spec.env, 3)
+		assert.Len(t, spec.env, 4)
 		assert.Equal(t, "API_KEY", spec.env[0].Name)
 		assert.Equal(t, apiKey, spec.env[0].Value)
+		assert.Equal(t, "TZ", spec.env[3].Name)
+		assert.Equal(t, "Europe/Braunschweig", spec.env[3].Value)
 	})
 
 	t.Run("should return error when parseRequirements fails", func(t *testing.T) {
