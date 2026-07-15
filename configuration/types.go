@@ -20,6 +20,7 @@ var (
 const (
 	EnvBaseConfigPathKey    = "CONFIG_PATH"
 	EnvImporterNamespaceKey = "IMPORTER_NAMESPACE"
+	EnvTimezoneKey          = "TZ"
 )
 
 const (

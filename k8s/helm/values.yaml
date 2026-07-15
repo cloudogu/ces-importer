@@ -148,5 +148,8 @@ config:
 controllerManager:
   image:
     tag: 0.0.1
+  extraEnv:
+    - name: "TZ"
+      value: "Europe/Berlin"
 image:
   tag: 0.0.1
