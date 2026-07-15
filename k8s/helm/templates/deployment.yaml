@@ -51,6 +51,9 @@ spec:
                   fieldPath: metadata.namespace
             - name: CONFIG_PATH
               value: "/etc/{{ include "ces-importer.name" . }}/config"
+              {{- with .Values.controllerManager.extraEnv}}
+              {{ toYaml . | nindent 12 }}
+              {{- end }}
           volumeMounts:
             - mountPath: "/etc/{{ include "ces-importer.name" . }}/config"
               name: config-volume

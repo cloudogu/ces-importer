@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.2] - 2026-07-15
+### Added
+- [#143] Option to add new env vars in the ces-importer container.
+- Setting the default timezone `TZ=Europe/Berlin` with the env vars. The `TZ` variable will also be set in the job container.
+
+### Fixed
+- [#140] Check for labels on deployments before iterating over them
+
 ## [v2.3.1] - 2026-06-30
 ### Fixed
 - [#137] Use patch operation instead of update for blueprints to prevent overriding unknown fields if the blueprint CRD is updated.

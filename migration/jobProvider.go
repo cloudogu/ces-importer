@@ -316,6 +316,10 @@ func createContainerEnv(apiKey string) []v1.EnvVar {
 			Name:  configuration.EnvImporterNamespaceKey,
 			Value: os.Getenv(configuration.EnvImporterNamespaceKey),
 		},
+		{
+			Name:  configuration.EnvTimezoneKey,
+			Value: os.Getenv(configuration.EnvTimezoneKey),
+		},
 	}
 }
 
