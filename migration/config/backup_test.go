@@ -12,18 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-)
-
-var notFoundError = apierrors.NewNotFound(
-	schema.GroupResource{
-		Group:    "",
-		Resource: "configmaps",
-	},
-	"notfound",
 )
 
 func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
@@ -42,8 +33,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule1", metav1.GetOptions{}).Return(nil, notFoundError)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -78,7 +67,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(assert.AnError)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -110,7 +98,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc := newMockBackupScheduleClient(t)
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(mockWatcherSchedule1, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule1", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -146,7 +133,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(nil, errors.NewNotFound(schema.GroupResource{}, "schedule1"))
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -179,7 +165,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(nil, assert.AnError)
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -214,7 +199,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(errors.NewNotFound(schema.GroupResource{}, "schedule1"))
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
@@ -248,7 +232,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc := newMockBackupScheduleClient(t)
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(mockWatcherSchedule1, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule1", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 
@@ -282,8 +265,6 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule1", metav1.DeleteOptions{}).Return(nil)
 		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule1", metav1.GetOptions{}).Return(nil, notFoundError)
-		mockBsc.EXPECT().Get(mock.Anything, "schedule2", metav1.GetOptions{}).Return(nil, notFoundError)
 
 		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
 		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}

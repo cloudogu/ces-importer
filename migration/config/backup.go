@@ -16,14 +16,13 @@ import (
 const veleroBackupProvider = "velero"
 
 var (
-	watchTimeout = 10 * time.Second
+	watchTimeout = 30 * time.Second
 )
 
 type backupScheduleClient interface {
 	Create(ctx context.Context, backupSchedule *backupv1.BackupSchedule, opts metav1.CreateOptions) (*backupv1.BackupSchedule, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*backupv1.BackupSchedule, error)
 }
 
 type cesBackupScheduleImporter struct {
@@ -79,14 +78,6 @@ func (bsi *cesBackupScheduleImporter) delete(ctx context.Context, scheduleName s
 			return nil
 		}
 		return fmt.Errorf("failed to delete backup schedule resource'%s': %w", scheduleName, err)
-	}
-
-	err = migration.WaitForDeletion(func() error {
-		_, timeout_error := bsi.backupScheduleClient.Get(watchCtx, scheduleName, metav1.GetOptions{})
-		return timeout_error
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete backup schedule config after timeout: %w", err)
 	}
 
 	slog.Debug("marked backup schedule as deleted, wait for deletion of resource", "name", scheduleName)
