@@ -8,8 +8,10 @@ import (
 	"slices"
 	"strings"
 
+	ceserrors "github.com/cloudogu/ces-commons-lib/errors"
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var globalConfigKeysToKeep = []string{
@@ -29,28 +31,23 @@ type cesGlobalConfigImporter struct {
 func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, config migration.GlobalConfig) error {
 	slog.Info("Importing global config...")
 
-	previousGlobalConfig, err := gci.globalConfigRepo.Get(ctx)
+	gc, err := gci.globalConfigRepo.Get(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get global config: %w", err)
+		if !ceserrors.IsNotFoundError(err) && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get global config: %w", err)
+		}
+		// no current global-config, so we create it
+		gc, err = gci.globalConfigRepo.Create(ctx, regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{}))
+		if err != nil {
+			return fmt.Errorf("failed to create global config: %w", err)
+		}
 	}
+	// store original values for merging config values to keep
+	// - might be empty if gc was created previously
+	previousGlobalConfig := gc
 
-	err = gci.globalConfigRepo.Delete(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delete global config: %w", err)
-	}
-
-	err = migration.WaitForDeletion(func() error {
-		_, timeoutError := gci.globalConfigRepo.Get(ctx)
-		return timeoutError
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete previous global config after timeout: %w", err)
-	}
-
-	gc, err := gci.globalConfigRepo.Create(ctx, regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{}))
-	if err != nil {
-		return fmt.Errorf("failed to create global config: %w", err)
-	}
+	// wipe out old config so we overwrite instead of merging with old values.
+	gc.Config = regConfig.CreateConfig(map[regConfig.Key]regConfig.Value{})
 
 	gc, err = gci.addConfigToKeepToRegistry(previousGlobalConfig, gc)
 	if err != nil {
@@ -77,7 +74,7 @@ func (gci *cesGlobalConfigImporter) importGlobalConfig(ctx context.Context, conf
 		gc = regConfig.GlobalConfig{Config: newGlobalConfig}
 	}
 
-	_, err = gci.globalConfigRepo.SaveOrMerge(ctx, gc)
+	_, err = gci.globalConfigRepo.Update(ctx, gc)
 	if err != nil {
 		return fmt.Errorf("failed to save new global config: %w", err)
 	}
