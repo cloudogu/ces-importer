@@ -9,7 +9,29 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// createSimpleKeyValueConfig builds the common key1/key2 exporter config and the expected
+// resulting global config shared by several subtests below.
+func createSimpleKeyValueConfig(t *testing.T) ([]migration.KeyValue, regConfig.GlobalConfig) {
+	t.Helper()
+
+	testConfig := []migration.KeyValue{
+		{"key1", "value1"},
+		{"key2", "value2"},
+	}
+
+	expectedConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
+	newCfg, err := expectedConfig.Set("key1", "value1")
+	require.NoError(t, err)
+	newCfg, err = newCfg.Set("key2", "value2")
+	require.NoError(t, err)
+	expectedConfig = regConfig.GlobalConfig{Config: newCfg}
+
+	return testConfig, expectedConfig
+}
 
 func TestConfigImporter_importGlobalConfig(t *testing.T) {
 	testCtx := context.Background()
@@ -18,19 +40,9 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		// given
 		mockConfigRepo := newMockGlobalConfigRepo(t)
 		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, nil)
-		expectedConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
-		newCfg, err := expectedConfig.Set("key1", "value1")
-		require.NoError(t, err)
-		newCfg, err = newCfg.Set("key2", "value2")
-		require.NoError(t, err)
 
-		expectedConfig = regConfig.GlobalConfig{Config: newCfg}
+		testConfig, expectedConfig := createSimpleKeyValueConfig(t)
 		mockConfigRepo.EXPECT().Update(testCtx, expectedConfig).Return(expectedConfig, nil)
-
-		testConfig := []migration.KeyValue{
-			{"key1", "value1"},
-			{"key2", "value2"},
-		}
 
 		importer := &cesGlobalConfigImporter{
 			globalConfigRepo:     mockConfigRepo,
@@ -38,7 +50,7 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		// when
-		err = importer.importGlobalConfig(testCtx, testConfig)
+		err := importer.importGlobalConfig(testCtx, testConfig)
 
 		// then
 		require.NoError(t, err)
@@ -208,19 +220,19 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to get global config:")
 	})
 
-	t.Run("should fail to import global config on saveOrMerge new config", func(t *testing.T) {
+	t.Run("should fail to import global config on create new config", func(t *testing.T) {
 		// given
 		mockConfigRepo := newMockGlobalConfigRepo(t)
-		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, nil)
+		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, apierrors.NewNotFound(
+			schema.GroupResource{
+				Group:    "",
+				Resource: "configmaps",
+			},
+			"notfound",
+		))
 
-		expectedConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
-		newCfg, err := expectedConfig.Set("key1", "value1")
-		require.NoError(t, err)
-		newCfg, err = newCfg.Set("key2", "value2")
-		require.NoError(t, err)
-
-		expectedConfig = regConfig.GlobalConfig{Config: newCfg}
-		mockConfigRepo.EXPECT().Update(testCtx, expectedConfig).Return(expectedConfig, assert.AnError)
+		emptyConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
+		mockConfigRepo.EXPECT().Create(testCtx, emptyConfig).Return(emptyConfig, assert.AnError)
 
 		testConfig := []migration.KeyValue{
 			{"key1", "value1"},
@@ -233,7 +245,58 @@ func TestConfigImporter_importGlobalConfig(t *testing.T) {
 		}
 
 		// when
-		err = importer.importGlobalConfig(testCtx, testConfig)
+		err := importer.importGlobalConfig(testCtx, testConfig)
+
+		// then
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, "failed to create global config:")
+	})
+
+	t.Run("should succeed to create and import global config not found error", func(t *testing.T) {
+		// given
+		mockConfigRepo := newMockGlobalConfigRepo(t)
+		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, apierrors.NewNotFound(
+			schema.GroupResource{
+				Group:    "",
+				Resource: "configmaps",
+			},
+			"notfound",
+		))
+
+		emptyConfig := regConfig.CreateGlobalConfig(map[regConfig.Key]regConfig.Value{})
+		mockConfigRepo.EXPECT().Create(testCtx, emptyConfig).Return(emptyConfig, nil)
+
+		testConfig, expectedConfig := createSimpleKeyValueConfig(t)
+		mockConfigRepo.EXPECT().Update(testCtx, expectedConfig).Return(expectedConfig, nil)
+
+		importer := &cesGlobalConfigImporter{
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
+		}
+
+		// when
+		err := importer.importGlobalConfig(testCtx, testConfig)
+
+		// then
+		require.NoError(t, err)
+	})
+
+	t.Run("should fail to import global config on update new config", func(t *testing.T) {
+		// given
+		mockConfigRepo := newMockGlobalConfigRepo(t)
+		mockConfigRepo.EXPECT().Get(testCtx).Return(regConfig.GlobalConfig{}, nil)
+
+		testConfig, expectedConfig := createSimpleKeyValueConfig(t)
+		mockConfigRepo.EXPECT().Update(testCtx, expectedConfig).Return(expectedConfig, assert.AnError)
+
+		importer := &cesGlobalConfigImporter{
+			globalConfigRepo:     mockConfigRepo,
+			additionalKeysToKeep: []string{},
+		}
+
+		// when
+		err := importer.importGlobalConfig(testCtx, testConfig)
 
 		// then
 		require.Error(t, err)
