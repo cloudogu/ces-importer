@@ -79,52 +79,6 @@ func (_c *mockGlobalConfigRepo_Create_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
-// Delete provides a mock function with given fields: ctx
-func (_m *mockGlobalConfigRepo) Delete(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Delete")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// mockGlobalConfigRepo_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type mockGlobalConfigRepo_Delete_Call struct {
-	*mock.Call
-}
-
-// Delete is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *mockGlobalConfigRepo_Expecter) Delete(ctx interface{}) *mockGlobalConfigRepo_Delete_Call {
-	return &mockGlobalConfigRepo_Delete_Call{Call: _e.mock.On("Delete", ctx)}
-}
-
-func (_c *mockGlobalConfigRepo_Delete_Call) Run(run func(ctx context.Context)) *mockGlobalConfigRepo_Delete_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
-	})
-	return _c
-}
-
-func (_c *mockGlobalConfigRepo_Delete_Call) Return(_a0 error) *mockGlobalConfigRepo_Delete_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *mockGlobalConfigRepo_Delete_Call) RunAndReturn(run func(context.Context) error) *mockGlobalConfigRepo_Delete_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Get provides a mock function with given fields: ctx
 func (_m *mockGlobalConfigRepo) Get(ctx context.Context) (config.GlobalConfig, error) {
 	ret := _m.Called(ctx)
@@ -181,12 +135,12 @@ func (_c *mockGlobalConfigRepo_Get_Call) RunAndReturn(run func(context.Context) 
 	return _c
 }
 
-// SaveOrMerge provides a mock function with given fields: ctx, globalConfig
-func (_m *mockGlobalConfigRepo) SaveOrMerge(ctx context.Context, globalConfig config.GlobalConfig) (config.GlobalConfig, error) {
+// Update provides a mock function with given fields: ctx, globalConfig
+func (_m *mockGlobalConfigRepo) Update(ctx context.Context, globalConfig config.GlobalConfig) (config.GlobalConfig, error) {
 	ret := _m.Called(ctx, globalConfig)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SaveOrMerge")
+		panic("no return value specified for Update")
 	}
 
 	var r0 config.GlobalConfig
@@ -209,31 +163,31 @@ func (_m *mockGlobalConfigRepo) SaveOrMerge(ctx context.Context, globalConfig co
 	return r0, r1
 }
 
-// mockGlobalConfigRepo_SaveOrMerge_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveOrMerge'
-type mockGlobalConfigRepo_SaveOrMerge_Call struct {
+// mockGlobalConfigRepo_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type mockGlobalConfigRepo_Update_Call struct {
 	*mock.Call
 }
 
-// SaveOrMerge is a helper method to define mock.On call
+// Update is a helper method to define mock.On call
 //   - ctx context.Context
 //   - globalConfig config.GlobalConfig
-func (_e *mockGlobalConfigRepo_Expecter) SaveOrMerge(ctx interface{}, globalConfig interface{}) *mockGlobalConfigRepo_SaveOrMerge_Call {
-	return &mockGlobalConfigRepo_SaveOrMerge_Call{Call: _e.mock.On("SaveOrMerge", ctx, globalConfig)}
+func (_e *mockGlobalConfigRepo_Expecter) Update(ctx interface{}, globalConfig interface{}) *mockGlobalConfigRepo_Update_Call {
+	return &mockGlobalConfigRepo_Update_Call{Call: _e.mock.On("Update", ctx, globalConfig)}
 }
 
-func (_c *mockGlobalConfigRepo_SaveOrMerge_Call) Run(run func(ctx context.Context, globalConfig config.GlobalConfig)) *mockGlobalConfigRepo_SaveOrMerge_Call {
+func (_c *mockGlobalConfigRepo_Update_Call) Run(run func(ctx context.Context, globalConfig config.GlobalConfig)) *mockGlobalConfigRepo_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(config.GlobalConfig))
 	})
 	return _c
 }
 
-func (_c *mockGlobalConfigRepo_SaveOrMerge_Call) Return(_a0 config.GlobalConfig, _a1 error) *mockGlobalConfigRepo_SaveOrMerge_Call {
+func (_c *mockGlobalConfigRepo_Update_Call) Return(_a0 config.GlobalConfig, _a1 error) *mockGlobalConfigRepo_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockGlobalConfigRepo_SaveOrMerge_Call) RunAndReturn(run func(context.Context, config.GlobalConfig) (config.GlobalConfig, error)) *mockGlobalConfigRepo_SaveOrMerge_Call {
+func (_c *mockGlobalConfigRepo_Update_Call) RunAndReturn(run func(context.Context, config.GlobalConfig) (config.GlobalConfig, error)) *mockGlobalConfigRepo_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

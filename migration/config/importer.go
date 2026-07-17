@@ -3,12 +3,13 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/cloudogu/ces-commons-lib/dogu"
 	"github.com/cloudogu/ces-importer/configuration"
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
-	"path"
-	"strings"
 )
 
 type configGetter interface {
@@ -18,13 +19,13 @@ type configGetter interface {
 type globalConfigRepo interface {
 	Get(ctx context.Context) (regConfig.GlobalConfig, error)
 	Create(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
-	SaveOrMerge(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
-	Delete(ctx context.Context) error
+	Update(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
 }
 
 type doguConfigRepo interface {
 	Create(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	Get(ctx context.Context, name dogu.SimpleName) (regConfig.DoguConfig, error)
+	Update(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	SaveOrMerge(ctx context.Context, doguConfig regConfig.DoguConfig) (regConfig.DoguConfig, error)
 	Delete(ctx context.Context, name dogu.SimpleName) error
 }

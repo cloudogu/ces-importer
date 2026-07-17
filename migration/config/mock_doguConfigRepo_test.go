@@ -241,6 +241,63 @@ func (_c *mockDoguConfigRepo_SaveOrMerge_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// Update provides a mock function with given fields: ctx, doguConfig
+func (_m *mockDoguConfigRepo) Update(ctx context.Context, doguConfig config.DoguConfig) (config.DoguConfig, error) {
+	ret := _m.Called(ctx, doguConfig)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 config.DoguConfig
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, config.DoguConfig) (config.DoguConfig, error)); ok {
+		return rf(ctx, doguConfig)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, config.DoguConfig) config.DoguConfig); ok {
+		r0 = rf(ctx, doguConfig)
+	} else {
+		r0 = ret.Get(0).(config.DoguConfig)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, config.DoguConfig) error); ok {
+		r1 = rf(ctx, doguConfig)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// mockDoguConfigRepo_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type mockDoguConfigRepo_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - doguConfig config.DoguConfig
+func (_e *mockDoguConfigRepo_Expecter) Update(ctx interface{}, doguConfig interface{}) *mockDoguConfigRepo_Update_Call {
+	return &mockDoguConfigRepo_Update_Call{Call: _e.mock.On("Update", ctx, doguConfig)}
+}
+
+func (_c *mockDoguConfigRepo_Update_Call) Run(run func(ctx context.Context, doguConfig config.DoguConfig)) *mockDoguConfigRepo_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(config.DoguConfig))
+	})
+	return _c
+}
+
+func (_c *mockDoguConfigRepo_Update_Call) Return(_a0 config.DoguConfig, _a1 error) *mockDoguConfigRepo_Update_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *mockDoguConfigRepo_Update_Call) RunAndReturn(run func(context.Context, config.DoguConfig) (config.DoguConfig, error)) *mockDoguConfigRepo_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // newMockDoguConfigRepo creates a new instance of mockDoguConfigRepo. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func newMockDoguConfigRepo(t interface {
