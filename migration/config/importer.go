@@ -19,9 +19,7 @@ type configGetter interface {
 type globalConfigRepo interface {
 	Get(ctx context.Context) (regConfig.GlobalConfig, error)
 	Create(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
-	SaveOrMerge(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
 	Update(ctx context.Context, globalConfig regConfig.GlobalConfig) (regConfig.GlobalConfig, error)
-	Delete(ctx context.Context) error
 }
 
 type doguConfigRepo interface {
