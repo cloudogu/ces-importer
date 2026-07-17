@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	doguCommons "github.com/cloudogu/ces-commons-lib/dogu"
+	ceserrors "github.com/cloudogu/ces-commons-lib/errors"
 	"github.com/cloudogu/ces-importer/migration"
 	regConfig "github.com/cloudogu/k8s-registry-lib/config"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"log/slog"
 	"os"
 	"path"
@@ -77,31 +81,30 @@ func (dci *cesDoguConfigImporter) importDoguConfig(ctx context.Context, dc migra
 	return nil
 }
 
-// importDoguConfigWithRepo imports a dogu configuration into a doguConfigRepo by deleting the original repo
-// and creating and then filling a new one. Dogu configurations specifically excluded are set to the original values
-// or skipped if they didn't exist before the import
+// importDoguConfigWithRepo imports a dogu configuration into a doguConfigRepo by wiping the
+// existing config and refilling it. Excluded keys are restored to their original values, or
+// skipped if they didn't exist before the import.
 func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConfig []migration.KeyValue, repo doguConfigRepo, excludedKeys []string) error {
 	doguName := doguCommons.SimpleName(dogu)
 
-	var originalValues regConfig.DoguConfig
-	var err error
-	if len(excludedKeys) > 0 {
-		// this is only needed if we need to recreate the old keys became some keys were excluded
-		originalValues, err = repo.Get(ctx, doguName)
-		if err != nil {
+	// get current dogu-config to clear content
+	registryDoguConfig, err := repo.Get(ctx, doguName)
+	if err != nil {
+		if !ceserrors.IsNotFoundError(err) && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get original dogu config: %w", err)
 		}
+		// no current dogu-config, so we create it
+		registryDoguConfig, err = repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
+		if err != nil {
+			return fmt.Errorf("failed to create new dogu config: %w", err)
+		}
 	}
+	// store original values for merging excluded keys if needed
+	// - might be empty if registryDoguConfig was created previously
+	originalValues := registryDoguConfig
 
-	err = repo.Delete(ctx, doguName)
-	if err != nil {
-		return fmt.Errorf("failed to delete original dogu config: %w", err)
-	}
-
-	registryDoguConfig, err := repo.Create(ctx, regConfig.CreateDoguConfig(doguName, map[regConfig.Key]regConfig.Value{}))
-	if err != nil {
-		return fmt.Errorf("failed to create new dogu config: %w", err)
-	}
+	// wipe out old config so we overwrite instead of merging with old values.
+	registryDoguConfig.Config = regConfig.CreateConfig(make(regConfig.Entries))
 
 	configValuesToSet := make(map[regConfig.Key]regConfig.Value)
 
@@ -121,7 +124,8 @@ func importDoguConfigWithRepo(ctx context.Context, dogu string, exporterDoguConf
 		}
 	}
 
-	_, err = repo.SaveOrMerge(ctx, registryDoguConfig)
+	//overwrite config instead of merging with old values
+	_, err = repo.Update(ctx, registryDoguConfig)
 	if err != nil {
 		return fmt.Errorf("failed to save dogu config: %w", err)
 	}

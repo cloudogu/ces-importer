@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.3] - 2026-07-17
+### Fixed
+- [#134] Wipe and rewrite the dogu-configmap instead of deleting and recreating it, because of possible interference from Dogu-Operator
+- [#134] Wipe and rewrite the global-configmap instead of deleting and recreating it, to stay consistent to dogu-config and avoid too early creation problems
+
 ## [v2.3.2] - 2026-07-15
 ### Added
 - [#143] Option to add new env vars in the ces-importer container.

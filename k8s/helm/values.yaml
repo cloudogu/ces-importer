@@ -2,7 +2,7 @@ main:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer
-    tag: 2.3.2
+    tag: 2.3.3
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent
@@ -17,7 +17,7 @@ job:
   image:
     registry: docker.io
     repository: cloudogu/ces-importer-migration-job
-    tag: 2.3.2
+    tag: 2.3.3
   imagePullSecrets:
     - name: "ces-container-registries"
   imagePullPolicy: IfNotPresent

@@ -16,7 +16,7 @@ import (
 const veleroBackupProvider = "velero"
 
 var (
-	watchTimeout = 10 * time.Second
+	watchTimeout = 30 * time.Second
 )
 
 type backupScheduleClient interface {
@@ -77,8 +77,7 @@ func (bsi *cesBackupScheduleImporter) delete(ctx context.Context, scheduleName s
 		if errors.IsNotFound(err) {
 			return nil
 		}
-
-		return fmt.Errorf("failed to delete backup schedule resoruce'%s': %w", scheduleName, err)
+		return fmt.Errorf("failed to delete backup schedule resource'%s': %w", scheduleName, err)
 	}
 
 	slog.Debug("marked backup schedule as deleted, wait for deletion of resource", "name", scheduleName)
