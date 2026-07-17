@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - [#140] Check for labels on deployments before iterating over them
 ### Fixed
-- [#134] Reuse original dogu-configmap
-- [#134] Wait for global-Configmap to get deleted
+- [#134] Wipe and rewrite the dogu-configmap instead of deleting and recreating it, because of possible interference from Dogu-Operator
+- [#134] Wipe and rewrite the global-configmap instead of deleting and recreating it, to stay consistent to dogu-config and avoid too early creation problems
 
 ## [v2.3.1] - 2026-06-30
 ### Fixed
