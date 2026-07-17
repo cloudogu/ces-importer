@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v2.3.3] - 2026-07-17
 ### Fixed
 - [#134] Wipe and rewrite the dogu-configmap instead of deleting and recreating it, because of possible interference from Dogu-Operator
 - [#134] Wipe and rewrite the global-configmap instead of deleting and recreating it, to stay consistent to dogu-config and avoid too early creation problems
