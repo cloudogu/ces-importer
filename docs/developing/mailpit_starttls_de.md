@@ -29,6 +29,8 @@ DNS.3 = localhost
 Zertifikat mit Konfiguration erstellen
 
 ```bash
+openssl genrsa -out ca.key 2048
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt -subj "/CN=MailPit-Test-CA"
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -config server.cnf
 openssl x509 -req   -in server.csr   -CA ca.crt   -CAkey ca.key   -CAcreateserial   -out server.crt   -days 825   -sha256   -extensions req_ext   -extfile server.cnf
@@ -46,7 +48,7 @@ kubectl create secret tls mailpit-tls --cert=server.crt --key=server.key
 
 #### Zertifikat als Config-Map für den Importer im Cluster ablegen
 ```bash
-kubectl create configmap ces-importer-mail-ca --from-file=mail.crt=server.crt --namespace=ecosystem
+kubectl create configmap ces-importer-mail-ca --from-file=mail.crt=ca.crt --namespace=ecosystem
 ```
 
 #### Mailpit als Deployment ablegen
@@ -132,6 +134,26 @@ spec:
                 name: mailpit
                 port:
                   number: 8025
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: importer-mailpit-test-removeme
+  namespace: ecosystem
+spec:
+  podSelector:
+    matchLabels:
+      app: mailpit
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              k8s.cloudogu.com/component.name: ces-importer
+      ports:
+        - protocol: TCP
+          port: 1025
 ```
 
 #### Testen über Portforwarding
