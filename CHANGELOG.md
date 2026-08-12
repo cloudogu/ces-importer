@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v2.3.4] - 2026-08-12
 ### Fixed
 - [#145] The name of the smtp tls mode configuration in the go struct tag from `tlsMODE` to `tlsMode`.
 
