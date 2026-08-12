@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.3.4] - 2026-08-12
+### Fixed
+- [#145] The name of the smtp tls mode configuration in the go struct tag from `tlsMODE` to `tlsMode`.
+
 ## [v2.3.3] - 2026-07-17
 ### Fixed
 - [#134] Wipe and rewrite the dogu-configmap instead of deleting and recreating it, because of possible interference from Dogu-Operator
