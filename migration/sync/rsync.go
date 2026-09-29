@@ -231,6 +231,9 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 	// delete extraneous files from dest dirs
 	args = append(args, "--delete")
 
+    // detect changed files by content instead of only size and mtime
+    args = append(args, "--checksum")
+
 	// turn sequences of nulls into sparse blocks
 	args = append(args, "--sparse")
 
