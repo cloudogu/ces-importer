@@ -41,11 +41,12 @@ type RsyncSyncer struct {
 	excludePattern      []configuration.ExcludePattern
 	doguVolumeBasePath  string
 	excludedDogus       []string
+	checksumDogus       []string
 	verbose             bool
 }
 
 // NewRsyncSyncer creates a new RsyncSyncer instance.
-func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string, excludedDogus []string, verbose bool) *RsyncSyncer {
+func NewRsyncSyncer(host string, user string, privateKeyPath string, client exportDoguApiClient, provider systemInfoProvider, excludePattern []configuration.ExcludePattern, doguVolumeBasePath string, excludedDogus, checksumDogus []string, verbose bool) *RsyncSyncer {
 	commandMaker := func(name string, arg ...string) command {
 		return exec.Command(name, arg...)
 	}
@@ -59,6 +60,7 @@ func NewRsyncSyncer(host string, user string, privateKeyPath string, client expo
 		excludePattern:      excludePattern,
 		doguVolumeBasePath:  doguVolumeBasePath,
 		excludedDogus:       excludedDogus,
+		checksumDogus:       checksumDogus,
 		verbose:             verbose,
 	}
 }
@@ -90,6 +92,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 	}
 
 	excludedDoguNames := rs.getExcludedDoguNames()
+	checksumDoguNames := getSimpleDoguNames(rs.checksumDogus)
 
 	// sync data for every dogu
 	for _, dogu := range systemInfo.Dogus {
@@ -116,6 +119,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 
 		// exclude pattern might be an empty string
 		excludePattern := excludeMap[dogu.Name]
+		useChecksum := slices.Contains(checksumDoguNames, qualifiedDoguName.SimpleName.String())
 		// default is /data/{doguName}
 
 		doguImportDir := path.Join(rs.doguVolumeBasePath, string(qualifiedDoguName.SimpleName))
@@ -132,7 +136,7 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 			// Ensure the exporter path ends with a separator for rsync
 			exporterSourcePath := path.Clean(path.Join(doguExport.VolumePath, subDir)) + "/"
 
-			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern); err != nil {
+			if err := rs.SyncDoguDir(ctx, doguExport.ExporterPort, exporterSourcePath, importerDestination, excludePattern, useChecksum); err != nil {
 				slog.Error(fmt.Sprintf("failed to sync source %s to destination %s: %v", exporterSourcePath, importerDestination, err))
 				result = errors.Join(result, fmt.Errorf("failed to sync source %s to destination %s: %w", exporterSourcePath, importerDestination, err))
 			}
@@ -145,23 +149,27 @@ func (rs *RsyncSyncer) SyncData(ctx context.Context) error {
 
 // getExcludedDoguNames gets the list of excluded dogu names without the namespace
 func (rs *RsyncSyncer) getExcludedDoguNames() []string {
-	excludedDoguNames := make([]string, len(rs.excludedDogus))
-	for i, doguName := range rs.excludedDogus {
+	return getSimpleDoguNames(rs.excludedDogus)
+}
+
+func getSimpleDoguNames(doguNames []string) []string {
+	simpleNames := make([]string, len(doguNames))
+	for i, doguName := range doguNames {
 		qualifiedName, err := doguCommons.QualifiedNameFromString(doguName)
 		if err == nil {
-			excludedDoguNames[i] = qualifiedName.SimpleName.String()
+			simpleNames[i] = qualifiedName.SimpleName.String()
 		} else {
-			excludedDoguNames[i] = doguName
+			simpleNames[i] = doguName
 		}
 	}
-	return excludedDoguNames
+	return simpleNames
 }
 
 // SyncDoguDir copies dogu volume data from a remote Cloudogu EcoSystem instance.
-func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destination string, excludePatterns []string) error {
+func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destination string, excludePatterns []string, useChecksum bool) error {
 
 	// Define the rsync command and arguments
-	args := rs.buildRSyncArgs(port, source, destination, excludePatterns)
+	args := rs.buildRSyncArgs(port, source, destination, excludePatterns, useChecksum)
 	cmd := rs.makeCommand("rsync", args...)
 
 	slog.Debug(fmt.Sprintf("executing rsync command: %s", cmd.String()))
@@ -216,7 +224,7 @@ func (rs *RsyncSyncer) SyncDoguDir(_ context.Context, port int, source, destinat
 }
 
 // buildRSyncArgs builds the arguments for the rsync command based on the given parameters
-func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excludePatterns []string) []string {
+func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excludePatterns []string, useChecksum bool) []string {
 	var args []string
 	// archive mode
 	// verbose
@@ -230,6 +238,11 @@ func (rs *RsyncSyncer) buildRSyncArgs(port int, source, destination string, excl
 
 	// delete extraneous files from dest dirs
 	args = append(args, "--delete")
+
+	if useChecksum {
+		// detect changed files by content instead of only size and mtime
+		args = append(args, "--checksum")
+	}
 
 	// turn sequences of nulls into sparse blocks
 	args = append(args, "--sparse")

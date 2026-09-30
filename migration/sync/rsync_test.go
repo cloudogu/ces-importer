@@ -10,99 +10,120 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 )
 
 func TestSyncData(t *testing.T) {
-	t.Run("should return with no error", func(t *testing.T) {
-		cmd := newMockCommand(t)
-		cmd.EXPECT().String().Return("cmd")
-		l := strings.NewReader("log")
-		lc := io.NopCloser(l)
-		cmd.EXPECT().StdoutPipe().Return(lc, nil)
-		e := strings.NewReader("error")
-		ec := io.NopCloser(e)
-		cmd.EXPECT().StderrPipe().Return(ec, nil)
-		cmd.EXPECT().Start().Return(nil)
-		cmd.EXPECT().Wait().Return(nil)
+	for _, tc := range []struct {
+		name          string
+		checksumDogus []string
+		useChecksum   bool
+	}{
+		{name: "omitted checksum list"},
+		{name: "empty checksum list", checksumDogus: []string{}},
+		{name: "qualified checksum dogu", checksumDogus: []string{"official/test"}, useChecksum: true},
+		{name: "simple checksum dogu", checksumDogus: []string{"test"}, useChecksum: true},
+		{name: "unlisted dogu", checksumDogus: []string{"official/ldap"}},
+		{name: "multiple checksum dogus", checksumDogus: []string{"official/ldap", "test"}, useChecksum: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := newMockCommand(t)
+			cmd.EXPECT().String().Return("cmd")
+			l := strings.NewReader("log")
+			lc := io.NopCloser(l)
+			cmd.EXPECT().StdoutPipe().Return(lc, nil)
+			e := strings.NewReader("error")
+			ec := io.NopCloser(e)
+			cmd.EXPECT().StderrPipe().Return(ec, nil)
+			cmd.EXPECT().Start().Return(nil)
+			cmd.EXPECT().Wait().Return(nil)
 
-		iterator := 0
-		commandMaker := func(name string, arg ...string) command {
-			subDir := ""
-			switch iterator {
-			case 0:
-				subDir = "db"
-			case 1:
-				subDir = "localConfig"
-			default:
-				t.Error("unexpected call of make command")
+			iterator := 0
+			commandMaker := func(name string, arg ...string) command {
+				subDir := ""
+				switch iterator {
+				case 0:
+					subDir = "db"
+				case 1:
+					subDir = "localConfig"
+				default:
+					t.Error("unexpected call of make command")
+				}
+				iterator++
+
+				assert.Equal(t, "rsync", name)
+				expectedArgs := []string{
+					"-avhz",
+					"--delete",
+					"--sparse",
+					"--stats",
+					"--delete-excluded",
+					"--exclude=*.file",
+					"--exclude=*.bak",
+					"-e",
+					"ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes",
+					fmt.Sprintf("localhost:/a/b/%s/", subDir),
+					fmt.Sprintf("../../testdata/sync/test/%s", subDir),
+				}
+				if tc.useChecksum {
+					expectedArgs = slices.Insert(expectedArgs, 2, "--checksum")
+				}
+				assert.Equal(t, expectedArgs, arg)
+
+				return cmd
 			}
-			iterator++
 
-			assert.Equal(t, "rsync", name)
-			assert.Len(t, arg, 11)
-			assert.Equal(t, "-avhz", arg[0])
-			assert.Equal(t, "--delete", arg[1])
-			assert.Equal(t, "--sparse", arg[2])
-			assert.Equal(t, "--stats", arg[3])
-			assert.Equal(t, "--delete-excluded", arg[4])
-			assert.Equal(t, "--exclude=*.file", arg[5])
-			assert.Equal(t, "--exclude=*.bak", arg[6])
-			assert.Equal(t, "-e", arg[7])
-			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[8])
-			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[9])
-			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[10])
-
-			return cmd
-		}
-
-		systemInfoProvider := newMockSystemInfoProvider(t)
-		exportDoguApiClient := newMockExportDoguApiClient(t)
-		syncer := &RsyncSyncer{
-			host:                "localhost",
-			user:                "user",
-			privateKeyPath:      "secret/private.key",
-			makeCommand:         commandMaker,
-			exportModeApiClient: exportDoguApiClient,
-			systemInfoProvider:  systemInfoProvider,
-			doguVolumeBasePath:  "../../testdata/sync",
-			excludePattern: []configuration.ExcludePattern{
-				{DoguName: "official/test", Pattern: []string{
-					"*.file",
-					"*.bak",
-				}},
-			},
-			verbose: true,
-		}
-
-		// system info request
-		systemInfo := migration.SystemInfo{
-			FQDN:        "",
-			IsMultinode: false,
-			Dogus: []migration.Dogu{
-				{
-					Name:    "official/test",
-					Version: "",
-					Volume:  migration.DoguVolume{},
+			systemInfoProvider := newMockSystemInfoProvider(t)
+			exportDoguApiClient := newMockExportDoguApiClient(t)
+			syncer := &RsyncSyncer{
+				host:                "localhost",
+				user:                "user",
+				privateKeyPath:      "secret/private.key",
+				makeCommand:         commandMaker,
+				exportModeApiClient: exportDoguApiClient,
+				systemInfoProvider:  systemInfoProvider,
+				doguVolumeBasePath:  "../../testdata/sync",
+				excludePattern: []configuration.ExcludePattern{
+					{DoguName: "official/test", Pattern: []string{
+						"*.file",
+						"*.bak",
+					}},
 				},
-			},
-			Components: nil,
-		}
+				verbose:       true,
+				checksumDogus: tc.checksumDogus,
+			}
 
-		systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
+			// system info request
+			systemInfo := migration.SystemInfo{
+				FQDN:        "",
+				IsMultinode: false,
+				Dogus: []migration.Dogu{
+					{
+						Name:    "official/test",
+						Version: "",
+						Volume:  migration.DoguVolume{},
+					},
+				},
+				Components: nil,
+			}
 
-		// set export dogu request
-		export := migration.DoguExport{
-			Dogu:         "test",
-			VolumePath:   "/a/b",
-			ExporterPort: 1234,
-		}
-		exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
+			systemInfoProvider.EXPECT().GetSystemInfo(mock.Anything).Return(&systemInfo, nil)
 
-		err := syncer.SyncData(context.Background())
-		require.NoError(t, err)
-	})
+			// set export dogu request
+			export := migration.DoguExport{
+				Dogu:         "test",
+				VolumePath:   "/a/b",
+				ExporterPort: 1234,
+			}
+			exportDoguApiClient.EXPECT().SetExportDogu(mock.Anything, mock.Anything).Return(&export, nil)
+
+			err := syncer.SyncData(context.Background())
+			require.NoError(t, err)
+			assert.Equal(t, 2, iterator, "both Dogu directories must be synchronized")
+		})
+	}
 
 	t.Run("should fail to fetch system info", func(t *testing.T) {
 		cmd := newMockCommand(t)
@@ -328,7 +349,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		exclude := []string{"*.test"}
-		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.NoError(t, err)
 	})
 
@@ -351,7 +372,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		var exclude []string
-		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error creating stdout pipe: testerror")
 	})
 
@@ -378,7 +399,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		var exclude []string
-		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error creating stderr pipe: testerror")
 	})
 
@@ -407,7 +428,7 @@ func TestSyncDogu(t *testing.T) {
 		}
 
 		var exclude []string
-		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "error starting rsync: testerror")
 	})
 
@@ -436,7 +457,7 @@ func TestSyncDogu(t *testing.T) {
 			systemInfoProvider:  systemInfoProvider,
 		}
 		var exclude []string
-		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude)
+		err := syncer.SyncDoguDir(context.Background(), 1234, "data/dogu", "data/dogu", exclude, false)
 		require.EqualError(t, err, "rsync exited with error: testerror")
 	})
 }
@@ -470,8 +491,9 @@ func TestNewRsyncSyncer(t *testing.T) {
 		doguVolumeBasePath := "/dogu/volume"
 		excludePattern := []configuration.ExcludePattern{{DoguName: "test", Pattern: []string{"*.file"}}}
 		excludedDogus := make([]string, 0)
+		checksumDogus := []string{"official/ldap"}
 
-		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath, excludedDogus, false)
+		syncer := NewRsyncSyncer(host, user, privateKeyPath, exportDoguApiClient, systemInfoProvider, excludePattern, doguVolumeBasePath, excludedDogus, checksumDogus, false)
 
 		require.NotNil(t, syncer)
 		assert.Equal(t, host, syncer.host)
@@ -481,6 +503,7 @@ func TestNewRsyncSyncer(t *testing.T) {
 		assert.Equal(t, systemInfoProvider, syncer.systemInfoProvider)
 		assert.Equal(t, doguVolumeBasePath, syncer.doguVolumeBasePath)
 		assert.Equal(t, excludePattern, syncer.excludePattern)
+		assert.Equal(t, checksumDogus, syncer.checksumDogus)
 		assert.NotNil(t, syncer.makeCommand)
 		assert.Equal(t, exec.Command("test", "a", "b"), syncer.makeCommand("test", "a", "b"))
 	})
