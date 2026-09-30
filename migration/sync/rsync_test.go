@@ -41,18 +41,20 @@ func TestSyncData(t *testing.T) {
 			iterator++
 
 			assert.Equal(t, "rsync", name)
-			assert.Len(t, arg, 11)
-			assert.Equal(t, "-avhz", arg[0])
-			assert.Equal(t, "--delete", arg[1])
-			assert.Equal(t, "--sparse", arg[2])
-			assert.Equal(t, "--stats", arg[3])
-			assert.Equal(t, "--delete-excluded", arg[4])
-			assert.Equal(t, "--exclude=*.file", arg[5])
-			assert.Equal(t, "--exclude=*.bak", arg[6])
-			assert.Equal(t, "-e", arg[7])
-			assert.Equal(t, "ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes", arg[8])
-			assert.Equal(t, fmt.Sprintf("localhost:/a/b/%s/", subDir), arg[9])
-			assert.Equal(t, fmt.Sprintf("../../testdata/sync/test/%s", subDir), arg[10])
+			assert.Equal(t, []string{
+				"-avhz",
+				"--delete",
+				"--checksum",
+				"--sparse",
+				"--stats",
+				"--delete-excluded",
+				"--exclude=*.file",
+				"--exclude=*.bak",
+				"-e",
+				"ssh -p 1234 -l user -i secret/private.key -o StrictHostKeyChecking=no -o BatchMode=yes",
+				fmt.Sprintf("localhost:/a/b/%s/", subDir),
+				fmt.Sprintf("../../testdata/sync/test/%s", subDir),
+			}, arg)
 
 			return cmd
 		}
