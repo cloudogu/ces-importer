@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - [#149] Configure rsync checksum comparison per Dogu with `config.job.checksumDogus`, defaulting to `ldap`. An empty list disables checksum comparison.
- - Checksum comparison adds disk reads and CPU work to the source rsync exporter and target migration Job, including for unchanged files. It can slow source applications sharing those resources, increase migration duration
- - The default is set to only ldap because a changed database file might retain the same size and mtime and might not be transferred 
+  - Checksum comparison adds disk reads and CPU work to the source and target systems. It can increase migration duration.
+  - The default is set to ldap because a changed database file can retain the same size and mtime, it would not be migrated in this case 
 
 ### Fixed
 - [#148] Wait until all pods of the stopped dogus are terminated before the data is synchronized
