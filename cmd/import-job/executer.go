@@ -40,7 +40,7 @@ func NewImportExecuter(cfg configuration.Job, apiService *exporter.Service, k8sC
 
 	configRepos := migrationConfig.NewConfigRepos(globalConfigRepo, doguConfigRepo, sensitiveDoguConfigRepo)
 
-	ds := sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath, apiService.ExportDoguService, apiService.SystemInfoService, cfg.Exclude, cfg.DoguVolumeBasePath, cfg.ExcludedDogus, cfg.Verbose)
+	ds := sync.NewRsyncSyncer(cfg.API.ExporterHost, cfg.SSH.User, cfg.SSH.PrivateSSHKeyPath, apiService.ExportDoguService, apiService.SystemInfoService, cfg.Exclude, cfg.DoguVolumeBasePath, cfg.ExcludedDogus, cfg.ChecksumDogus, cfg.Verbose)
 	cs := migrationConfig.NewConfigImporter(cfg.DoguVolumeBasePath, apiService.ConfigService, *configRepos, k8sClientSet.BackupSchedule, cfg.AdditionalExcludedGlobalConfigurationKeys, cfg.ExcludedDoguConfigurations)
 	fc := migrationFQDN.NewService(apiService.ConfigService, globalConfigRepo, k8sClientSet.ConfigMap, k8sClientSet.Secret)
 

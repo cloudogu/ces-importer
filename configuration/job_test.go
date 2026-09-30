@@ -2,9 +2,42 @@ package configuration
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"testing"
 )
+
+func TestReadJobConfigChecksumDogus(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		yaml      string
+		want      []string
+		wantError bool
+	}{
+		{name: "omitted list"},
+		{name: "empty list", yaml: "checksumDogus: []\n", want: []string{}},
+		{name: "configured dogus", yaml: "checksumDogus:\n  - official/ldap\n  - jenkins\n", want: []string{"official/ldap", "jenkins"}},
+		{name: "empty name rejected", yaml: "checksumDogus:\n  - ''\n", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for _, filename := range []string{fileLoggingConfig, fileAPIConfig, fileSSHConfig} {
+				createValidConfig(t, dir, filename)
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(dir, fileJobConfig), []byte("doguVolumeBasePath: /data\n"+tc.yaml), 0600))
+			t.Setenv(EnvBaseConfigPathKey, dir)
+			t.Setenv(EnvImporterNamespaceKey, "test")
+			cfg, err := ReadJobConfig()
+			if tc.wantError {
+				require.ErrorContains(t, err, "ChecksumDogus")
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, cfg.ChecksumDogus)
+		})
+	}
+}
 
 func TestReadJobConfig(t *testing.T) {
 	t.Run("read config for job", func(t *testing.T) {

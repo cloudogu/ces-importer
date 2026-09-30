@@ -180,6 +180,9 @@ type JobConfig struct {
 	// AdditionalExcludedDogus specifies dogus that should be excluded from the migration in
 	// addition to the globally excluded dogus
 	AdditionalExcludedDogus []string `yaml:"excludedDogus"`
+	// ChecksumDogus specifies dogus whose files are compared by checksum instead of size and modification time.
+	// Names may be simple (ldap) or qualified (official/ldap). An empty list disables checksum comparison.
+	ChecksumDogus []string `yaml:"checksumDogus" validate:"omitempty,dive,required"`
 	// AdditionalExcludedConfigurations specifies global configurations that should be excluded from the migration
 	// in addition to configurations that are already being excluded
 	AdditionalExcludedGlobalConfigurationKeys []string `yaml:"excludedGlobalConfigurationKeys"`
