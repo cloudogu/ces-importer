@@ -54,7 +54,7 @@ func CreateK8SClientSet(k8sRestConfig *rest.Config, namespace string) (K8sClient
 	}
 
 	k8sDoguClient := ecoSystemClient.Dogus(namespace)
-	doguControl := NewDoguControl(k8sDoguClient)
+	doguControl := NewDoguControl(k8sDoguClient, k8sPodClient)
 
 	k8sBlueprintClient, err := getBlueprintClient(k8sRestConfig, k8sClientSet)
 	if err != nil {
