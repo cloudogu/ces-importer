@@ -30,9 +30,18 @@ type cesBackupScheduleImporter struct {
 }
 
 func (bsi *cesBackupScheduleImporter) importBackupSchedules(ctx context.Context, config []migration.BackupSchedule) error {
+	if len(config) == 0 {
+		slog.Info("No backup schedules to import, skipping backup schedule import.")
+		return nil
+	}
+
 	slog.Info("Importing backup schedules...")
 	for _, schedule := range config {
 		if err := bsi.delete(ctx, schedule.Name); err != nil {
+			if errors.IsNotFound(err) {
+				slog.Info("BackupSchedule API is unavailable, skipping backup schedule import.")
+				return nil
+			}
 			slog.Warn("failed to delete backup schedule", "name", schedule.Name, "schedule", schedule.Schedule, "error", err)
 			continue
 		}
@@ -61,10 +70,8 @@ func (bsi *cesBackupScheduleImporter) importBackupSchedules(ctx context.Context,
 func (bsi *cesBackupScheduleImporter) delete(ctx context.Context, scheduleName string) error {
 	watcher, err := bsi.backupScheduleClient.Watch(ctx, metav1.SingleObject(metav1.ObjectMeta{Name: scheduleName}))
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-
+		// Watch queries the collection, so NotFound means the API is unavailable,
+		// rather than that an individual schedule is missing.
 		return fmt.Errorf("failed to watch backup schedule resource '%s': %w", scheduleName, err)
 	}
 
