@@ -122,37 +122,39 @@ func Test_cesBackupScheduleImporter_importBackupSchedules(t *testing.T) {
 		mockBsc.AssertNotCalled(t, "Create", testCtx, bs2, metav1.CreateOptions{})
 	})
 
-	t.Run("watcher returns Not found error", func(t *testing.T) {
-		mockWatcherSchedule2 := watch.NewFake()
-
-		go func() {
-			mockWatcherSchedule2.Delete(&backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}})
-		}()
-
+	t.Run("should skip all backup schedules when the API is unavailable", func(t *testing.T) {
 		mockBsc := newMockBackupScheduleClient(t)
-		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(nil, errors.NewNotFound(schema.GroupResource{}, "schedule1"))
-		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule2"})).Return(mockWatcherSchedule2, nil)
-		mockBsc.EXPECT().Delete(mock.Anything, "schedule2", metav1.DeleteOptions{}).Return(nil)
+		mockBsc.EXPECT().Watch(testCtx, metav1.SingleObject(metav1.ObjectMeta{Name: "schedule1"})).Return(nil, errors.NewNotFound(schema.GroupResource{Group: "k8s.cloudogu.com", Resource: "backupschedules"}, "")).Once()
 
-		bs1 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule1"}, Spec: backupv1.BackupScheduleSpec{Schedule: "0 0 * * *", Provider: veleroBackupProvider}}
-		bs2 := &backupv1.BackupSchedule{ObjectMeta: metav1.ObjectMeta{Name: "schedule2"}, Spec: backupv1.BackupScheduleSpec{Schedule: "2 2 * 3 *", Provider: veleroBackupProvider}}
-
-		mockBsc.EXPECT().Create(testCtx, bs1, metav1.CreateOptions{}).Return(bs1, nil)
-		mockBsc.EXPECT().Create(testCtx, bs2, metav1.CreateOptions{}).Return(bs2, nil)
-
-		bsi := &cesBackupScheduleImporter{
-			backupScheduleClient: mockBsc,
-		}
-
+		bsi := &cesBackupScheduleImporter{backupScheduleClient: mockBsc}
 		schedules := []migration.BackupSchedule{
 			{Name: "schedule1", Schedule: "0 0 * * *"},
 			{Name: "schedule2", Schedule: "2 2 * 3 *"},
 		}
 
-		err := bsi.importBackupSchedules(testCtx, schedules)
-		assert.NoError(t, err)
-		mockBsc.AssertNotCalled(t, "Delete", mock.Anything, "schedule1", metav1.DeleteOptions{})
+		require.NoError(t, bsi.importBackupSchedules(testCtx, schedules))
+		mockBsc.AssertNumberOfCalls(t, "Watch", 1)
+		mockBsc.AssertNumberOfCalls(t, "Delete", 0)
+		mockBsc.AssertNumberOfCalls(t, "Create", 0)
 	})
+
+	for _, tc := range []struct {
+		name      string
+		schedules []migration.BackupSchedule
+	}{
+		{name: "omitted backup schedules"},
+		{name: "empty backup schedules", schedules: []migration.BackupSchedule{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mockBsc := newMockBackupScheduleClient(t)
+			bsi := &cesBackupScheduleImporter{backupScheduleClient: mockBsc}
+
+			require.NoError(t, bsi.importBackupSchedules(testCtx, tc.schedules))
+			mockBsc.AssertNumberOfCalls(t, "Watch", 0)
+			mockBsc.AssertNumberOfCalls(t, "Delete", 0)
+			mockBsc.AssertNumberOfCalls(t, "Create", 0)
+		})
+	}
 
 	t.Run("watcher returns error", func(t *testing.T) {
 		mockWatcherSchedule2 := watch.NewFake()
