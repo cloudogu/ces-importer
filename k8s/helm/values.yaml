@@ -82,6 +82,16 @@ config:
     #   - jenkins
     #   - cockpit
     excludedDogus: []
+    # checksumDogus contains dogus whose files are compared by checksum instead of size and modification time.
+    # Simple names (ldap) and qualified names (official/ldap) are supported.
+    # Checksum comparison applies to all synchronized directories of each listed dogu.
+    # --checksum adds disk reads and CPU work to the source rsync exporter and target migration Job,
+    # including for unchanged files. It can slow source applications sharing those resources,
+    # increase migration duration, and extend downtime for all stopped target dogus.
+    # The cost grows with the amount of file data checked.
+    # Set to [] to disable checksum comparison for every dogu.
+    checksumDogus:
+      - ldap
     # excludedGlobalConfigurationKeys contains the names of configuration keys that are not dogu-specific to exclude from the
     # import. For these configuration keys, the importing system will keep the current value. The keys in this list are
     # added to the keys that are always excluded from the import, those will not be ovrwritten by this configuration.
