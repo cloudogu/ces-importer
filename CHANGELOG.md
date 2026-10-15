@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.4.0] - 2026-10-15
+### Added
+- [#149] Configure rsync checksum comparison per Dogu with `config.job.checksumDogus`, defaulting to `ldap`. An empty list disables checksum comparison.
+  - Checksum comparison adds disk reads and CPU work to the source and target systems. It can increase migration duration.
+  - The default is set to ldap because a changed database file can retain the same size and mtime, it would not be migrated in this case 
+### Changed
+- [#151] Remove the dependency to k8s-backup-operator and handle cases where no backup schedule can be imported because of the missing API
+### Fixed
+- [#148] Wait until all pods of the stopped dogus are terminated before the data is synchronized
+
 ## [v2.3.4] - 2026-08-12
 ### Fixed
 - [#145] The name of the smtp tls mode configuration in the go struct tag from `tlsMODE` to `tlsMode`.

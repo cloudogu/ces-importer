@@ -1,8 +1,8 @@
 apiVersion: v1
 values:
   images:
-    cesImporter: cloudogu/ces-importer:2.3.4
-    cesImporterJob: cloudogu/ces-importer-migration-job:2.3.4
+    cesImporter: cloudogu/ces-importer:2.4.0
+    cesImporterJob: cloudogu/ces-importer-migration-job:2.4.0
 patches:
   values.yaml:
     main:

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,18 +24,35 @@ type DoguInterface interface {
 	UpdateSpecWithRetry(ctx context.Context, dogu *doguV2.Dogu, updateFunc func(spec doguV2.DoguSpec) doguV2.DoguSpec, opts metav1.UpdateOptions) (*doguV2.Dogu, error)
 }
 
+type PodInterface interface {
+	// List takes label and field selectors and returns the list of Pods that match those selectors.
+	List(ctx context.Context, opts metav1.ListOptions) (*corev1.PodList, error)
+}
+
+var (
+	// stopTimeout limits how long StopAll waits for the pods of the stopped dogus to terminate.
+	stopTimeout = 5 * time.Minute
+	// stopPollInterval is the interval in which StopAll checks whether the dogu pods are gone.
+	stopPollInterval = 2 * time.Second
+)
+
 type DoguControl struct {
 	doguCli DoguInterface
+	podCli  PodInterface
 }
 
 // NewDoguControl creates a new client that operates on dogu deployments on the importer system.
-func NewDoguControl(doguCli DoguInterface) *DoguControl {
+func NewDoguControl(doguCli DoguInterface, podCli PodInterface) *DoguControl {
 	return &DoguControl{
 		doguCli: doguCli,
+		podCli:  podCli,
 	}
 }
 
-// StopAll stopps all dogus in the importer system.
+// StopAll stopps all dogus in the importer system and waits until their pods are terminated.
+//
+// Waiting is required because the dogu data is synchronized right after this call.
+// A dogu process that is still running (e.g. a terminating pod) keeps the old files open while they are replaced.
 func (dc *DoguControl) StopAll(ctx context.Context) error {
 	slog.Info("Stopping all dogus")
 	list, err := dc.doguCli.List(ctx, metav1.ListOptions{})
@@ -48,7 +67,57 @@ func (dc *DoguControl) StopAll(ctx context.Context) error {
 		}
 	}
 
+	for _, dogu := range list.Items {
+		err := dc.waitForDoguPodsTerminated(ctx, dogu.Spec.Name)
+		if err != nil {
+			return fmt.Errorf("failed to wait for dogu to stop: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// countNotTerminatedPods counts the pods whose containers may still be running.
+func countNotTerminatedPods(pods []corev1.Pod) int {
+	count := 0
+	for _, pod := range pods {
+		if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
+			count++
+		}
+	}
+	return count
+}
+
+// waitForDoguPodsTerminated waits until no pod of the given dogu is running anymore, including pods that are still terminating.
+func (dc *DoguControl) waitForDoguPodsTerminated(ctx context.Context, exporterDoguName string) error {
+	fullyQualifiedDoguName, err := cescommons.QualifiedNameFromString(exporterDoguName)
+	if err != nil {
+		return err
+	}
+	doguName := fullyQualifiedDoguName.SimpleName.String()
+	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", doguV2.DoguLabelName, doguName)}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, stopTimeout)
+	defer cancel()
+
+	for {
+		pods, err := dc.podCli.List(timeoutCtx, listOptions)
+		if err != nil {
+			return fmt.Errorf("failed to list pods of dogu %s: %w", doguName, err)
+		}
+		running := countNotTerminatedPods(pods.Items)
+		if running == 0 {
+			slog.Info(fmt.Sprintf("All pods of dogu %s are terminated", doguName))
+			return nil
+		}
+
+		slog.Debug("Waiting for pods of dogu to terminate", "dogu", doguName, "pods", running)
+		select {
+		case <-timeoutCtx.Done():
+			return fmt.Errorf("pods of dogu %s did not terminate in time: %w", doguName, timeoutCtx.Err())
+		case <-time.After(stopPollInterval):
+		}
+	}
 }
 
 // StopDogu stopps the given dogu in the importer system.
