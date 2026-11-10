@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - [#153] Update Go to 1.27.3
+- [#153] Update alpine to 3.24.4
 
 ### Changed
 - [#153] Update golangci-lint to v2.15.0 for Go 1.27 support.
