@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- [#153] Update Go to 1.27.3
+
+### Changed
+- [#153] Update golangci-lint to v2.15.0 for Go 1.27 support.
+
 ## [v2.4.0] - 2026-10-15
 ### Added
 - [#149] Configure rsync checksum comparison per Dogu with `config.job.checksumDogus`, defaulting to `ldap`. An empty list disables checksum comparison.

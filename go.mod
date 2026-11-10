@@ -1,6 +1,6 @@
 module github.com/cloudogu/ces-importer
 
-go 1.26.0
+go 1.27.3
 
 require (
 	github.com/adhocore/gronx v1.19.5
