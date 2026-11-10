@@ -18,8 +18,8 @@ ARG BINARY=ces-importer
 # BUILD_PATH specifies the path to application to be build. Default: ./
 ARG BUILD_PATH="./cmd/${BINARY}"
 
-ARG GO_VERSION=1.26
-ARG ALPINE_VERSION=3.21.3
+ARG GO_VERSION=1.27.3
+ARG ALPINE_VERSION=3.24.4
 
 ARG UID=65532
 ARG GID=$UID
@@ -87,7 +87,7 @@ ARG GID
 LABEL \
     maintainer="hello@cloudogu.com" \
     NAME="${BINARY}" \
-    VERSION="2.4.0"
+    VERSION="2.4.1"
 
 WORKDIR /
 
