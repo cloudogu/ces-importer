@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v2.4.1] - 2026-11-10
+
 ### Security
 - [#153] Update Go to 1.27.3
 - [#153] Update alpine to 3.24.4
